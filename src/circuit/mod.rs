@@ -1,4 +1,5 @@
 pub mod signal;
+pub mod bitify;
 
 use bellman_ce::{
     SynthesisError

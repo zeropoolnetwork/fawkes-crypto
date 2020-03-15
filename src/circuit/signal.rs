@@ -244,44 +244,4 @@ impl <E:Engine> Signal<E> {
         cs.enforce(|| "self*(self-1)==self", |_| self.lc(), |_| self.lc() - (E::Fr::one(), CS::one()), |zero| zero);
     }
 
-
-
-    pub fn into_bits_le<CS>(
-        &self,
-        mut cs: CS,
-        limit: usize
-    ) -> Result<Vec<Self>, SynthesisError>
-        where CS: ConstraintSystem<E>
-    {
-        fn get_bit<F:PrimeField>(value:Option<F::Repr>, i:usize) -> Option<F> {
-            let limb = i >> 6;
-            let offset = i & 0x3f;
-            value.map(|e| {
-                if e.as_ref()[limb] >> offset & 1 == 1 {
-                    F::one()
-                } else {
-                    F::zero()
-                }
-            })
-        }
-
-        let value = self.get_value().map(|e| e.into_repr());
-
-
-        let mut remained_signal = self.clone();
-        let mut k = E::Fr::one();
-        let mut bits = Vec::<Self>::new();
-        for i in 0..limit-1 {
-            let s = Signal::alloc(cs.namespace(|| format!("alloc bit {}", i)), || get_bit(value, i).grab())?;
-            s.assert_bit(cs.namespace(|| format!("assert bit {}", i)));
-            remained_signal = remained_signal - &(k * &s);
-            bits.push(s);
-            k.double();
-        }
-
-        remained_signal.assert_bit(cs.namespace(|| format!("assert last bit {}", limit-1)));
-        bits.push(remained_signal);
-        Ok(bits)
-    }
-
 }
