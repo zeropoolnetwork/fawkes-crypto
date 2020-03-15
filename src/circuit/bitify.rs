@@ -19,27 +19,13 @@ use bellman_ce::{
 
 
 use std::ops::{Add, Sub, Mul};
+use std::iter;
 use std::collections::HashMap;
 
 use super::Assignment;
 use super::signal::Signal;
 
 
-
-fn fr_into_bits<F:PrimeField>(value:F) -> Vec<bool>{
-    let value_repr = value.into_repr();
-    let value_repr_ref = value_repr.as_ref();
-    let nlimbs = value_repr_ref.len();
-
-    let mut res = Vec::<bool>::new();
-    for limb in 0..nlimbs {
-        for offset in 0..64 {
-            res.push(value_repr_ref[limb] >> offset & 1 == 1)
-        }
-    }
-    res
-    
-}
 
 fn bool2fr<F:PrimeField>(value:bool, f:F) -> F {
     if value {
@@ -50,8 +36,8 @@ fn bool2fr<F:PrimeField>(value:bool, f:F) -> F {
 }
 
 pub fn into_bits_le<E:Engine, CS:ConstraintSystem<E>>(
-    signal:&Signal<E>,
     mut cs: CS,
+    signal:&Signal<E>,
     limit: usize
 ) -> Result<Vec<Signal<E>>, SynthesisError>
     where CS: ConstraintSystem<E>
@@ -64,11 +50,9 @@ pub fn into_bits_le<E:Engine, CS:ConstraintSystem<E>>(
             let mut k = E::Fr::one();
             let mut bits = Vec::<Signal<E>>::new();
             let value_bits = match value {
-                Some(v) => fr_into_bits(v).into_iter().map(|e| Some(e)).collect::<Vec<_>>(),
+                Some(v) => BitIterator::new(v.into_repr()).map(|e| Some(e)).collect::<Vec<_>>(),
                 None => vec![None; E::Fr::NUM_BITS as usize]
             };
-            
-            value.map(|v|fr_into_bits(v));
             
             for i in 0..limit-1 {
                 let s = Signal::alloc(cs.namespace(|| format!("alloc bit {}", i)), || value_bits[i].map(|b| bool2fr(b, E::Fr::one())).grab())?;
@@ -86,7 +70,7 @@ pub fn into_bits_le<E:Engine, CS:ConstraintSystem<E>>(
             let mut bits = Vec::<Signal<E>>::new();
             let mut k = E::Fr::one();
             let mut remained_value = value.clone();
-            let value_bits = fr_into_bits(*value);
+            let value_bits = BitIterator::new(value.into_repr()).collect::<Vec<_>>();
             for i in 0..limit {
                 let bit = bool2fr(value_bits[i], k.clone()); 
                 remained_value.sub_assign(&bit);
@@ -100,6 +84,45 @@ pub fn into_bits_le<E:Engine, CS:ConstraintSystem<E>>(
             }
         }
     }
+}
 
+// return 1 if ct > signal
+pub fn comp_constant<E:Engine, CS:ConstraintSystem<E>>(
+    mut cs: CS,
+    signal:&[Signal<E>],
+    ct: &E::Fr
+) -> Result<Signal<E>, SynthesisError> {
+    let siglen = signal.len();
+    let nsteps = (siglen >> 1) + (siglen & 1);
+    let sig_zero = if siglen & 1 == 1 {vec![Signal::<E>::zero()] } else {vec![]};
 
+    let mut sig_bits = signal.iter().chain(sig_zero.iter());
+    let mut ct_bits = BitIterator::new(ct.into_repr());
+
+    let mut k = E::Fr::one();
+    let mut acc = Signal::zero();
+
+    for i in 0..nsteps {
+        let ct_l = ct_bits.next().unwrap();
+        let ct_u = ct_bits.next().unwrap();
+
+        let sig_l = sig_bits.next().unwrap();
+        let sig_u = sig_bits.next().unwrap();
+
+        let sig_lu = sig_l.multiply(cs.namespace(|| format!("sig_l*sig_u; i={}", i)), &sig_u)?;
+
+        acc = acc + &(k * &match (ct_l, ct_u) {
+            (false, false) => sig_lu - sig_l - sig_u,
+            (true, false) => sig_lu - sig_l - sig_u - sig_u,
+            (false, true) => Signal::one() - sig_l - &sig_lu,
+            (true, true) => Signal::one() - &sig_lu
+        });
+        k.double();
+    }
+
+    k.sub_assign(&E::Fr::one());
+
+    acc = acc + &Signal::Constant(k);
+    let acc_bits = into_bits_le(cs.namespace(|| "bitify acc"), &acc, nsteps+1)?;
+    Ok(acc_bits[nsteps].clone())
 }
