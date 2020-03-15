@@ -76,22 +76,22 @@ impl<'a, E: Engine> Sub<&'a Signal<E>> for Signal<E> {
 }
 
 
-impl<'a, E: Engine> Mul<E::Fr> for Signal<E> {
+impl<'a, E: Engine> Mul<&'a Signal<E>> for E::Fr {
     type Output = Signal<E>;
 
-    fn mul(self, other: E::Fr) -> Signal<E> {
-        match &self {
-            &Self::Constant(mut a) => {
-                a.mul_assign(&other);
-                Self::Constant(a)
+    fn mul(self, other: &'a Signal<E>) -> Signal<E> {
+        match other {
+            &Signal::Constant(mut a) => {
+                a.mul_assign(&self);
+                Signal::Constant(a)
             },
             _ => {
-                let value = match self.get_value() {
-                    Some(mut a) => {a.mul_assign(&other); Some(a)},
+                let value = match other.get_value() {
+                    Some(mut a) => {a.mul_assign(&self); Some(a)},
                     _ => None
                 };
-                let lc = LinearCombination::<E>::zero() + (other, &self.lc());
-                Self::Variable(value, lc)
+                let lc = LinearCombination::<E>::zero() + (self, &other.lc());
+                Signal::Variable(value, lc)
             }
         }
     }
@@ -274,7 +274,7 @@ impl <E:Engine> Signal<E> {
         for i in 0..limit-1 {
             let s = Signal::alloc(cs.namespace(|| format!("alloc bit {}", i)), || get_bit(value, i).grab())?;
             s.assert_bit(cs.namespace(|| format!("assert bit {}", i)));
-            remained_signal = remained_signal - &(s.clone() * k);
+            remained_signal = remained_signal - &(k * &s);
             bits.push(s);
             k.double();
         }
