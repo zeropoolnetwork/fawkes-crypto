@@ -112,10 +112,10 @@ pub fn comp_constant<E:Engine, CS:ConstraintSystem<E>>(
         let sig_lu = sig_l.multiply(cs.namespace(|| format!("sig_l*sig_u; i={}", i)), &sig_u)?;
 
         acc = acc + &(k * &match (ct_l, ct_u) {
-            (false, false) => sig_lu - sig_l - sig_u,
-            (true, false) => sig_lu - sig_l - sig_u - sig_u,
-            (false, true) => Signal::one() - sig_l - &sig_lu,
-            (true, true) => Signal::one() - &sig_lu
+            (false, false) => -sig_lu + sig_l + sig_u,
+            (true, false) => -sig_lu + sig_l + sig_u + sig_u - &Signal::one(),
+            (false, true) => sig_lu + sig_u - &Signal::one(),
+            (true, true) => sig_lu - &Signal::one()
         });
         k.double();
     }

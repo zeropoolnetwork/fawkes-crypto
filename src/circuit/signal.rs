@@ -18,7 +18,7 @@ use bellman_ce::{
 };
 
 
-use std::ops::{Add, Sub, Mul};
+use std::ops::{Add, Sub, Mul, Neg};
 use std::collections::HashMap;
 
 use super::Assignment;
@@ -31,12 +31,25 @@ pub enum Signal<E:Engine> {
     Constant(E::Fr)
 }
 
+impl<'a, E: Engine> Neg for Signal<E> {
+    type Output = Signal<E>;
 
+    fn neg(self) -> Self::Output {
+        match self {
+            Self::Constant(mut a) => {a.negate(); Self::Constant(a)},
+            Self::Variable(mut value, mut lc) => {
+                value = value.map(|mut v| {v.negate(); v});
+                lc = LinearCombination::zero() - &lc;
+                Self::Variable(value, lc)
+            }
+        }
+    }
+}
 
 impl<'a, E: Engine> Add<&'a Signal<E>> for Signal<E> {
     type Output = Signal<E>;
 
-    fn add(self, other: &'a Signal<E>) -> Signal<E> {
+    fn add(self, other: &'a Signal<E>) -> Self::Output {
         match (&self, other) {
             (&Self::Constant(mut a), Self::Constant(b)) => {
                 a.add_assign(b);
@@ -57,7 +70,7 @@ impl<'a, E: Engine> Add<&'a Signal<E>> for Signal<E> {
 impl<'a, E: Engine> Sub<&'a Signal<E>> for Signal<E> {
     type Output = Signal<E>;
 
-    fn sub(self, other: &'a Signal<E>) -> Signal<E> {
+    fn sub(self, other: &'a Signal<E>) -> Self::Output {
         match (&self, other) {
             (&Self::Constant(mut a), Self::Constant(b)) => {
                 a.sub_assign(b);
@@ -79,7 +92,7 @@ impl<'a, E: Engine> Sub<&'a Signal<E>> for Signal<E> {
 impl<'a, E: Engine> Mul<&'a Signal<E>> for E::Fr {
     type Output = Signal<E>;
 
-    fn mul(self, other: &'a Signal<E>) -> Signal<E> {
+    fn mul(self, other: &'a Signal<E>) -> Self::Output {
         match other {
             &Signal::Constant(mut a) => {
                 a.mul_assign(&self);
