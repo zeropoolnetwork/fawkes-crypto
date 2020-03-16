@@ -5,22 +5,15 @@ use bellman_ce::pairing::{
 use bellman_ce::pairing::ff::{
     Field,
     PrimeField,
-    PrimeFieldRepr,
     BitIterator
 };
 
 use bellman_ce::{
     SynthesisError,
-    ConstraintSystem,
-    LinearCombination,
-    Variable,
-    Index
+    ConstraintSystem
 };
 
 
-use std::ops::{Add, Sub, Mul};
-use std::iter;
-use std::collections::HashMap;
 
 use super::Assignment;
 use super::signal::Signal;
@@ -126,3 +119,19 @@ pub fn comp_constant<E:Engine, CS:ConstraintSystem<E>>(
     let acc_bits = into_bits_le(cs.namespace(|| "bitify acc"), &acc, nsteps+1)?;
     Ok(acc_bits[nsteps].clone())
 }
+
+
+pub fn into_bits_le_strict<E:Engine, CS:ConstraintSystem<E>>(
+    mut cs: CS,
+    signal:&Signal<E>
+) -> Result<Vec<Signal<E>>, SynthesisError>
+    where CS: ConstraintSystem<E>
+{
+    let bits = into_bits_le(cs.namespace(|| "split to bits"), signal, E::Fr::NUM_BITS as usize)?;
+    let mut minus_one = E::Fr::one();
+    minus_one.negate();
+    let cmp_res = comp_constant(cs.namespace(|| "cmp with minus one"), &bits, &minus_one)?;
+    cmp_res.assert_zero(cs.namespace(||"should be <= -1"));
+    Ok(bits)
+}
+

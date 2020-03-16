@@ -3,10 +3,7 @@ use bellman_ce::pairing::{
 };
 
 use bellman_ce::pairing::ff::{
-    Field,
-    PrimeField,
-    PrimeFieldRepr,
-    BitIterator
+    Field
 };
 
 use bellman_ce::{
