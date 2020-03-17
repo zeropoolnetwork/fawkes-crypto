@@ -65,13 +65,12 @@ pub fn merkle_root<E:Engine, CS:ConstraintSystem<E>>(
     path:&[Signal<E>], 
     params:&PoseidonParams<E::Fr>
 ) -> Result<Signal<E>, SynthesisError> {
-    assert!(siblings.len() == path.len(), "merkle proof path should be the same");
+    assert!(siblings.len() == path.len(), "merkle proof length should be the same");
     let mut root = leaf.clone();
     let mut i = 0;
     for (p, s) in path.iter().zip(siblings.iter()) {
         i+=1;
-        let selector = p.multiply(cs.namespace(|| format!("selector i={}", i)), &(s - &root))?;
-        let first = &root + &selector;
+        let first = &root + &p.multiply(cs.namespace(|| format!("selector i={}", i)), &(s - &root))?;
         let second = &root + s - &first;
         root = poseidon(cs.namespace(|| format!("node i={}", i)), [first, second].as_ref(), params)?;
     }
