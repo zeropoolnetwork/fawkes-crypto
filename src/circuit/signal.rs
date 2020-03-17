@@ -28,7 +28,7 @@ pub enum Signal<E:Engine> {
     Constant(E::Fr)
 }
 
-impl<'a, E: Engine> Neg for Signal<E> {
+impl<E: Engine> Neg for Signal<E> {
     type Output = Signal<E>;
 
     fn neg(self) -> Self::Output {
@@ -42,6 +42,24 @@ impl<'a, E: Engine> Neg for Signal<E> {
         }
     }
 }
+
+impl<'a, E: Engine> Neg for &'a Signal<E> {
+    type Output = Signal<E>;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            &Signal::Constant(mut a) => {a.negate(); Signal::Constant(a)},
+            _ => {
+                let mut value = self.get_value();
+                value = value.map(|mut v| {v.negate(); v});
+                let lc = LinearCombination::zero() - &self.lc();
+                Signal::Variable(value, lc)
+            }
+        }
+    }
+}
+
+
 
 impl<'a, E: Engine> Add<&'a Signal<E>> for Signal<E> {
     type Output = Signal<E>;
@@ -64,6 +82,29 @@ impl<'a, E: Engine> Add<&'a Signal<E>> for Signal<E> {
     }
 }
 
+
+impl<'a, 'b, E: Engine> Add<&'a Signal<E>> for &'b Signal<E> {
+    type Output = Signal<E>;
+
+    fn add(self, other: &'a Signal<E>) -> Self::Output {
+        match (self, other) {
+            (&Signal::Constant(mut a), Signal::Constant(b)) => {
+                a.add_assign(b);
+                Signal::Constant(a)
+            },
+            _ => {
+                let value = match (self.get_value(), other.get_value()) {
+                    (Some(mut a), Some(b)) => {a.add_assign(&b); Some(a)},
+                    _ => None
+                };
+                let lc = self.lc() + &other.lc();
+                Signal::Variable(value, lc)
+            }
+        }
+    }
+}
+
+
 impl<'a, E: Engine> Sub<&'a Signal<E>> for Signal<E> {
     type Output = Signal<E>;
 
@@ -80,6 +121,28 @@ impl<'a, E: Engine> Sub<&'a Signal<E>> for Signal<E> {
                 };
                 let lc = self.lc() - &other.lc();
                 Self::Variable(value, lc)
+            }
+        }
+    }
+}
+
+
+impl<'a, 'b, E: Engine> Sub<&'a Signal<E>> for &'b Signal<E> {
+    type Output = Signal<E>;
+
+    fn sub(self, other: &'a Signal<E>) -> Self::Output {
+        match (self, other) {
+            (&Signal::Constant(mut a), Signal::Constant(b)) => {
+                a.sub_assign(b);
+                Signal::Constant(a)
+            },
+            _ => {
+                let value = match (self.get_value(), other.get_value()) {
+                    (Some(mut a), Some(b)) => {a.sub_assign(&b); Some(a)},
+                    _ => None
+                };
+                let lc = self.lc() - &other.lc();
+                Signal::Variable(value, lc)
             }
         }
     }

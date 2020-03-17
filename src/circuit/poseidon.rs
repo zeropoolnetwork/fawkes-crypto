@@ -28,7 +28,7 @@ fn mix<E:Engine>(state: &mut[Signal<E>], params:&PoseidonParams<E::Fr>) {
     let mut new_state = vec![Signal::zero(); statelen];
     for i in 0..statelen {
         for j in 0..statelen {
-            new_state[i] = new_state[i].clone() + &(params.m[i][j] * &state[j]);
+            new_state[i] = &new_state[i] + &(params.m[i][j] * &state[j]);
         }
     }
     state.clone_from_slice(&new_state);
@@ -59,4 +59,22 @@ pub fn poseidon<E:Engine, CS:ConstraintSystem<E>>(mut cs:CS, inputs:&[Signal<E>]
 }
 
 
+pub fn merkle_root<E:Engine, CS:ConstraintSystem<E>>(
+    mut cs:CS, leaf:&Signal<E>, 
+    siblings:&[Signal<E>], 
+    path:&[Signal<E>], 
+    params:&PoseidonParams<E::Fr>
+) -> Result<Signal<E>, SynthesisError> {
+    assert!(siblings.len() == path.len(), "merkle proof path should be the same");
+    let mut root = leaf.clone();
+    let mut i = 0;
+    for (p, s) in path.iter().zip(siblings.iter()) {
+        i+=1;
+        let selector = p.multiply(cs.namespace(|| format!("selector i={}", i)), &(s - &root))?;
+        let first = &root + &selector;
+        let second = &root + s - &first;
+        root = poseidon(cs.namespace(|| format!("node i={}", i)), [first, second].as_ref(), params)?;
+    }
+    Ok(root)
+}
 

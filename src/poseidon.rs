@@ -18,8 +18,8 @@ pub struct PoseidonParams<F:Field> {
 impl<F:PrimeField> PoseidonParams<F> {
     pub fn new(t:usize, f:usize, p:usize) -> Self {
         let mut seedbox = SeedboxBlake2::new(format!("fawkes_poseidon(t={},f={},p={})", t, f, p).as_bytes());
-        let c = (0..f+p).map(|_| seedbox.gen()).collect::<Vec<F>>();
-        let m = (0..t).map(|_| (0..t).map(|_| seedbox.gen()).collect()).collect::<Vec<Vec<F>>>();
+        let c = (0..f+p).map(|_| seedbox.gen()).collect();
+        let m = (0..t).map(|_| (0..t).map(|_| seedbox.gen()).collect()).collect();
         PoseidonParams {c, m, t, f, p}
     }
 }
@@ -75,4 +75,16 @@ pub fn poseidon<F:PrimeField>(inputs:&[F], params:&PoseidonParams<F>) -> F {
         mix(&mut state, params);
     }
     state[0]
+}
+
+
+pub fn merkle_root<F:PrimeField>(leaf:&F, siblings:&[F], path:&[bool], params:&PoseidonParams<F>) -> F {
+    assert!(siblings.len() == path.len(), "merkle proof path should be the same");
+    let mut root = leaf.clone();
+    
+    for (&p, &s) in path.iter().zip(siblings.iter()) {
+        let pair = if p {[s, root]} else {[root, s]};
+        root = poseidon(pair.as_ref(), params);
+    }
+    root
 }
