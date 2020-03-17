@@ -1,5 +1,5 @@
 use bellman_ce::pairing::{
-    Engine,
+    Engine
 };
 
 use bellman_ce::pairing::ff::{
@@ -49,13 +49,13 @@ pub fn into_bits_le<E:Engine, CS:ConstraintSystem<E>>(
             
             for i in 0..limit-1 {
                 let s = Signal::alloc(cs.namespace(|| format!("alloc bit {}", i)), || value_bits[i].map(|b| bool2fr(b, E::Fr::one())).grab())?;
-                s.assert_bit(cs.namespace(|| format!("assert bit {}", i)));
+                s.assert_bit(cs.namespace(|| format!("assert bit {}", i)))?;
                 remained_signal = remained_signal - &(k * &s);
                 bits.push(s);
                 k.double();
             }
             let remained_signal = remained_signal.normalize();
-            remained_signal.assert_bit(cs.namespace(|| format!("assert last bit {}", limit-1)));
+            remained_signal.assert_bit(cs.namespace(|| format!("assert last bit {}", limit-1)))?;
             bits.push(remained_signal);
             Ok(bits)
         },
@@ -131,7 +131,7 @@ pub fn into_bits_le_strict<E:Engine, CS:ConstraintSystem<E>>(
     let mut minus_one = E::Fr::one();
     minus_one.negate();
     let cmp_res = comp_constant(cs.namespace(|| "cmp with minus one"), &bits, &minus_one)?;
-    cmp_res.assert_zero(cs.namespace(||"should be <= -1"));
+    cmp_res.assert_zero(cs.namespace(||"should be <= -1"))?;
     Ok(bits)
 }
 

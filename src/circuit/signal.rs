@@ -144,7 +144,9 @@ impl <E:Engine> Signal<E> {
 
                 let mut lc = LinearCombination::<E>::zero();
                 for (var, coeff) in hm {
-                    lc = lc + (coeff, *var);
+                    if !coeff.is_zero() {
+                        lc = lc + (coeff, *var);
+                    }
                 }
 
                 let lc_items = lc.as_ref();
@@ -230,8 +232,20 @@ impl <E:Engine> Signal<E> {
 
         let signal = match (a, b) {
             (Self::Constant(_), Self::Constant(_)) => Self::Constant(a_mul_b_value.unwrap()),
-            (Self::Constant(a), b) => Self::Variable(a_mul_b_value, LinearCombination::<E>::zero() + (a, &b.lc())),
-            (a, Self::Constant(b)) => Self::Variable(a_mul_b_value, LinearCombination::<E>::zero() + (b, &a.lc())),
+            (Self::Constant(a), b) => {
+                if a.is_zero() {
+                    Self::zero()
+                } else {
+                    Self::Variable(a_mul_b_value, LinearCombination::<E>::zero() + (a, &b.lc()))
+                }
+            },  
+            (a, Self::Constant(b)) => {
+                if b.is_zero() {
+                    Self::zero()
+                } else {
+                    Self::Variable(a_mul_b_value, LinearCombination::<E>::zero() + (b, &a.lc()))
+                }
+            },
             (a, b) => {
                 let a_mul_b = cs.alloc(|| "a mul b", || a_mul_b_value.grab())?;
                 let a_mul_b_lc = LinearCombination::<E>::zero() + a_mul_b;
@@ -242,16 +256,46 @@ impl <E:Engine> Signal<E> {
         Ok(signal)
     }
 
-    pub fn enforce<CS:ConstraintSystem<E>>(mut cs: CS, a:&Self, b: &Self, c: &Self) {
-        cs.enforce(|| "a*b==c", |_| a.lc(), |_| b.lc(), |_| c.lc());
+    pub fn square<CS:ConstraintSystem<E>>(&self, mut cs: CS) -> Result<Self, SynthesisError> {
+        self.multiply(cs.namespace(|| "multiply self*self"), self)
     }
 
-    pub fn assert_zero<CS:ConstraintSystem<E>>(&self, mut cs:CS) {
-        cs.enforce(|| "0*0==self", |zero| zero, |zero| zero, |_| self.lc());
+
+    pub fn assert_zero<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<(), SynthesisError> {
+        match self {
+            Signal::Constant(c) => {
+                if c.is_zero() {
+                    Ok(())
+                } else {
+                    Err(SynthesisError::Unsatisfiable)
+                }
+            },
+            Signal::Variable(_, _) => {
+                cs.enforce(|| "0*0==self", |zero| zero, |zero| zero, |_| self.lc());
+                Ok(())
+            }
+        }
     }
 
-    pub fn assert_bit<CS:ConstraintSystem<E>>(&self, mut cs:CS) {
-        cs.enforce(|| "self*(self-1)==self", |_| self.lc(), |_| self.lc() - (E::Fr::one(), CS::one()), |zero| zero);
+    pub fn assert_bit<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<(), SynthesisError> {
+        match self {
+            Signal::Constant(c) => {
+                let mut r = c.clone();
+                r.sub_assign(&E::Fr::one());
+                r.mul_assign(&c);
+                if r.is_zero() {
+                    Ok(())
+                } else {
+                    Err(SynthesisError::Unsatisfiable)
+                }
+                
+            },
+            Signal::Variable(_, _) => {
+                cs.enforce(|| "self*(self-1)==self", |_| self.lc(), |_| self.lc() - (E::Fr::one(), CS::one()), |zero| zero);
+                Ok(())
+            }
+        }
+        
     }
 
 }
