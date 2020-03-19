@@ -144,6 +144,8 @@ dependencies = [
  "bellman_ce",
  "blake2-rfc",
  "byteorder",
+ "ff_ce",
+ "pairing_ce",
  "rand",
 ]
 

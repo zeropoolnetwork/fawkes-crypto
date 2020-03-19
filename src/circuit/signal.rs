@@ -1,12 +1,12 @@
-use bellman_ce::pairing::{
+use bellman::pairing::{
     Engine,
 };
 
-use bellman_ce::pairing::ff::{
+use bellman::pairing::ff::{
     Field
 };
 
-use bellman_ce::{
+use bellman::{
     SynthesisError,
     ConstraintSystem,
     LinearCombination,

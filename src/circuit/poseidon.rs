@@ -1,9 +1,9 @@
-use bellman_ce::{
+use bellman::{
     SynthesisError,
     ConstraintSystem
 };
 
-use bellman_ce::pairing::{
+use bellman::pairing::{
     Engine
 };
 

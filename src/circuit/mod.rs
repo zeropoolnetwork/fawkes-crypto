@@ -3,7 +3,7 @@ pub mod bitify;
 pub mod poseidon;
 pub mod ecc;
 
-use bellman_ce::{
+use bellman::{
     SynthesisError
 };
 
