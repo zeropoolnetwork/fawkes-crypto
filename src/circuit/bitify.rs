@@ -4,8 +4,7 @@ use bellman_ce::pairing::{
 
 use bellman_ce::pairing::ff::{
     Field,
-    PrimeField,
-    BitIterator
+    PrimeField
 };
 
 use bellman_ce::{
@@ -17,7 +16,7 @@ use bellman_ce::{
 
 use super::Assignment;
 use super::signal::Signal;
-
+use crate::bititerator::BitIteratorLE;
 
 
 fn bool2fr<F:PrimeField>(value:bool, f:F) -> F {
@@ -43,7 +42,7 @@ pub fn into_bits_le<E:Engine, CS:ConstraintSystem<E>>(
             let mut k = E::Fr::one();
             let mut bits = Vec::<Signal<E>>::new();
             let value_bits = match value {
-                Some(v) => BitIterator::new(v.into_repr()).map(|e| Some(e)).collect::<Vec<_>>(),
+                Some(v) => BitIteratorLE::new(v.into_repr()).map(|e| Some(e)).collect::<Vec<_>>(),
                 None => vec![None; E::Fr::NUM_BITS as usize]
             };
             
@@ -63,7 +62,7 @@ pub fn into_bits_le<E:Engine, CS:ConstraintSystem<E>>(
             let mut bits = Vec::<Signal<E>>::new();
             let mut k = E::Fr::one();
             let mut remained_value = value.clone();
-            let value_bits = BitIterator::new(value.into_repr()).collect::<Vec<_>>();
+            let value_bits = BitIteratorLE::new(value.into_repr()).collect::<Vec<_>>();
             for i in 0..limit {
                 let bit = bool2fr(value_bits[i], k.clone()); 
                 remained_value.sub_assign(&bit);
@@ -90,7 +89,7 @@ pub fn comp_constant<E:Engine, CS:ConstraintSystem<E>>(
     let sig_zero = if siglen & 1 == 1 {vec![Signal::<E>::zero()] } else {vec![]};
 
     let mut sig_bits = signal.iter().chain(sig_zero.iter());
-    let mut ct_bits = BitIterator::new(ct.into_repr());
+    let mut ct_bits = BitIteratorLE::new(ct.into_repr());
 
     let mut k = E::Fr::one();
     let mut acc = Signal::zero();
