@@ -14,7 +14,6 @@ use bellman::{
 
 
 
-use super::Assignment;
 use super::signal::Signal;
 use crate::bititerator::BitIteratorLE;
 
@@ -47,7 +46,7 @@ pub fn into_bits_le<E:Engine, CS:ConstraintSystem<E>>(
             };
             
             for i in 0..limit-1 {
-                let s = Signal::alloc(cs.namespace(|| format!("alloc bit {}", i)), || value_bits[i].map(|b| bool2fr(b, E::Fr::one())).grab())?;
+                let s = Signal::alloc(cs.namespace(|| format!("alloc bit {}", i)), value_bits[i].map(|b| bool2fr(b, E::Fr::one())))?;
                 s.assert_bit(cs.namespace(|| format!("assert bit {}", i)))?;
                 remained_signal = remained_signal - &(k * &s);
                 bits.push(s);

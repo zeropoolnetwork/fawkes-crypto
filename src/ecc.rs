@@ -30,6 +30,8 @@ pub struct EdwardsPoint<E:Engine> {
 }
 
 pub trait JubJubParams<E:Engine>: Sized {
+    type Fs: PrimeField;
+
     fn edwards_g(&self) -> &EdwardsPoint<E>;
 
     fn edwards_g8(&self) -> &EdwardsPoint<E>;
@@ -39,6 +41,8 @@ pub trait JubJubParams<E:Engine>: Sized {
     fn montgomery_a(&self) -> &E::Fr;
 
     fn montgomery_b(&self) -> &E::Fr;
+
+    fn edwards_inv_cofactor(&self) -> &Fs;
 }
 
 pub struct JubJubBN256 {
@@ -46,7 +50,8 @@ pub struct JubJubBN256 {
     edwards_g8: EdwardsPoint<Bn256>,
     edwards_d: Fr,
     montgomery_a: Fr,
-    montgomery_b: Fr
+    montgomery_b: Fr,
+    edwards_inv_cofactor: Fs
 }
 
 
@@ -69,12 +74,16 @@ impl JubJubBN256 {
         let montgomery_a = Fr::from_str("168698").unwrap();
         let montgomery_b = Fr::from_str("21888242871839275222246405745257275088548364400416034343698204186575808326917").unwrap();
 
+        
+        let edwards_inv_cofactor = Fs::from_str("2394026564107420727433200628387514462817212225638746351800188703329891451411").unwrap();
+
         Self {
             edwards_g,
             edwards_g8,
             edwards_d,
             montgomery_a,
-            montgomery_b
+            montgomery_b,
+            edwards_inv_cofactor
         }
     }
 }
@@ -82,6 +91,8 @@ impl JubJubBN256 {
 
 
 impl JubJubParams<Bn256> for JubJubBN256 {
+    type Fs = Fs;
+
     fn edwards_g(&self) -> &EdwardsPoint<Bn256> {
         &self.edwards_g
     }
@@ -101,6 +112,10 @@ impl JubJubParams<Bn256> for JubJubBN256 {
 
     fn montgomery_b(&self) -> &Fr {
         &self.montgomery_b
+    }
+
+    fn edwards_inv_cofactor(&self) -> &Fs {
+        &self.edwards_inv_cofactor
     }
 }
 

@@ -174,6 +174,7 @@ impl<'a, E: Engine> Mul<&'a Signal<E>> for E::Fr {
 
 
 
+
 impl <E:Engine> Signal<E> {
     pub fn get_value(&self) -> Option<E::Fr> {
         match self {
@@ -228,21 +229,13 @@ impl <E:Engine> Signal<E> {
     }
 
 
-    pub fn alloc<CS, F>(
+    pub fn alloc<CS: ConstraintSystem<E>>(
         mut cs: CS,
-        value: F,
+        value: Option<E::Fr>,
     ) -> Result<Self, SynthesisError>
-        where CS: ConstraintSystem<E>,
-              F: FnOnce() -> Result<E::Fr, SynthesisError>
     {
-        let mut new_value = None;
-        let var = cs.alloc(|| "num", || {
-            let tmp = value()?;
-            new_value = Some(tmp);
-            Ok(tmp)
-        })?;
-
-        Ok(Self::Variable(new_value, LinearCombination::<E>::zero() + (E::Fr::one(), var)))
+        let var = cs.alloc(|| "num", || value.grab())?;
+        Ok(Self::Variable(value, LinearCombination::<E>::zero() + (E::Fr::one(), var)))
     }
 
     pub fn inputize<CS>(
