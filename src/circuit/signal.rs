@@ -312,8 +312,43 @@ impl <E:Engine> Signal<E> {
             (a, b) => {
                 let a_mul_b = cs.alloc(|| "a mul b", || a_mul_b_value.grab())?;
                 let a_mul_b_lc = LinearCombination::<E>::zero() + a_mul_b;
-                cs.enforce(|| "enforce res = a mul b", |_| a.lc(), |_| b.lc(), |zero| zero + &a_mul_b_lc);
+                cs.enforce(|| "enforce res == a mul b", |_| a.lc(), |_| b.lc(), |zero| zero + &a_mul_b_lc);
                 Self::Variable(a_mul_b_value, a_mul_b_lc)
+            }
+        };
+        Ok(signal)
+    }
+
+    pub fn divide<CS:ConstraintSystem<E>>(&self, mut cs: CS, b: &Self) -> Result<Self, SynthesisError> {
+        let a = self.normalize();
+        let b = b.normalize();
+
+        let b_value = b.get_value();
+        
+        if let Some(t) = b_value {
+            if t.is_zero() {
+                return Err(SynthesisError::DivisionByZero);
+            }
+        }
+
+        let b_inverse_value = b_value.map(|x| x.inverse().unwrap());
+        
+        
+        let a_div_b_value = match (a.get_value(), b_inverse_value) {
+            (Some(mut a), Some(b_inv)) => {a.mul_assign(&b_inv); Some(a)},
+            _ => None
+        };
+
+        let signal = match (a, b) {
+            (Self::Constant(_), Self::Constant(_)) => Self::Constant(a_div_b_value.unwrap()), 
+            (a, Self::Constant(_)) => {
+                Self::Variable(a_div_b_value, LinearCombination::<E>::zero() + (b_inverse_value.unwrap(), &a.lc()))
+            },
+            (a, b) => {
+                let a_div_b = cs.alloc(|| "a mul b", || a_div_b_value.grab())?;
+                let a_div_b_lc = LinearCombination::<E>::zero() + a_div_b;
+                cs.enforce(|| "enforce res * b == a ", |zero| zero + &a_div_b_lc, |_| b.lc(), |_| a.lc());
+                Self::Variable(a_div_b_value, a_div_b_lc)
             }
         };
         Ok(signal)
