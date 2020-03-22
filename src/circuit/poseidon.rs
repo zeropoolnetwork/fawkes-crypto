@@ -70,7 +70,7 @@ pub fn merkle_root<E:Engine, CS:ConstraintSystem<E>>(
     let mut i = 0;
     for (p, s) in path.iter().zip(siblings.iter()) {
         i+=1;
-        let first = &root + &p.multiply(cs.namespace(|| format!("selector i={}", i)), &(s - &root))?;
+        let first = s.switch(cs.namespace(|| format!("selector i={}", i)), p, &root)?; 
         let second = &root + s - &first;
         root = poseidon(cs.namespace(|| format!("node i={}", i)), [first, second].as_ref(), params)?;
     }

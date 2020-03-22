@@ -351,6 +351,34 @@ impl <E:Engine> Signal<E> {
         self.multiply(cs.namespace(|| "multiply self*self"), self)
     }
 
+    pub fn is_zero<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<Self, SynthesisError> {
+        match self {
+            Signal::Constant(c) => {
+                if c.is_zero() {
+                    Ok(Signal::one())
+                } else {
+                    Ok(Signal::zero())
+                }
+            },
+            Signal::Variable(value, _) => {
+                let inv_value = match value {
+                    Some(t) => t.inverse().or(Some(E::Fr::one())),
+                    None => None
+                };
+                let inv_signal = Self::alloc(cs.namespace(|| "alloc inverse value"), inv_value)?;
+                let res_signal = self.multiply(cs.namespace(|| "compute signal*inv_signal"), &inv_signal)?;
+
+                inv_signal.assert_nonzero(cs.namespace(|| "assert inv_signal nonzero"))?;
+                res_signal.assert_bit(cs.namespace(|| "assert res_signal bit"))?;
+                Ok(Signal::one() - &res_signal)
+            }
+        }
+    }
+
+    pub fn switch<CS:ConstraintSystem<E>>(&self, mut cs:CS, bit: &Self, if_else: &Self) -> Result<Self, SynthesisError> {
+        Ok(if_else + &bit.multiply(cs.namespace(|| "compute flag*(if_true-if_false)"), &(self-if_else))?)
+    }
+
 
     pub fn assert_zero<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<(), SynthesisError> {
         match self {
@@ -363,6 +391,27 @@ impl <E:Engine> Signal<E> {
             },
             Signal::Variable(_, _) => {
                 cs.enforce(|| "0*0==self", |zero| zero, |zero| zero, |_| self.lc());
+                Ok(())
+            }
+        }
+    }
+
+    pub fn assert_nonzero<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<(), SynthesisError> {
+        match self {
+            Signal::Constant(c) => {
+                if c.is_zero() {
+                    Err(SynthesisError::Unsatisfiable)
+                } else {
+                    Ok(())
+                }
+            },
+            Signal::Variable(value, _) => {
+                let inv_value = match value {
+                    Some(t) => Some(t.inverse().ok_or(SynthesisError::DivisionByZero)?),
+                    None => None
+                };
+                let inv_signal = Self::alloc(cs.namespace(|| "alloc inverse value"), inv_value)?;
+                cs.enforce(|| "signal*inv_signal==1", |_| self.lc(), |_| inv_signal.lc(), |zero| zero + CS::one());
                 Ok(())
             }
         }
