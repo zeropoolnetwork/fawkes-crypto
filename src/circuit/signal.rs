@@ -14,169 +14,187 @@ use bellman::{
     Index
 };
 
-
 use std::ops::{Add, Sub, Mul, Neg};
 use std::collections::HashMap;
 
 use super::Assignment;
+use crate::wrappedmath::Wrap;
 
 
 
 #[derive(Clone)]
 pub enum Signal<E:Engine> {
-    Variable(Option<E::Fr>, LinearCombination<E>),
-    Constant(E::Fr)
+    Variable(Option<Wrap<E::Fr>>, LinearCombination<E>),
+    Constant(Wrap<E::Fr>)
 }
+
+
+fn _neg<E:Engine>(a:&Signal<E>) -> Signal<E> {
+    match a {
+        &Signal::Constant(a) => Signal::Constant(-a),
+        _ => {
+            let value = a.get_value().map(|x| -x);
+            let lc = LinearCombination::zero() - &a.lc();
+            Signal::Variable(value, lc)
+        }
+    }
+}
+
 
 impl<E: Engine> Neg for Signal<E> {
     type Output = Signal<E>;
-
     fn neg(self) -> Self::Output {
-        match self {
-            Self::Constant(mut a) => {a.negate(); Self::Constant(a)},
-            Self::Variable(mut value, mut lc) => {
-                value = value.map(|mut v| {v.negate(); v});
-                lc = LinearCombination::zero() - &lc;
-                Self::Variable(value, lc)
-            }
-        }
+        _neg(&self)
     }
 }
+
 
 impl<'a, E: Engine> Neg for &'a Signal<E> {
     type Output = Signal<E>;
-
     fn neg(self) -> Self::Output {
-        match self {
-            &Signal::Constant(mut a) => {a.negate(); Signal::Constant(a)},
-            _ => {
-                let mut value = self.get_value();
-                value = value.map(|mut v| {v.negate(); v});
-                let lc = LinearCombination::zero() - &self.lc();
-                Signal::Variable(value, lc)
-            }
-        }
+        _neg(self)
     }
 }
 
+
+
+fn _add<E: Engine>(a: &Signal<E>, b: &Signal<E>) -> Signal<E> {
+    match (a, b) {
+        (&Signal::Constant(a), &Signal::Constant(b)) => Signal::Constant(a+b),
+        _ => {
+            let value = match (a.get_value(), b.get_value()) {
+                (Some(a), Some(b)) => {Some(a+b)},
+                _ => None
+            };
+            let lc = a.lc() + &b.lc();
+            Signal::Variable(value, lc)
+        }
+    }
+}
 
 
 impl<'a, E: Engine> Add<&'a Signal<E>> for Signal<E> {
     type Output = Signal<E>;
-
     fn add(self, other: &'a Signal<E>) -> Self::Output {
-        match (&self, other) {
-            (&Self::Constant(mut a), Self::Constant(b)) => {
-                a.add_assign(b);
-                Self::Constant(a)
-            },
-            _ => {
-                let value = match (self.get_value(), other.get_value()) {
-                    (Some(mut a), Some(b)) => {a.add_assign(&b); Some(a)},
-                    _ => None
-                };
-                let lc = self.lc() + &other.lc();
-                Self::Variable(value, lc)
-            }
-        }
+        _add(&self, other)
     }
 }
-
 
 impl<'a, 'b, E: Engine> Add<&'a Signal<E>> for &'b Signal<E> {
     type Output = Signal<E>;
-
     fn add(self, other: &'a Signal<E>) -> Self::Output {
-        match (self, other) {
-            (&Signal::Constant(mut a), Signal::Constant(b)) => {
-                a.add_assign(b);
-                Signal::Constant(a)
-            },
-            _ => {
-                let value = match (self.get_value(), other.get_value()) {
-                    (Some(mut a), Some(b)) => {a.add_assign(&b); Some(a)},
-                    _ => None
-                };
-                let lc = self.lc() + &other.lc();
-                Signal::Variable(value, lc)
-            }
-        }
+        _add(self, other)
     }
 }
 
+impl<E: Engine> Add<Signal<E>> for Signal<E> {
+    type Output = Signal<E>;
+    fn add(self, other: Signal<E>) -> Self::Output {
+        _add(&self, &other)
+    }
+}
+
+impl<'b, E: Engine> Add<Signal<E>> for &'b Signal<E> {
+    type Output = Signal<E>;
+    fn add(self, other: Signal<E>) -> Self::Output {
+        _add(self, &other)
+    }
+}
+
+
+fn _sub<E: Engine>(a: &Signal<E>, b: &Signal<E>) -> Signal<E> {
+    match (a, b) {
+        (&Signal::Constant(a), &Signal::Constant(b)) => Signal::Constant(a-b),
+        _ => {
+            let value = match (a.get_value(), b.get_value()) {
+                (Some(a), Some(b)) => {Some(a-b)},
+                _ => None
+            };
+            let lc = a.lc() - &b.lc();
+            Signal::Variable(value, lc)
+        }
+    }
+}
 
 impl<'a, E: Engine> Sub<&'a Signal<E>> for Signal<E> {
     type Output = Signal<E>;
-
     fn sub(self, other: &'a Signal<E>) -> Self::Output {
-        match (&self, other) {
-            (&Self::Constant(mut a), Self::Constant(b)) => {
-                a.sub_assign(b);
-                Self::Constant(a)
-            },
-            _ => {
-                let value = match (self.get_value(), other.get_value()) {
-                    (Some(mut a), Some(b)) => {a.sub_assign(&b); Some(a)},
-                    _ => None
-                };
-                let lc = self.lc() - &other.lc();
-                Self::Variable(value, lc)
-            }
-        }
+        _sub(&self, other)
     }
 }
-
 
 impl<'a, 'b, E: Engine> Sub<&'a Signal<E>> for &'b Signal<E> {
     type Output = Signal<E>;
-
     fn sub(self, other: &'a Signal<E>) -> Self::Output {
-        match (self, other) {
-            (&Signal::Constant(mut a), Signal::Constant(b)) => {
-                a.sub_assign(b);
-                Signal::Constant(a)
-            },
-            _ => {
-                let value = match (self.get_value(), other.get_value()) {
-                    (Some(mut a), Some(b)) => {a.sub_assign(&b); Some(a)},
-                    _ => None
-                };
-                let lc = self.lc() - &other.lc();
-                Signal::Variable(value, lc)
-            }
-        }
+        _sub(self, other)
     }
 }
 
-
-impl<'a, E: Engine> Mul<&'a Signal<E>> for E::Fr {
+impl<E: Engine> Sub<Signal<E>> for Signal<E> {
     type Output = Signal<E>;
+    fn sub(self, other: Signal<E>) -> Self::Output {
+        _sub(&self, &other)
+    }
+}
 
-    fn mul(self, other: &'a Signal<E>) -> Self::Output {
-        match other {
-            &Signal::Constant(mut a) => {
-                a.mul_assign(&self);
-                Signal::Constant(a)
-            },
-            _ => {
-                let value = match other.get_value() {
-                    Some(mut a) => {a.mul_assign(&self); Some(a)},
-                    _ => None
-                };
-                let lc = LinearCombination::<E>::zero() + (self, &other.lc());
-                Signal::Variable(value, lc)
-            }
+impl<'b, E: Engine> Sub<Signal<E>> for &'b Signal<E> {
+    type Output = Signal<E>;
+    fn sub(self, other: Signal<E>) -> Self::Output {
+        _sub(self, &other)
+    }
+}
+
+
+fn _mul<E:Engine>(a:Wrap<E::Fr>, b:&Signal<E>) -> Signal<E> {
+    match b {
+        &Signal::Constant(b) => Signal::Constant(a*b),
+        _ => {
+            let value = match b.get_value() {
+                Some(b) => Some(a*b),
+                _ => None
+            };
+            let lc = LinearCombination::<E>::zero() + (a.into_inner(), &b.lc());
+            Signal::Variable(value, lc)
         }
     }
 }
 
+
+impl<'a, E: Engine> Mul<&'a Signal<E>> for Wrap<E::Fr> {
+    type Output = Signal<E>;
+    fn mul(self, other: &'a Signal<E>) -> Self::Output {
+        _mul(self, other)
+    }
+}
+
+impl<E: Engine> Mul<Signal<E>> for Wrap<E::Fr> {
+    type Output = Signal<E>;
+    fn mul(self, other: Signal<E>) -> Self::Output {
+        _mul(self, &other)
+    }
+}
+
+
+impl<'b, E: Engine> Mul<Wrap<E::Fr>> for &'b Signal<E>  {
+    type Output = Signal<E>;
+    fn mul(self, other: Wrap<E::Fr>) -> Self::Output {
+        _mul(other, self)
+    }
+}
+
+impl<E: Engine> Mul<Wrap<E::Fr>> for Signal<E> {
+    type Output = Signal<E>;
+    fn mul(self, other: Wrap<E::Fr>) -> Self::Output {
+        _mul(other, &self)
+    }
+}
 
 
 
 
 
 impl <E:Engine> Signal<E> {
-    pub fn get_value(&self) -> Option<E::Fr> {
+    pub fn get_value(&self) -> Option<Wrap<E::Fr>> {
         match self {
             &Self::Variable(v, _) => v,
             &Self::Constant(v) => Some(v)
@@ -186,16 +204,16 @@ impl <E:Engine> Signal<E> {
     pub fn lc(&self) -> LinearCombination<E> {
         match self {
             Self::Variable(_, lc) => lc.clone(),
-            Self::Constant(v) => LinearCombination::<E>::zero() + (*v, Variable::new_unchecked(Index::Input(0)))
+            Self::Constant(v) => LinearCombination::<E>::zero() + (v.into_inner(), Variable::new_unchecked(Index::Input(0)))
         }
     }
 
     pub fn one() -> Self {
-        Self::Constant(E::Fr::one())
+        Self::Constant(Wrap::one())
     }
 
     pub fn zero() -> Self {
-        Self::Constant(E::Fr::zero())
+        Self::Constant(Wrap::zero())
     }
 
     pub fn normalize(&self) -> Self {
@@ -217,9 +235,9 @@ impl <E:Engine> Signal<E> {
 
 
                 if lc_items.len()==0 {
-                    Self::Constant(E::Fr::zero())
+                    Self::Constant(Wrap::zero())
                 } else if lc_items.len()==1 && lc_items[0].0.get_unchecked() == Index::Input(0) {
-                    Self::Constant(lc_items[0].1)
+                    Self::Constant(Wrap::new(lc_items[0].1))
                 } else {
                     Self::Variable(*value, lc)
                 }
@@ -231,7 +249,7 @@ impl <E:Engine> Signal<E> {
 
     pub fn alloc<CS: ConstraintSystem<E>>(
         mut cs: CS,
-        value: Option<E::Fr>,
+        value: Option<Wrap<E::Fr>>,
     ) -> Result<Self, SynthesisError>
     {
         let var = cs.alloc(|| "num", || value.grab())?;
@@ -262,14 +280,14 @@ impl <E:Engine> Signal<E> {
             &Self::Constant(v) => {
                 let input = cs.alloc_input(
                     || "input variable",
-                    || Ok(v)
+                    || Ok(v.into_inner())
                 )?;
         
                 cs.enforce(
                     || "enforce input is correct",
                     |zero| zero + input,
                     |zero| zero + CS::one(),
-                    |zero| zero + (v, CS::one())
+                    |zero| zero + (v.into_inner(), CS::one())
                 );
                 Ok(())
             }
@@ -282,7 +300,7 @@ impl <E:Engine> Signal<E> {
         
         
         let a_mul_b_value = match (a.get_value(), b.get_value()) {
-            (Some(mut a), Some(b)) => {a.mul_assign(&b); Some(a)},
+            (Some(a), Some(b)) => Some(a*b),
             _ => None
         };
 
@@ -292,14 +310,14 @@ impl <E:Engine> Signal<E> {
                 if a.is_zero() {
                     Self::zero()
                 } else {
-                    Self::Variable(a_mul_b_value, LinearCombination::<E>::zero() + (a, &b.lc()))
+                    Self::Variable(a_mul_b_value, LinearCombination::<E>::zero() + (a.into_inner(), &b.lc()))
                 }
             },  
             (a, Self::Constant(b)) => {
                 if b.is_zero() {
                     Self::zero()
                 } else {
-                    Self::Variable(a_mul_b_value, LinearCombination::<E>::zero() + (b, &a.lc()))
+                    Self::Variable(a_mul_b_value, LinearCombination::<E>::zero() + (b.into_inner(), &a.lc()))
                 }
             },
             (a, b) => {
@@ -328,14 +346,14 @@ impl <E:Engine> Signal<E> {
         
         
         let a_div_b_value = match (a.get_value(), b_inverse_value) {
-            (Some(mut a), Some(b_inv)) => {a.mul_assign(&b_inv); Some(a)},
+            (Some(a), Some(b_inv)) => Some(a*b_inv),
             _ => None
         };
 
         let signal = match (a, b) {
             (Self::Constant(_), Self::Constant(_)) => Self::Constant(a_div_b_value.unwrap()), 
             (a, Self::Constant(_)) => {
-                Self::Variable(a_div_b_value, LinearCombination::<E>::zero() + (b_inverse_value.unwrap(), &a.lc()))
+                Self::Variable(a_div_b_value, LinearCombination::<E>::zero() + (b_inverse_value.unwrap().into_inner(), &a.lc()))
             },
             (a, b) => {
                 let a_div_b = cs.alloc(|| "a mul b", || a_div_b_value.grab())?;
@@ -362,7 +380,7 @@ impl <E:Engine> Signal<E> {
             },
             Signal::Variable(value, _) => {
                 let inv_value = match value {
-                    Some(t) => t.inverse().or(Some(E::Fr::one())),
+                    Some(t) => t.inverse().or(Some(Wrap::one())),
                     None => None
                 };
                 let inv_signal = Self::alloc(cs.namespace(|| "alloc inverse value"), inv_value)?;
@@ -376,7 +394,22 @@ impl <E:Engine> Signal<E> {
     }
 
     pub fn switch<CS:ConstraintSystem<E>>(&self, mut cs:CS, bit: &Self, if_else: &Self) -> Result<Self, SynthesisError> {
-        Ok(if_else + &bit.multiply(cs.namespace(|| "compute flag*(if_true-if_false)"), &(self-if_else))?)
+        match bit {
+            &Signal::Constant(b) => {
+                if b == Wrap::one() {
+                    Ok(self.clone())
+                } else {
+                    if b.is_zero() {
+                        Ok(if_else.clone())
+                    }
+                    else {
+                        Err(SynthesisError::Unsatisfiable)
+                    }
+                }
+            },
+            Signal::Variable(_, _) => Ok(if_else + &bit.multiply(cs.namespace(|| "compute flag*(if_ok-if_else)"), &(self-if_else))?)
+        }
+        
     }
 
 
@@ -419,16 +452,12 @@ impl <E:Engine> Signal<E> {
 
     pub fn assert_bit<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<(), SynthesisError> {
         match self {
-            Signal::Constant(c) => {
-                let mut r = c.clone();
-                r.sub_assign(&E::Fr::one());
-                r.mul_assign(&c);
-                if r.is_zero() {
+            &Signal::Constant(c) => {
+                if c.is_zero() || c == Wrap::one() {
                     Ok(())
                 } else {
                     Err(SynthesisError::Unsatisfiable)
                 }
-                
             },
             Signal::Variable(_, _) => {
                 cs.enforce(|| "self*(self-1)==self", |_| self.lc(), |_| self.lc() - (E::Fr::one(), CS::one()), |zero| zero);

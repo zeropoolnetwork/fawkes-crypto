@@ -10,11 +10,11 @@ use bellman::pairing::{
 
 use super::signal::Signal;
 use crate::poseidon::PoseidonParams;
+use crate::wrappedmath::Wrap;
 
 
-
-fn ark<E:Engine>(state: &mut[Signal<E>], c:&E::Fr) {
-    state.iter_mut().for_each(|e| *e = e.clone() + &Signal::Constant(*c));
+fn ark<E:Engine>(state: &mut[Signal<E>], c:Wrap<E::Fr>) {
+    state.iter_mut().for_each(|e| *e = e.clone() + &Signal::Constant(c));
 }
 
 fn sigma<E:Engine, CS:ConstraintSystem<E>>(mut cs:CS, a:&Signal<E>) -> Result<Signal<E>, SynthesisError> {
@@ -28,7 +28,7 @@ fn mix<E:Engine>(state: &mut[Signal<E>], params:&PoseidonParams<E::Fr>) {
     let mut new_state = vec![Signal::zero(); statelen];
     for i in 0..statelen {
         for j in 0..statelen {
-            new_state[i] = &new_state[i] + &(params.m[i][j] * &state[j]);
+            new_state[i] = &new_state[i] + params.m[i][j] * &state[j];
         }
     }
     state.clone_from_slice(&new_state);
@@ -45,7 +45,7 @@ pub fn poseidon<E:Engine, CS:ConstraintSystem<E>>(mut cs:CS, inputs:&[Signal<E>]
     let half_f = params.f>>1;
 
     for i in 0..params.f+params.p {
-        ark(&mut state, &params.c[i]);
+        ark(&mut state, params.c[i]);
         if i < half_f || i >= half_f + params.p {
             for j in 0..params.t {
                 state[j] = sigma(cs.namespace(|| format!("sigma i={}, j={}", i, j)), &state[j])?;

@@ -7,9 +7,6 @@ use bellman::pairing::{
     Engine
 };
 
-use ff::{
-    PrimeField
-};
 
 
 use super::signal::Signal;
@@ -49,8 +46,8 @@ impl<E:Engine> EdwardsPoint<E> {
         let v = self.x.multiply(cs.namespace(|| "xy"), &self.y)?;
         let v2 = v.square(cs.namespace(|| "x^2 y^2"))?;
         let u = (&self.x+&self.y).square(cs.namespace(|| "(x+y)^2"))?;
-        let new_x = (&v+&v).divide(cs.namespace(|| "compute point.x"), &(Signal::one() +  &(params.edwards_d().clone()*&v2)))?;
-        let new_y = (&u-&v-&v).divide(cs.namespace(|| "compute point.x"), &(Signal::one() -  &(params.edwards_d().clone()*&v2)))?;
+        let new_x = (&v+&v).divide(cs.namespace(|| "compute point.x"), &(Signal::one() +  params.edwards_d()*&v2))?;
+        let new_y = (&u-&v-&v).divide(cs.namespace(|| "compute point.x"), &(Signal::one() -  params.edwards_d()*&v2))?;
         Ok(Self {x: new_x, y: new_y})
     }
 
@@ -68,15 +65,15 @@ impl<E:Engine> EdwardsPoint<E> {
         let v2 = p.x.multiply(cs.namespace(|| "x2y1"), &self.y)?;
         let v12 = v1.multiply(cs.namespace(|| "x1y2x2y1"), &v2)?;
         let u = (&self.x+&self.y).multiply(cs.namespace(|| "(x1+y1)*(x2+y2)"), &(&p.x+&p.y))?;
-        let new_x = (&v1+&v2).divide(cs.namespace(|| "compute point.x"), &(Signal::one() +  &(params.edwards_d().clone()*&v12)))?;
-        let new_y = (&u-&v1-&v2).divide(cs.namespace(|| "compute point.x"), &(Signal::one() -  &(params.edwards_d().clone()*&v12)))?;
+        let new_x = (&v1+&v2).divide(cs.namespace(|| "compute point.x"), &(Signal::one() +  params.edwards_d()*&v12))?;
+        let new_y = (&u-&v1-&v2).divide(cs.namespace(|| "compute point.x"), &(Signal::one() -  params.edwards_d()*&v12))?;
         Ok(Self {x: new_x, y: new_y})
     }
 
     pub fn assert_in_curve<CS:ConstraintSystem<E>, J:JubJubParams<E>>(&self, mut cs:CS, params: &J) -> Result<(), SynthesisError> {
         let x2 = self.x.square(cs.namespace(|| "x^2"))?;
         let y2 = self.y.square(cs.namespace(|| "y^2"))?;
-        cs.enforce(|| "point should be on curve", |_| y2.lc(), |zero| zero + CS::one() - (params.edwards_d().clone(), &y2.lc()), |zero| zero + CS::one() + &x2.lc());
+        cs.enforce(|| "point should be on curve", |_| y2.lc(), |zero| zero + CS::one() - (params.edwards_d().into_inner(), &y2.lc()), |zero| zero + CS::one() + &x2.lc());
         Ok(())
     }
 
@@ -100,7 +97,7 @@ impl<E:Engine> EdwardsPoint<E> {
 
     // assume nonzero subgroup point
     pub fn into_montgomery<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<MontgomeryPoint<E>, SynthesisError> {
-        let x = (&Signal::one() + &self.y).divide(cs.namespace(|| "compute montgomery x"), &(&Signal::one() - &self.y))?;
+        let x = (&Signal::one() + &self.y).divide(cs.namespace(|| "compute montgomery x"), &(Signal::one() - &self.y))?;
         let y = x.divide(cs.namespace(|| "compute montgomery y"), &self.x)?;
         Ok(MontgomeryPoint {x, y})
     }
@@ -113,39 +110,43 @@ impl<E:Engine> EdwardsPoint<E> {
 
     // assume subgroup point, bits
     pub fn multiply<CS:ConstraintSystem<E>, J:JubJubParams<E>>(&self, mut cs:CS, bits:&[Signal<E>], params: &J) -> Result<Self, SynthesisError> {
+        match (&self.x, &self.y) {
+            (&Signal::Constant(x), &Signal::Constant(y)) => {
+                Err(SynthesisError::AssignmentMissing)
+            },
+            _ => {
+                let base_is_zero = self.x.is_zero(cs.namespace(|| "check is base zero"))?;
 
-
-        let base_is_zero = self.x.is_zero(cs.namespace(|| "check is base zero"))?;
+                let g8 = params.edwards_g8();
+                let dummy_point = EdwardsPoint {x: Signal::Constant(g8.x), y: Signal::Constant(g8.y)};
         
-        let g8 = params.edwards_g8();
-        let dummy_point = EdwardsPoint {x: Signal::Constant(g8.x), y: Signal::Constant(g8.y)};
-
-        let base_point = dummy_point.switch(cs.namespace(|| "optional switch point to dummy"), &base_is_zero, self)?;
-        let mut base_point = base_point.into_montgomery(cs.namespace(|| "convert point to montgomery"))?;
-
-        let mut exponents = vec![base_point.clone()];
-
-        for i in 1..bits.len() {
-            base_point = base_point.double(cs.namespace(|| format!("{}th doubling", i)), params)?;
-            exponents.push(base_point.clone());
+                let base_point = dummy_point.switch(cs.namespace(|| "optional switch point to dummy"), &base_is_zero, self)?;
+                let mut base_point = base_point.into_montgomery(cs.namespace(|| "convert point to montgomery"))?;
+        
+                let mut exponents = vec![base_point.clone()];
+        
+                for i in 1..bits.len() {
+                    base_point = base_point.double(cs.namespace(|| format!("{}th doubling", i)), params)?;
+                    exponents.push(base_point.clone());
+                }
+        
+                let empty_acc = MontgomeryPoint {x:Signal::zero(), y:Signal::zero()};
+                let mut acc = empty_acc.clone();
+        
+                for i in 0..bits.len() {
+                    let inc_acc = acc.add(cs.namespace(|| format!("{}th addition", i)), &exponents[i], params)?;
+                    acc = inc_acc.switch(cs.namespace(|| format!("{}th switch", i)), &bits[i], &acc)?;
+                }
+        
+                acc = empty_acc.switch(cs.namespace(|| "optional switch acc to empty"), &base_is_zero, &acc)?;
+        
+                let res = acc.into_edwards(cs.namespace(|| "convert point to edwards"))?;
+        
+                // reduce the accumulator to (0, -1) point in edwards representation
+                Ok(EdwardsPoint {x:-res.x, y:-res.y})
+            }
         }
-
-        let empty_acc = MontgomeryPoint {x:Signal::zero(), y:Signal::zero()};
-        let mut acc = empty_acc.clone();
-
-        for i in 0..bits.len() {
-            let inc_acc = acc.add(cs.namespace(|| format!("{}th addition", i)), &exponents[i], params)?;
-            acc = inc_acc.switch(cs.namespace(|| format!("{}th switch", i)), &bits[i], &acc)?;
-        }
-
-        acc = empty_acc.switch(cs.namespace(|| "optional switch acc to empty"), &base_is_zero, &acc)?;
-
-        let res = acc.into_edwards(cs.namespace(|| "convert point to edwards"))?;
-
-        // reduce the accumulator to (0, -1) point in edwards representation
-        Ok(EdwardsPoint {x:-res.x, y:-res.y})
     }
-
 }
 
 
