@@ -2,7 +2,7 @@ pub mod signal;
 pub mod bitify;
 pub mod poseidon;
 pub mod ecc;
-//pub mod mux;
+pub mod mux;
 
 use bellman::{
     SynthesisError

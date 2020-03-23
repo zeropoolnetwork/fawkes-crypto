@@ -32,8 +32,7 @@ fn ark<F:PrimeField>(state: &mut[Wrap<F>], c:Wrap<F>) {
 }
 
 fn sigma<F:PrimeField>(a: Wrap<F>) -> Wrap<F> {
-    let t = a*a;
-    t*t*a
+    a.square().square()*a
 }
 
 fn mix<F:PrimeField>(state: &mut[Wrap<F>], params:&PoseidonParams<F>) {

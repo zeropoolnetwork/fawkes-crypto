@@ -112,6 +112,7 @@ impl<E:Engine> EdwardsPoint<E> {
     pub fn multiply<CS:ConstraintSystem<E>, J:JubJubParams<E>>(&self, mut cs:CS, bits:&[Signal<E>], params: &J) -> Result<Self, SynthesisError> {
         match (&self.x, &self.y) {
             (&Signal::Constant(x), &Signal::Constant(y)) => {
+                //TODO implement constant exponentiation
                 Err(SynthesisError::AssignmentMissing)
             },
             _ => {
