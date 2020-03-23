@@ -28,6 +28,9 @@ pub enum Signal<E:Engine> {
     Constant(Wrap<E::Fr>)
 }
 
+pub fn enforce<E:Engine, CS:ConstraintSystem<E>>(mut cs:CS, a:&Signal<E>, b:&Signal<E>, c:&Signal<E>) {
+    cs.enforce(|| "enforce", |_| a.lc(), |_| b.lc(), |_| c.lc());
+}
 
 fn _neg<E:Engine>(a:&Signal<E>) -> Signal<E> {
     match a {

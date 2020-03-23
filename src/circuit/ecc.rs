@@ -101,6 +101,23 @@ impl<E:Engine> EdwardsPoint<E> {
         Ok(())
     }
 
+    pub fn subgroup_decompress<CS:ConstraintSystem<E>, J:JubJubParams<E>>(mut cs:CS, x:&Signal<E>, params: &J) -> Result<Self, SynthesisError> {
+        let preimage_value = match x.get_value() {
+            Some(x) => {
+                let p = crate::ecc::EdwardsPoint::subgroup_decompress(x, params).ok_or(SynthesisError::Unsatisfiable)?;
+                Some(p.mul(params.edwards_inv_cofactor().into_repr(), params))
+            },
+            _ => None
+        };
+
+        let preimage = EdwardsPoint::alloc(cs.namespace(|| "alloc preimage point"), preimage_value)?;
+        let preimage8 = preimage.mul_cofactor(cs.namespace(|| "8*preimage"), params)?;
+
+        (x - &preimage8.x).assert_zero(cs.namespace(|| "assert x equality"))?;
+        
+        Ok(preimage8)
+    }
+
     // assume nonzero subgroup point
     pub fn into_montgomery<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<MontgomeryPoint<E>, SynthesisError> {
         let x = (&Signal::one() + &self.y).divide(cs.namespace(|| "compute montgomery x"), &(Signal::one() - &self.y))?;
