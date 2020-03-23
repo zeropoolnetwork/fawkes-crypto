@@ -11,6 +11,9 @@ use bellman::{
 use super::signal::Signal;
 use crate::wrappedmath::Wrap;
 
+
+// this method is described here https://iden3.readthedocs.io/en/latest/iden3_repos/research/publications/zkproof-standards-workshop-2/pedersen-hash/pedersen.html
+
 pub fn mux3<E:Engine, CS:ConstraintSystem<E>>(mut cs:CS, s:&[Signal<E>], c:&[Vec<Wrap<E::Fr>>]) -> Result<Vec<Signal<E>>, SynthesisError> {
     assert!(s.len()==3, "should be 3 bits");
     for i in 0..c.len() {
