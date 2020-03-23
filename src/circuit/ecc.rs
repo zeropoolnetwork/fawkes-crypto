@@ -120,7 +120,7 @@ impl<E:Engine> EdwardsPoint<E> {
             let mut x_col = vec![];
             let mut y_col = vec![];
             let mut q = p.clone();
-            for _ in 0..16 {
+            for _ in 0..8 {
                 let (x, y) = q.into_montgomery_xy().unwrap();
                 x_col.push(x);
                 y_col.push(y);
@@ -139,7 +139,7 @@ impl<E:Engine> EdwardsPoint<E> {
                     let zeros_len = (3 - (bits_len % 3))%3;
                     let zero_bits = vec![Signal::zero(); zeros_len];
                     let all_bits = [bits, &zero_bits].concat();
-                    
+
                     let all_bits_len = all_bits.len();
                     let nwindows = all_bits_len / 3;
 
