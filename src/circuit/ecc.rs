@@ -8,9 +8,10 @@ use bellman::pairing::{
 };
 
 
-
 use super::signal::Signal;
 use crate::ecc::{JubJubParams};
+use crate::wrappedmath::Wrap;
+use crate::circuit::mux::mux3;
 
 #[derive(Clone)]
 pub struct EdwardsPoint<E:Engine> {
@@ -39,6 +40,11 @@ impl<E:Engine> EdwardsPoint<E> {
         let x = Signal::alloc(cs.namespace(|| "alloc x"), x_value)?;
         let y = Signal::alloc(cs.namespace(|| "alloc y"), y_value)?;
         Ok(Self {x, y})
+    }
+
+    pub fn constant(p: crate::ecc::EdwardsPoint<E>) -> Self {
+        let (x, y) = p.into_xy();
+        Self {x: Signal::Constant(x), y: Signal::Constant(y)}
     }
 
 
@@ -110,10 +116,57 @@ impl<E:Engine> EdwardsPoint<E> {
 
     // assume subgroup point, bits
     pub fn multiply<CS:ConstraintSystem<E>, J:JubJubParams<E>>(&self, mut cs:CS, bits:&[Signal<E>], params: &J) -> Result<Self, SynthesisError> {
-        match (&self.x, &self.y) {
+        fn gen_table<E:Engine, J:JubJubParams<E>>(p: &crate::ecc::EdwardsPoint<E>, params: &J) -> Vec<Vec<Wrap<E::Fr>>> {
+            let mut x_col = vec![];
+            let mut y_col = vec![];
+            let mut q = p.clone();
+            for _ in 0..16 {
+                let (x, y) = q.into_montgomery_xy().unwrap();
+                x_col.push(x);
+                y_col.push(y);
+                q = q.add(&p, params);
+            }
+            vec![x_col, y_col]
+        }
+        
+        match (&self.x, &self.y) {        
             (&Signal::Constant(x), &Signal::Constant(y)) => {
-                //TODO implement constant exponentiation
-                Err(SynthesisError::AssignmentMissing)
+                let mut base = crate::ecc::EdwardsPoint::from_xy_unchecked(x, y);
+                if base.is_zero() {
+                    Ok(EdwardsPoint {x: Signal::zero(), y: Signal::one()})
+                } else {
+                    let bits_len = bits.len();
+                    let zeros_len = (3 - (bits_len % 3))%3;
+                    let zero_bits = vec![Signal::zero(); zeros_len];
+                    let all_bits = [bits, &zero_bits].concat();
+                    
+                    let all_bits_len = all_bits.len();
+                    let nwindows = all_bits_len / 3;
+
+                    let mut acc = crate::ecc::EdwardsPoint::from_xy_unchecked(Wrap::zero(), Wrap::minusone());
+                    
+                    for _ in 0..nwindows {
+                        acc = acc.add(&base, params);
+                        base = base.double().double().double();
+                    }
+
+                    let (m_x, m_y) = acc.negate().into_montgomery_xy().ok_or(SynthesisError::DivisionByZero)?;
+
+                    let mut acc = MontgomeryPoint {x: Signal::Constant(m_x), y: Signal::Constant(m_y)};
+                    let mut base = crate::ecc::EdwardsPoint::from_xy_unchecked(x, y);
+
+        
+                    for i in 0..nwindows {
+                        let table = gen_table(&base, params);
+                        let res = mux3(cs.namespace(|| format!("{}th mux3", i)), &bits[3*i..3*(i+1)], &table)?;
+                        let p = MontgomeryPoint {x: res[0].clone(), y: res[1].clone()};
+                        acc = acc.add(cs.namespace(|| format!("{}th adder", i)), &p, params)?;
+                        base = base.double().double().double();
+                    }
+                    
+                    let res = acc.into_edwards(cs.namespace(|| "convert point to edwards"))?;
+                    Ok(EdwardsPoint {x:-res.x, y:-res.y})
+                }
             },
             _ => {
                 let base_is_zero = self.x.is_zero(cs.namespace(|| "check is base zero"))?;
@@ -142,8 +195,6 @@ impl<E:Engine> EdwardsPoint<E> {
                 acc = empty_acc.switch(cs.namespace(|| "optional switch acc to empty"), &base_is_zero, &acc)?;
         
                 let res = acc.into_edwards(cs.namespace(|| "convert point to edwards"))?;
-        
-                // reduce the accumulator to (0, -1) point in edwards representation
                 Ok(EdwardsPoint {x:-res.x, y:-res.y})
             }
         }
