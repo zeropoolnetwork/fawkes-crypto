@@ -1,12 +1,13 @@
 use ff::{
     Field,
     PrimeField,
+    PrimeFieldRepr,
     SqrtField
 };
 
 use rand::{Rand, Rng};
 use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssign};
-
+use num::bigint::{BigUint};
 
 #[derive(Copy, Clone)]
 pub struct Wrap<T:Field>(pub T);
@@ -67,8 +68,41 @@ impl<T:SqrtField> Wrap<T> {
 }
 
 impl<T:PrimeField> Wrap<T> {
+    fn num_bytes() -> usize {
+        ((T::NUM_BITS >> 3) + if T::NUM_BITS & 7 == 0 { 0 } else { 1 }) as usize
+    }
+
     pub fn into_repr(&self) -> T::Repr {
         self.0.into_repr()
+    }
+
+    pub fn into_binary_be(&self) -> Vec<u8> {
+        let t_bytes = Self::num_bytes();
+        let mut buff = vec![0u8;t_bytes];
+        self.into_repr().write_be(&mut buff[..]).unwrap();
+        buff
+    }
+
+    pub fn from_binary_be(blob: &[u8]) -> Self {        
+        let t_bytes = Self::num_bytes();
+        let mut order = vec![0u8;t_bytes];
+        T::char().write_be(&mut order[..]).unwrap();
+        let order = BigUint::from_bytes_be(order.as_ref());
+        let x = BigUint::from_bytes_be(blob);
+        let remainder = (x % order).to_bytes_be();
+        
+        let mut rem_buff = vec![0u8;t_bytes];
+        rem_buff[t_bytes-remainder.len()..].clone_from_slice(&remainder);
+        let mut repr = T::zero().into_raw_repr();
+        repr.read_be(&rem_buff[..]).unwrap();
+        Wrap(T::from_repr(repr).unwrap())
+    }
+
+    pub fn from_other<G:PrimeField>(n: Wrap<G>) -> Self {
+        let g_bytes = Wrap::<G>::num_bytes();
+        let mut buff = vec![0u8;g_bytes];
+        n.0.into_repr().write_be(&mut buff[..]).unwrap();
+        Self::from_binary_be(buff.as_ref())
     }
 }
 
@@ -81,11 +115,13 @@ impl<T:Field> PartialEq for Wrap<T> {
 
 impl<T:PrimeField> From<u64> for Wrap<T> {
     fn from(n: u64) -> Self {
-        let mut repr = T::zero().into_repr();
+        let mut repr = T::zero().into_raw_repr();
         repr.as_mut()[0] = n;
         Wrap::new(T::from_repr(repr).unwrap())
     }
 }
+
+
 
 impl<T:PrimeField> From<bool> for Wrap<T> {
     fn from(b: bool) -> Self {
@@ -107,7 +143,7 @@ impl<T:PrimeField> From<&str> for Wrap<T> {
 
 impl<T:PrimeField> From<i64> for Wrap<T> {
     fn from(n: i64) -> Self {
-        let mut repr = T::zero().into_repr();
+        let mut repr = T::zero().into_raw_repr();
         repr.as_mut()[0] = n.abs() as u64;
         if n >= 0 {
             Wrap::new(T::from_repr(repr).unwrap())

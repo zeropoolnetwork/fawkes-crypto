@@ -220,13 +220,13 @@ impl<E:Engine> MontgomeryPoint<E> {
     // assume self != (0, 0)
     pub fn double<CS:ConstraintSystem<E>, J:JubJubParams<E>>(&self, mut cs:CS, params: &J) -> Result<Self, SynthesisError> {
         let x2 = self.x.square(cs.namespace(|| "compute x^2"))?;
-        let ax = params.montgomery_a().clone() * &self.x;
-        let by = params.montgomery_b().clone() * &self.y;
+        let ax = params.montgomery_a() * &self.x;
+        let by = params.montgomery_b() * &self.y;
 
         let l = (&x2 + &x2 + &x2 + &ax + &ax + &Signal::one()).divide(cs.namespace(|| "compute (3 x^2 + 2 a x + 1)/(2 b y)"), &(&by + &by))?;
         
-        let b_l2 = params.montgomery_b().clone()*&l.square(cs.namespace(|| "compute l^2"))?;
-        let a = Signal::Constant(params.montgomery_a().clone());
+        let b_l2 = params.montgomery_b()*&l.square(cs.namespace(|| "compute l^2"))?;
+        let a = Signal::Constant(params.montgomery_a());
     
         let x = &b_l2 - &a - &self.x - &self.x;
         let y = l.multiply(cs.namespace(|| "compute (3 x + A - B*l^2)*l"), &(&self.x + &self.x + &self.x + &a - &b_l2))? - &self.y;
@@ -237,8 +237,8 @@ impl<E:Engine> MontgomeryPoint<E> {
     // assume self != p
     pub fn add<CS:ConstraintSystem<E>, J:JubJubParams<E>>(&self, mut cs:CS, p: &Self, params: &J) -> Result<Self, SynthesisError> {
         let l = (&p.y - &self.y).divide(cs.namespace(|| "compute l"), &(&p.x - &self.x))?;
-        let b_l2 = params.montgomery_b().clone()*&l.square(cs.namespace(|| "compute l^2"))?;
-        let a = Signal::Constant(params.montgomery_a().clone());
+        let b_l2 = params.montgomery_b()*&l.square(cs.namespace(|| "compute l^2"))?;
+        let a = Signal::Constant(params.montgomery_a());
     
         let x = &b_l2 - &a - &self.x - &p.x;
         let y = l.multiply(cs.namespace(|| "compute (2 x1 + x2 + A - B*l^2)*l"), &(&self.x + &self.x + &self.x + &a - &b_l2))? - &self.y;

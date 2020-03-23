@@ -155,10 +155,6 @@ impl <E:Engine> EdwardsPoint<E> {
 
     pub fn get_for_y<J: JubJubParams<E>>(y: Wrap<E::Fr>, sign: bool, params: &J) -> Option<Self>
     {
-        // Given a y on the curve, x^2 = (y^2 - 1) / (dy^2 + 1)
-        // This is defined for all valid y-coordinates,
-        // as dy^2 + 1 = 0 has no solution in Fr.
-
         let y2 = y.square();
         
         ((y2 - Wrap::one()) / (params.edwards_d()*y2 + Wrap::one())).sqrt().map(|x| {
@@ -169,6 +165,28 @@ impl <E:Engine> EdwardsPoint<E> {
             }
         })
     }
+
+    pub fn subgroup_decompress<J: JubJubParams<E>>(x: Wrap<E::Fr>, params: &J) -> Option<Self>
+    {
+        let x2 = x.square();
+        let t = ((x2 + Wrap::one()) / (Wrap::one() - params.edwards_d()*x2 )).sqrt();
+        match t {
+            Some(y) => {
+                let (lx, ly) = Self::from_xy_unchecked(x, y).mul(J::Fs::char(), params).into_xy();
+                if lx.is_zero() {
+                    if ly == Wrap::one() {
+                        Some(Self::from_xy_unchecked(x, y))
+                    } else {
+                        Some(Self::from_xy_unchecked(x, -y))
+                    }
+                } else {
+                    None
+                }
+            },
+            None => None
+        }
+    }
+
 
     // compress point into single E::Fr and a sign bit
     pub fn compress_into_y(&self) -> (Wrap<E::Fr>, bool)
@@ -301,6 +319,10 @@ impl <E:Engine> EdwardsPoint<E> {
         let z3 = f*g;
 
         EdwardsPoint {x: x3, y: y3, t: t3, z: z3}
+    }
+
+    pub fn is_in_subgroup<J:JubJubParams<E>>(&self, params: &J) -> bool {
+        self.mul(J::Fs::char(), params).is_zero()
     }
 
 

@@ -11,6 +11,7 @@ crate-type = ["cdylib", "lib", "staticlib"]
 blake2-rfc = {git = "https://github.com/gtank/blake2-rfc", rev = "7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"}
 rand = "0.4"
 byteorder = "1"
+num = "0.2.1"
 
 [dependencies.bellman]
 version = "0.3.1"
