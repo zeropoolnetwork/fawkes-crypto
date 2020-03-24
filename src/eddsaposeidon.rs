@@ -91,7 +91,7 @@ mod eddsaposeidon_test {
         let poseidon_params = PoseidonParams::<Fr>::new(4, 8, 54);
         let jubjub_params = JubJubBN256::new();
 
-        const SAMPLES: usize = 100;
+        const SAMPLES: usize = 20;
         for _ in 0..SAMPLES {
             let sk = rng.gen();
             let m = rng.gen();

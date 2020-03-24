@@ -345,8 +345,33 @@ impl <E:Engine> EdwardsPoint<E> {
         }
         res
     }
+}
 
 
+#[cfg(test)]
+mod ecc_test {
+    use super::*;
 
-    
+    use rand::Rng;
+    use bellman::pairing::bn256::{Fr};
+
+    use crate::seedbox::{SeedboxBlake2};
+
+    #[test]
+    fn jubjubbn256() {
+        let mut rng = SeedboxBlake2::new_with_salt(b"faw_test", b"jubjubbn256");
+        let jubjub_params = JubJubBN256::new();
+
+        assert!(!jubjub_params.edwards_g().is_in_subgroup(&jubjub_params), "generator should be not in subgroup");        
+        assert!(jubjub_params.edwards_g8().is_in_subgroup(&jubjub_params), "subgroup generator should be in subgroup");
+
+        const SAMPLES: usize = 20;
+        for _ in 0..SAMPLES {
+            let s:Wrap<Fs> = rng.gen();
+            let p = jubjub_params.edwards_g8().mul(s.into_repr(), &jubjub_params);
+            assert!(p.is_in_subgroup(&jubjub_params), "point should be in subgroup");
+        }
+    }
+
+
 }

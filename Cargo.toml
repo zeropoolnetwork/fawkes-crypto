@@ -26,3 +26,7 @@ package = "ff_ce"
 [dependencies.pairing]
 version = "0.18.0"
 package = "pairing_ce"
+
+[dev-dependencies.sapling-crypto]
+version = "0.1.2"
+package = "sapling-crypto_ce" 
