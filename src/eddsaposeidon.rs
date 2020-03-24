@@ -18,7 +18,7 @@ fn hash_r<Fr:PrimeField, Fs:PrimeField>(
     sk: Wrap<Fs>,
     m: Wrap<Fr>,
 ) -> Wrap<Fs> {
-    let mut h = Blake2s::with_params(32, &[], &[], b"fawkes eddsa R");
+    let mut h = Blake2s::with_params(32, &[], &[], b"faw_eddR");
     h.update(sk.into_binary_be().as_ref());
     h.update(m.into_binary_be().as_ref());
     Wrap::<Fs>::from_binary_be(h.finalize().as_ref())
@@ -70,4 +70,37 @@ pub fn eddsaposeidon_verify<E: Engine, J:JubJubParams<E>>(
     let ha_plus_r = ha.add(&p_r, jubjub_params);
 
     sb == ha_plus_r
+}
+
+#[cfg(test)]
+mod eddsaposeidon_test {
+    use super::*;
+
+    use rand::Rng;
+    use bellman::pairing::bn256::{Fr};
+
+    use crate::seedbox::{SeedboxBlake2};
+    use crate::ecc::{JubJubBN256};
+
+
+
+
+    #[test]
+    fn eddsaposeidon() {
+        let mut rng = SeedboxBlake2::new_with_salt(b"faw_test", b"eddsaposeidon");
+        let poseidon_params = PoseidonParams::<Fr>::new(4, 8, 54);
+        let jubjub_params = JubJubBN256::new();
+
+        const SAMPLES: usize = 100;
+        for _ in 0..SAMPLES {
+            let sk = rng.gen();
+            let m = rng.gen();
+            let (s, r) = eddsaposeidon_sign(sk, m, &poseidon_params, &jubjub_params);
+            let a = jubjub_params.edwards_g8().mul(sk.into_repr(), &jubjub_params).into_xy().0;
+            assert!(eddsaposeidon_verify(s, r, a, m, &poseidon_params, &jubjub_params), "signature should be valid")
+        }
+    }
+
+
+
 }

@@ -5,6 +5,7 @@ use rand::Rng;
 
 pub struct SeedboxBlake2{
     personalization: Vec<u8>,
+    salt: Vec<u8>,
     n_iter: u64,
     n_limb: usize,
     buff: [u8;32]
@@ -14,6 +15,17 @@ impl SeedboxBlake2 {
     pub fn new(personalization: &[u8]) -> Self {
         SeedboxBlake2 {
             personalization: personalization.to_vec(),
+            salt: vec![],
+            n_iter: 0,
+            n_limb: 8,
+            buff: [0;32]
+        }
+    }
+
+    pub fn new_with_salt(personalization: &[u8], salt: &[u8]) -> Self {
+        SeedboxBlake2 {
+            personalization: personalization.to_vec(),
+            salt: salt.to_vec(),
             n_iter: 0,
             n_limb: 8,
             buff: [0;32]
@@ -30,6 +42,9 @@ impl Rng for SeedboxBlake2 {
             n_iter_bin.as_mut().write_u64::<LittleEndian>(self.n_iter).unwrap();
             self.n_iter += 1;
             h.update(n_iter_bin.as_ref());
+            if self.salt.len()>0 {
+                h.update(self.salt.as_ref());
+            }
             self.buff.as_mut().clone_from_slice(h.finalize().as_ref())
         }
         
@@ -37,5 +52,19 @@ impl Rng for SeedboxBlake2 {
         self.n_limb+=1;
         res
         
+    }
+}
+
+#[cfg(test)]
+mod seedbox_test {
+    use super::*;
+
+    #[test]
+    fn seedbox_blake2() {
+        let mut rng = SeedboxBlake2::new_with_salt(b"faw_test", b"seedbox_blake2");
+        let a: u64 = rng.gen();
+        let b: u64 = rng.gen();
+
+        assert!(a!=b, "values should be different");
     }
 }

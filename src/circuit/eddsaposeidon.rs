@@ -28,7 +28,7 @@ pub fn eddsaposeidon_verify<E: Engine, J:JubJubParams<E>, CS:ConstraintSystem<E>
     poseidon_params: &PoseidonParams<E::Fr>,
     jubjub_params:&J
 ) -> Result<Signal<E>, SynthesisError> {
-    assert!(E::Fr::NUM_BITS > J::Fs::NUM_BITS, "jubjub field should be lesser than pairing field");
+    assert!(E::Fr::NUM_BITS > J::Fs::NUM_BITS, "jubjub field should be lesser than snark field");
     
     let p_a = EdwardsPoint::subgroup_decompress(cs.namespace(|| "decompress A"), a, jubjub_params)?;
     let p_r = EdwardsPoint::subgroup_decompress(cs.namespace(|| "decompress R"), r, jubjub_params)?;
