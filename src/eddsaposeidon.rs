@@ -76,10 +76,9 @@ pub fn eddsaposeidon_verify<E: Engine, J:JubJubParams<E>>(
 mod eddsaposeidon_test {
     use super::*;
 
-    use rand::Rng;
+    use rand::{Rng, thread_rng};
     use bellman::pairing::bn256::{Fr};
 
-    use crate::seedbox::{SeedboxBlake2};
     use crate::ecc::{JubJubBN256};
 
 
@@ -87,18 +86,16 @@ mod eddsaposeidon_test {
 
     #[test]
     fn eddsaposeidon() {
-        let mut rng = SeedboxBlake2::new_with_salt(b"faw_test", b"eddsaposeidon");
+        let mut rng = thread_rng();
         let poseidon_params = PoseidonParams::<Fr>::new(4, 8, 54);
         let jubjub_params = JubJubBN256::new();
 
-        const SAMPLES: usize = 20;
-        for _ in 0..SAMPLES {
-            let sk = rng.gen();
-            let m = rng.gen();
-            let (s, r) = eddsaposeidon_sign(sk, m, &poseidon_params, &jubjub_params);
-            let a = jubjub_params.edwards_g8().mul(sk.into_repr(), &jubjub_params).into_xy().0;
-            assert!(eddsaposeidon_verify(s, r, a, m, &poseidon_params, &jubjub_params), "signature should be valid")
-        }
+        let sk = rng.gen();
+        let m = rng.gen();
+        let (s, r) = eddsaposeidon_sign(sk, m, &poseidon_params, &jubjub_params);
+        let a = jubjub_params.edwards_g8().mul(sk.into_repr(), &jubjub_params).into_xy().0;
+        assert!(eddsaposeidon_verify(s, r, a, m, &poseidon_params, &jubjub_params), "signature should be valid")
+    
     }
 
 

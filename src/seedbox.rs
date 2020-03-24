@@ -59,17 +59,3 @@ impl Rng for SeedboxBlake2 {
         
     }
 }
-
-#[cfg(test)]
-mod seedbox_test {
-    use super::*;
-
-    #[test]
-    fn seedbox_blake2() {
-        let mut rng = SeedboxBlake2::new_with_salt(b"faw_test", b"seedbox_blake2");
-        let a: u64 = rng.gen();
-        let b: u64 = rng.gen();
-
-        assert!(a!=b, "values should be different");
-    }
-}

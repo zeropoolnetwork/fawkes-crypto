@@ -12,6 +12,7 @@ blake2-rfc = {git = "https://github.com/gtank/blake2-rfc", rev = "7a5b5fc99ae483
 rand = "0.4"
 byteorder = "1"
 num = "0.2.1"
+maplit = "1.0.2"
 
 [dependencies.bellman]
 version = "0.3.1"
@@ -27,6 +28,6 @@ package = "ff_ce"
 version = "0.18.0"
 package = "pairing_ce"
 
-[dev-dependencies.sapling-crypto]
+[dev-dependencies.sapling_crypto]
 version = "0.1.2"
 package = "sapling-crypto_ce" 

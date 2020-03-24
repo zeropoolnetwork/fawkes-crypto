@@ -16,6 +16,7 @@ use bellman::{
 
 use std::ops::{Add, Sub, Mul, Neg};
 use std::collections::HashMap;
+use maplit::hashmap;
 
 use super::Assignment;
 use crate::wrappedmath::Wrap;
@@ -24,7 +25,7 @@ use crate::wrappedmath::Wrap;
 
 #[derive(Clone)]
 pub enum Signal<E:Engine> {
-    Variable(Option<Wrap<E::Fr>>, LinearCombination<E>),
+    Variable(Option<Wrap<E::Fr>>, HashMap<Variable, Wrap<E::Fr>>),
     Constant(Wrap<E::Fr>)
 }
 
@@ -35,10 +36,13 @@ pub fn enforce<E:Engine, CS:ConstraintSystem<E>>(mut cs:CS, a:&Signal<E>, b:&Sig
 fn _neg<E:Engine>(a:&Signal<E>) -> Signal<E> {
     match a {
         &Signal::Constant(a) => Signal::Constant(-a),
-        _ => {
-            let value = a.get_value().map(|x| -x);
-            let lc = LinearCombination::zero() - &a.lc();
-            Signal::Variable(value, lc)
+        Signal::Variable(value, m) => {
+            let value = value.map(|x| -x);
+            let mut m = m.clone();
+            for (_, v) in m.iter_mut() {
+                *v = -*v;
+            }
+            Signal::Variable(value, m)
         }
     }
 }
@@ -61,6 +65,7 @@ impl<'a, E: Engine> Neg for &'a Signal<E> {
 
 
 
+
 fn _add<E: Engine>(a: &Signal<E>, b: &Signal<E>) -> Signal<E> {
     match (a, b) {
         (&Signal::Constant(a), &Signal::Constant(b)) => Signal::Constant(a+b),
@@ -69,8 +74,20 @@ fn _add<E: Engine>(a: &Signal<E>, b: &Signal<E>) -> Signal<E> {
                 (Some(a), Some(b)) => {Some(a+b)},
                 _ => None
             };
-            let lc = a.lc() + &b.lc();
-            Signal::Variable(value, lc)
+            let mut a_m = a.get_varmap();
+            let b_m = b.get_varmap();
+            for (k, v) in b_m {
+                if {
+                    let t = a_m.entry(k).or_insert(Wrap::zero());
+                    *t+=v;
+                    t.is_zero()
+                } {
+                    a_m.remove(&k);
+                }
+                
+            }
+
+            Signal::Variable(value, a_m)
         }
     }
 }
@@ -82,6 +99,8 @@ impl<'a, E: Engine> Add<&'a Signal<E>> for Signal<E> {
         _add(&self, other)
     }
 }
+
+
 
 impl<'a, 'b, E: Engine> Add<&'a Signal<E>> for &'b Signal<E> {
     type Output = Signal<E>;
@@ -110,11 +129,23 @@ fn _sub<E: Engine>(a: &Signal<E>, b: &Signal<E>) -> Signal<E> {
         (&Signal::Constant(a), &Signal::Constant(b)) => Signal::Constant(a-b),
         _ => {
             let value = match (a.get_value(), b.get_value()) {
-                (Some(a), Some(b)) => {Some(a-b)},
+                (Some(a), Some(b)) => {Some(a+b)},
                 _ => None
             };
-            let lc = a.lc() - &b.lc();
-            Signal::Variable(value, lc)
+            let mut a_m = a.get_varmap();
+            let b_m = b.get_varmap();
+            for (k, v) in b_m {
+                if {
+                    let t = a_m.entry(k).or_insert(Wrap::zero());
+                    *t-=v;
+                    t.is_zero()
+                } {
+                    a_m.remove(&k);
+                }
+                
+            }
+
+            Signal::Variable(value, a_m)
         }
     }
 }
@@ -149,15 +180,22 @@ impl<'b, E: Engine> Sub<Signal<E>> for &'b Signal<E> {
 
 
 fn _mul<E:Engine>(a:Wrap<E::Fr>, b:&Signal<E>) -> Signal<E> {
-    match b {
-        &Signal::Constant(b) => Signal::Constant(a*b),
-        _ => {
-            let value = match b.get_value() {
-                Some(b) => Some(a*b),
-                _ => None
-            };
-            let lc = LinearCombination::<E>::zero() + (a.into_inner(), &b.lc());
-            Signal::Variable(value, lc)
+    if a.is_zero() {
+        Signal::Constant(Wrap::zero())
+    } else {
+        match b {
+            &Signal::Constant(b) => Signal::Constant(a*b),
+            _ => {
+                let value = match b.get_value() {
+                    Some(b) => Some(a*b),
+                    _ => None
+                };
+                let mut b_m = b.get_varmap();
+                for (_, v) in b_m.iter_mut() {
+                    *v *= a;
+                }
+                Signal::Variable(value, b_m)
+            }
         }
     }
 }
@@ -204,12 +242,26 @@ impl <E:Engine> Signal<E> {
         }
     }
 
+    pub fn get_varmap(&self) -> HashMap<Variable, Wrap<E::Fr>> {
+        match self {
+            Self::Variable(_, m) => m.clone(),
+            &Self::Constant(v) => hashmap!{Variable::new_unchecked(Index::Input(0)) => v}
+        }
+    }
+
     pub fn lc(&self) -> LinearCombination<E> {
         match self {
-            Self::Variable(_, lc) => lc.clone(),
+            Self::Variable(_, lc) => {
+                let mut acc = LinearCombination::<E>::zero();
+                for (k, v) in lc {
+                    acc = acc + (v.into_inner(), *k)
+                }
+                acc
+            }
             Self::Constant(v) => LinearCombination::<E>::zero() + (v.into_inner(), Variable::new_unchecked(Index::Input(0)))
         }
     }
+
 
     pub fn one() -> Self {
         Self::Constant(Wrap::one())
@@ -221,28 +273,15 @@ impl <E:Engine> Signal<E> {
 
     pub fn normalize(&self) -> Self {
         match self {
-            Self::Variable(value, lc) => {
-                let mut hm = HashMap::new();
-                for (var, coeff) in lc.as_ref() {
-                    hm.entry(var).or_insert(E::Fr::zero()).add_assign(coeff);
-                }
-
-                let mut lc = LinearCombination::<E>::zero();
-                for (var, coeff) in hm {
-                    if !coeff.is_zero() {
-                        lc = lc + (coeff, *var);
-                    }
-                }
-
-                let lc_items = lc.as_ref();
-
+            Self::Variable(value, m) => {
+                let lc_items = m.iter().collect::<Vec<_>>();
 
                 if lc_items.len()==0 {
                     Self::Constant(Wrap::zero())
                 } else if lc_items.len()==1 && lc_items[0].0.get_unchecked() == Index::Input(0) {
-                    Self::Constant(Wrap::new(lc_items[0].1))
+                    Self::Constant(*lc_items[0].1)
                 } else {
-                    Self::Variable(*value, lc)
+                    self.clone()
                 }
             },
             &Self::Constant(v) => Self::Constant(v)
@@ -256,7 +295,7 @@ impl <E:Engine> Signal<E> {
     ) -> Result<Self, SynthesisError>
     {
         let var = cs.alloc(|| "num", || value.grab())?;
-        Ok(Self::Variable(value, LinearCombination::<E>::zero() + (E::Fr::one(), var)))
+        Ok(Self::Variable(value, hashmap!{var =>Wrap::one()}))
     }
 
     pub fn inputize<CS>(
@@ -266,7 +305,7 @@ impl <E:Engine> Signal<E> {
         where CS: ConstraintSystem<E>
     {
          match self {
-            Self::Variable(v, lc) => {
+            Self::Variable(v, _) => {
                 let input = cs.alloc_input(
                     || "input variable",
                     || v.grab()
@@ -276,7 +315,7 @@ impl <E:Engine> Signal<E> {
                     || "enforce input is correct",
                     |zero| zero + input,
                     |zero| zero + CS::one(),
-                    |zero| zero + lc
+                    |zero| zero + &self.lc()
                 );
                 Ok(())
             },
@@ -300,34 +339,32 @@ impl <E:Engine> Signal<E> {
     pub fn multiply<CS:ConstraintSystem<E>>(&self, mut cs: CS, b: &Self) -> Result<Self, SynthesisError> {
         let a = self.normalize();
         let b = b.normalize();
-        
-        
-        let a_mul_b_value = match (a.get_value(), b.get_value()) {
-            (Some(a), Some(b)) => Some(a*b),
-            _ => None
-        };
+    
 
         let signal = match (a, b) {
-            (Self::Constant(_), Self::Constant(_)) => Self::Constant(a_mul_b_value.unwrap()),
+            (Self::Constant(a), Self::Constant(b)) => Self::Constant(a*b),
             (Self::Constant(a), b) => {
                 if a.is_zero() {
                     Self::zero()
                 } else {
-                    Self::Variable(a_mul_b_value, LinearCombination::<E>::zero() + (a.into_inner(), &b.lc()))
+                    a * &b
                 }
             },  
             (a, Self::Constant(b)) => {
                 if b.is_zero() {
                     Self::zero()
                 } else {
-                    Self::Variable(a_mul_b_value, LinearCombination::<E>::zero() + (b.into_inner(), &a.lc()))
+                    b * &a
                 }
             },
             (a, b) => {
+                let a_mul_b_value = match (a.get_value(), b.get_value()) {
+                    (Some(a), Some(b)) => Some(a*b),
+                    _ => None
+                };
                 let a_mul_b = cs.alloc(|| "a mul b", || a_mul_b_value.grab())?;
-                let a_mul_b_lc = LinearCombination::<E>::zero() + a_mul_b;
-                cs.enforce(|| "enforce res == a mul b", |_| a.lc(), |_| b.lc(), |zero| zero + &a_mul_b_lc);
-                Self::Variable(a_mul_b_value, a_mul_b_lc)
+                cs.enforce(|| "enforce res == a mul b", |_| a.lc(), |_| b.lc(), |zero| zero + a_mul_b);
+                Self::Variable(a_mul_b_value, hashmap!{a_mul_b => Wrap::one()})
             }
         };
         Ok(signal)
@@ -345,24 +382,20 @@ impl <E:Engine> Signal<E> {
             }
         }
 
-        let b_inverse_value = b_value.map(|x| x.inverse().unwrap());
-        
-        
-        let a_div_b_value = match (a.get_value(), b_inverse_value) {
-            (Some(a), Some(b_inv)) => Some(a*b_inv),
-            _ => None
-        };
-
         let signal = match (a, b) {
-            (Self::Constant(_), Self::Constant(_)) => Self::Constant(a_div_b_value.unwrap()), 
-            (a, Self::Constant(_)) => {
-                Self::Variable(a_div_b_value, LinearCombination::<E>::zero() + (b_inverse_value.unwrap().into_inner(), &a.lc()))
-            },
+            (Self::Constant(a), Self::Constant(b)) => Self::Constant(a*b.inverse().ok_or(SynthesisError::DivisionByZero)?),
+            (a, Self::Constant(b)) => b.inverse().ok_or(SynthesisError::DivisionByZero)? * &a,
             (a, b) => {
-                let a_div_b = cs.alloc(|| "a mul b", || a_div_b_value.grab())?;
-                let a_div_b_lc = LinearCombination::<E>::zero() + a_div_b;
-                cs.enforce(|| "enforce res * b == a ", |zero| zero + &a_div_b_lc, |_| b.lc(), |_| a.lc());
-                Self::Variable(a_div_b_value, a_div_b_lc)
+
+                let a_div_b_value = match (a.get_value(), b.get_value()) {
+                    (Some(a), Some(b)) => Some(a*b.inverse().ok_or(SynthesisError::DivisionByZero)?),
+                    _ => None
+                };
+
+                let a_div_b = cs.alloc(|| "a div b", || a_div_b_value.grab())?;
+
+                cs.enforce(|| "enforce res * b == a ", |zero| zero + a_div_b, |_| b.lc(), |_| a.lc());
+                Self::Variable(a_div_b_value, hashmap!{a_div_b => Wrap::one()})
             }
         };
         Ok(signal)
@@ -410,7 +443,7 @@ impl <E:Engine> Signal<E> {
                     }
                 }
             },
-            Signal::Variable(_, _) => Ok(if_else + &bit.multiply(cs.namespace(|| "compute flag*(if_ok-if_else)"), &(self-if_else))?)
+            _ => Ok(if_else + &bit.multiply(cs.namespace(|| "compute flag*(if_ok-if_else)"), &(self-if_else))?)
         }
         
     }
@@ -470,4 +503,81 @@ impl <E:Engine> Signal<E> {
         
     }
 
+}
+
+
+#[cfg(test)]
+mod signal_test {
+    use super::*;
+    use sapling_crypto::circuit::test::TestConstraintSystem;
+    use bellman::pairing::bn256::{Bn256, Fr};
+    use rand::{Rng, thread_rng};
+
+
+    #[test]
+    fn alloc() {
+        let mut rng = thread_rng();
+        let a = rng.gen();
+
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let signal_a = Signal::alloc(cs.namespace(||"a"), Some(a)).unwrap();
+
+        assert!(cs.is_satisfied(), "cs should be satisfied");
+        assert!(signal_a.get_value().unwrap() == a);
+
+    }
+
+
+    #[test]
+    fn addition() {
+        let mut rng = thread_rng();
+        let a = rng.gen();
+        let b = rng.gen();
+
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let signal_a = Signal::alloc(cs.namespace(||"a"), Some(a)).unwrap();
+        let signal_b = Signal::alloc(cs.namespace(||"b"), Some(b)).unwrap();
+
+        let signal_a_plus_b = &signal_a + &signal_b;
+
+        assert!(cs.is_satisfied(), "cs should be satisfied");
+        assert!(signal_a_plus_b.get_value().unwrap() == a+b);
+
+    }
+
+
+    #[test]
+    fn multiply() {
+        let mut rng = thread_rng();
+        let a = rng.gen();
+        let b = rng.gen();
+
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let signal_a = Signal::alloc(cs.namespace(||"a"), Some(a)).unwrap();
+        let signal_b = Signal::alloc(cs.namespace(||"b"), Some(b)).unwrap();
+
+        let signal_a_mul_b = signal_a.multiply(cs.namespace(|| "mul"), &signal_b).unwrap();
+
+        assert!(cs.is_satisfied(), "cs should be satisfied");
+        assert!(signal_a_mul_b.get_value().unwrap() == a*b);
+
+    }
+
+
+    #[test]
+    fn normalize() {
+        let mut rng = thread_rng();
+        let a = rng.gen();
+        let b = rng.gen();
+
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let signal_a = Signal::alloc(cs.namespace(||"a"), Some(a)).unwrap();
+        let signal_b = Signal::alloc(cs.namespace(||"b"), Some(b)).unwrap();
+
+        let signal_a_mul_3b = signal_a.multiply(cs.namespace(|| "mul"), &(&signal_b+&signal_b+&signal_b)).unwrap();
+
+        assert!(cs.is_satisfied(), "cs should be satisfied");
+        assert!(signal_a_mul_3b.get_value().unwrap() == a*b*Wrap::from(3u64));
+
+    }
 }

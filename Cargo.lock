@@ -204,6 +204,7 @@ dependencies = [
  "blake2-rfc",
  "byteorder",
  "ff_ce",
+ "maplit",
  "num",
  "pairing_ce",
  "rand",
@@ -293,6 +294,12 @@ name = "libc"
 version = "0.2.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb147597cdf94ed43ab7a9038716637d2d1bf2bc571da995d0028dec06bd3018"
+
+[[package]]
+name = "maplit"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "maybe-uninit"

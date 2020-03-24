@@ -4,13 +4,19 @@ use ff::{
     PrimeFieldRepr,
     SqrtField
 };
-
+use std::fmt;
 use rand::{Rand, Rng};
 use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssign};
 use num::bigint::{BigUint};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Wrap<T:Field>(pub T);
+
+impl<T:Field> fmt::Display for Wrap<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl<T:Field> Wrap<T> {
     pub fn new(f:T) -> Self {
@@ -110,6 +116,13 @@ impl<T:PrimeField> Wrap<T> {
 impl<T:Field> PartialEq for Wrap<T> {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
+    }
+}
+
+impl<T:PrimeField> Into<BigUint> for Wrap<T> {
+    fn into(self) -> BigUint {
+        let bytes = self.into_binary_be();
+        BigUint::from_bytes_be(&bytes[..])
     }
 }
 
@@ -246,4 +259,27 @@ impl<T:Field> Rand for Wrap<T> {
     fn rand<R: Rng>(rng: &mut R) -> Self {
         Wrap(rng.gen())
     }
+}
+
+
+#[cfg(test)]
+mod signal_test {
+    use super::*;
+    use bellman::pairing::bn256::{Fr};
+    use rand::{Rng, thread_rng};
+
+
+    #[test]
+    fn calculations() {
+        let mut rng = thread_rng();
+        let order  = Into::<BigUint>::into(Wrap::<Fr>::minusone()) + BigUint::from(1u64);
+        let a : Wrap<Fr> = rng.gen();
+        let b : Wrap<Fr> = rng.gen();
+        assert!(Into::<BigUint>::into(a+b) == (Into::<BigUint>::into(a) + Into::<BigUint>::into(b)) % &order);
+        assert!(Into::<BigUint>::into(a*b) == (Into::<BigUint>::into(a) * Into::<BigUint>::into(b)) % &order);
+        assert!(Into::<BigUint>::into(a-b) == (&order + Into::<BigUint>::into(a) - Into::<BigUint>::into(b)) % &order);
+        assert!(BigUint::from(1u64) == (Into::<BigUint>::into(a.inverse().unwrap()) * Into::<BigUint>::into(a)) % &order);
+
+    }
+
 }

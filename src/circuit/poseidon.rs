@@ -77,3 +77,33 @@ pub fn merkle_root<E:Engine, CS:ConstraintSystem<E>>(
     Ok(root)
 }
 
+
+#[cfg(test)]
+mod poseidon_test {
+    use super::*;
+    use sapling_crypto::circuit::test::TestConstraintSystem;
+    use bellman::pairing::bn256::{Bn256, Fr};
+    use rand::{Rng, thread_rng};
+
+
+
+    #[test]
+    fn poseidon_hash() {
+        const N_INPUTS: usize = 3;
+        let mut rng = thread_rng();
+        let poseidon_params = PoseidonParams::<Fr>::new(N_INPUTS+1, 8, 54);
+
+    
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let data = (0..N_INPUTS).map(|_| rng.gen()).collect::<Vec<_>>();
+        let inputs = (0..N_INPUTS).map(|i| Signal::alloc(cs.namespace(|| format!("{}th poseidon input", i)), Some(data[i])).unwrap()).collect::<Vec<_>>();
+        let res = poseidon(cs.namespace(|| "compute poseidon"), &inputs, &poseidon_params).unwrap();
+
+        let res2 = crate::poseidon::poseidon(&data, &poseidon_params);
+        assert!(cs.is_satisfied(), "cs should be satisfied");
+        assert!(res.get_value().unwrap() == res2);
+    }
+    
+
+
+}

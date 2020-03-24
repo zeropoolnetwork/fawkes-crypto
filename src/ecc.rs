@@ -352,14 +352,13 @@ impl <E:Engine> EdwardsPoint<E> {
 mod ecc_test {
     use super::*;
 
-    use rand::Rng;
+    use rand::{Rng, thread_rng};
     use bellman::pairing::bn256::{Fr};
 
-    use crate::seedbox::{SeedboxBlake2};
 
     #[test]
     fn jubjubbn256() {
-        let mut rng = SeedboxBlake2::new_with_salt(b"faw_test", b"jubjubbn256");
+        let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
         assert!(!jubjub_params.edwards_g().is_in_subgroup(&jubjub_params), "generator should be not in subgroup");        
