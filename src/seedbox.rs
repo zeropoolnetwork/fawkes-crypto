@@ -5,7 +5,7 @@ use rand::Rng;
 
 pub struct SeedboxBlake2{
     personalization: Vec<u8>,
-    salt: Vec<u8>,
+    salt: Option<[u8;32]>,
     n_iter: u64,
     n_limb: usize,
     buff: [u8;32]
@@ -15,7 +15,7 @@ impl SeedboxBlake2 {
     pub fn new(personalization: &[u8]) -> Self {
         SeedboxBlake2 {
             personalization: personalization.to_vec(),
-            salt: vec![],
+            salt: None,
             n_iter: 0,
             n_limb: 8,
             buff: [0;32]
@@ -23,9 +23,14 @@ impl SeedboxBlake2 {
     }
 
     pub fn new_with_salt(personalization: &[u8], salt: &[u8]) -> Self {
+        let mut h = Blake2s::new(32);
+        let mut buff = [0u8;32];
+        h.update(salt);
+        buff[..].clone_from_slice(h.finalize().as_ref());
+
         SeedboxBlake2 {
             personalization: personalization.to_vec(),
-            salt: salt.to_vec(),
+            salt: Some(buff),
             n_iter: 0,
             n_limb: 8,
             buff: [0;32]
@@ -42,8 +47,8 @@ impl Rng for SeedboxBlake2 {
             n_iter_bin.as_mut().write_u64::<LittleEndian>(self.n_iter).unwrap();
             self.n_iter += 1;
             h.update(n_iter_bin.as_ref());
-            if self.salt.len()>0 {
-                h.update(self.salt.as_ref());
+            if self.salt.is_some() {
+                h.update(self.salt.unwrap().as_ref());
             }
             self.buff.as_mut().clone_from_slice(h.finalize().as_ref())
         }
