@@ -15,17 +15,47 @@ use bellman::{
 };
 
 use std::ops::{Add, Sub, Mul, Neg};
-use std::collections::HashMap;
-use maplit::hashmap;
+use std::cmp::{Ordering};
+
+use linked_list::{LinkedList, Cursor};
 
 use super::Assignment;
 use crate::wrappedmath::Wrap;
 
+#[derive(Eq, PartialEq, Clone, Copy)]
+pub struct WrapVar(pub Index);
+
+impl WrapVar {
+    pub fn into_var(&self) -> Variable {
+        Variable::new_unchecked(self.0)
+    }
+
+    fn one() -> Self {
+        Self(Index::Input(0))
+    }
+}
+
+impl PartialOrd for WrapVar {
+    fn partial_cmp(&self, other: &WrapVar) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for WrapVar {
+    fn cmp(&self, other: &WrapVar) -> Ordering {
+        match (self.0, other.0) {
+            (Index::Input(a), Index::Input(b)) => a.cmp(&b),
+            (Index::Input(_), Index::Aux(_)) => Ordering::Less,
+            (Index::Aux(_), Index::Input(_)) => Ordering::Greater,
+            (Index::Aux(a), Index::Aux(b)) => a.cmp(&b)
+        }
+    }
+}
 
 
 #[derive(Clone)]
 pub enum Signal<E:Engine> {
-    Variable(Option<Wrap<E::Fr>>, HashMap<Variable, Wrap<E::Fr>>),
+    Variable(Option<Wrap<E::Fr>>, LinkedList<(WrapVar, Wrap<E::Fr>)>),
     Constant(Wrap<E::Fr>)
 }
 
@@ -36,13 +66,13 @@ pub fn enforce<E:Engine, CS:ConstraintSystem<E>>(mut cs:CS, a:&Signal<E>, b:&Sig
 fn _neg<E:Engine>(a:&Signal<E>) -> Signal<E> {
     match a {
         &Signal::Constant(a) => Signal::Constant(-a),
-        Signal::Variable(value, m) => {
+        Signal::Variable(value, ll) => {
             let value = value.map(|x| -x);
-            let mut m = m.clone();
-            for (_, v) in m.iter_mut() {
+            let mut ll = ll.clone();
+            for (_, v) in ll.iter_mut() {
                 *v = -*v;
             }
-            Signal::Variable(value, m)
+            Signal::Variable(value, ll)
         }
     }
 }
@@ -63,6 +93,30 @@ impl<'a, E: Engine> Neg for &'a Signal<E> {
     }
 }
 
+#[derive(Eq,PartialEq)]
+enum LookupAction {
+    Add,
+    Insert
+}
+
+fn ll_lookup<K:PartialEq+PartialOrd,V>(cur: &mut Cursor<(K, V)>, n: K) -> LookupAction {
+    loop {
+        match cur.peek_next() {
+            Some((k, _)) => {
+                if  *k == n {
+                    return LookupAction::Add;
+                } else if *k > n {
+                    return  LookupAction::Insert;
+                }
+            },
+            None => {
+                return LookupAction::Insert;
+            }
+        }
+        cur.seek_forward(1);
+    }
+}
+
 
 
 
@@ -74,20 +128,22 @@ fn _add<E: Engine>(a: &Signal<E>, b: &Signal<E>) -> Signal<E> {
                 (Some(a), Some(b)) => {Some(a+b)},
                 _ => None
             };
-            let mut a_m = a.get_varmap();
-            let b_m = b.get_varmap();
-            for (k, v) in b_m {
-                if {
-                    let t = a_m.entry(k).or_insert(Wrap::zero());
-                    *t+=v;
-                    t.is_zero()
-                } {
-                    a_m.remove(&k);
-                }
-                
-            }
+            let mut a_ll = a.get_varlist();
+            let b_ll = b.get_varlist();
+            let mut cur_a_ll = a_ll.cursor();
 
-            Signal::Variable(value, a_m)
+            for (k, v) in b_ll.iter() {
+                if ll_lookup(&mut cur_a_ll, *k) == LookupAction::Add {
+                    let t = cur_a_ll.peek_next().unwrap();
+                    t.1 += *v;
+                    if t.1.is_zero() {
+                        cur_a_ll.remove();
+                    }
+                } else {
+                    cur_a_ll.insert((*k, *v))
+                }
+            }
+            Signal::Variable(value, a_ll)
         }
     }
 }
@@ -132,23 +188,26 @@ fn _sub<E: Engine>(a: &Signal<E>, b: &Signal<E>) -> Signal<E> {
                 (Some(a), Some(b)) => {Some(a-b)},
                 _ => None
             };
-            let mut a_m = a.get_varmap();
-            let b_m = b.get_varmap();
-            for (k, v) in b_m {
-                if {
-                    let t = a_m.entry(k).or_insert(Wrap::zero());
-                    *t-=v;
-                    t.is_zero()
-                } {
-                    a_m.remove(&k);
-                }
-                
-            }
+            let mut a_ll = a.get_varlist();
+            let b_ll = b.get_varlist();
+            let mut cur_a_ll = a_ll.cursor();
 
-            Signal::Variable(value, a_m)
+            for (k, v) in b_ll.iter() {
+                if ll_lookup(&mut cur_a_ll, *k) == LookupAction::Add {
+                    let t = cur_a_ll.peek_next().unwrap();
+                    t.1 -= *v;
+                    if t.1.is_zero() {
+                        cur_a_ll.remove();
+                    }
+                } else {
+                    cur_a_ll.insert((*k, -*v))
+                }
+            }
+            Signal::Variable(value, a_ll)
         }
     }
 }
+
 
 impl<'a, E: Engine> Sub<&'a Signal<E>> for Signal<E> {
     type Output = Signal<E>;
@@ -190,11 +249,11 @@ fn _mul<E:Engine>(a:Wrap<E::Fr>, b:&Signal<E>) -> Signal<E> {
                     Some(b) => Some(a*b),
                     _ => None
                 };
-                let mut b_m = b.get_varmap();
-                for (_, v) in b_m.iter_mut() {
+                let mut b_ll = b.get_varlist();
+                for (_, v) in b_ll.iter_mut() {
                     *v *= a;
                 }
-                Signal::Variable(value, b_m)
+                Signal::Variable(value, b_ll)
             }
         }
     }
@@ -242,29 +301,39 @@ impl <E:Engine> Signal<E> {
         }
     }
 
-    pub fn get_varmap(&self) -> HashMap<Variable, Wrap<E::Fr>> {
+    pub fn get_varlist(&self) -> LinkedList<(WrapVar, Wrap<E::Fr>)> {
         match self {
-            Self::Variable(_, m) => m.clone(),
-            &Self::Constant(v) => hashmap!{Variable::new_unchecked(Index::Input(0)) => v}
+            Self::Variable(_, ll) => ll.clone(),
+            &Self::Constant(v) => {
+                let mut ll = LinkedList::new();
+                ll.push_back((WrapVar::one(), v));
+                ll
+            }
         }
+    }
+
+    pub fn from_var(value: Option<Wrap<E::Fr>>, var: Variable) -> Self{
+        let mut ll = LinkedList::new();
+        ll.push_back((WrapVar(var.get_unchecked()), Wrap::one()));
+        Self::Variable(value, ll)
     }
 
     pub fn lc(&self) -> LinearCombination<E> {
         match self {
-            Self::Variable(_, m) => {
+            Self::Variable(_, ll) => {
                 let mut acc = LinearCombination::<E>::zero();
-                for (k, v) in m {
-                    acc = acc + (v.into_inner(), *k)
+                for (k, v) in ll {
+                    acc = acc + (v.into_inner(), k.into_var())
                 }
                 acc
             }
-            Self::Constant(v) => LinearCombination::<E>::zero() + (v.into_inner(), Variable::new_unchecked(Index::Input(0)))
+            Self::Constant(v) => LinearCombination::<E>::zero() + (v.into_inner(), WrapVar::one().into_var())
         }
     }
 
     pub fn len(&self) -> usize {
         match self {
-            Self::Variable(_, m) => m.keys().len(),
+            Self::Variable(_, ll) => ll.len(),
            _ => 1
         }
     }
@@ -280,15 +349,18 @@ impl <E:Engine> Signal<E> {
 
     pub fn normalize(&self) -> Self {
         match self {
-            Self::Variable(_, m) => {
-                let lc_items = m.iter().collect::<Vec<_>>();
-
-                if lc_items.len()==0 {
-                    Self::Constant(Wrap::zero())
-                } else if lc_items.len()==1 && lc_items[0].0.get_unchecked() == Index::Input(0) {
-                    Self::Constant(*lc_items[0].1)
-                } else {
+            Self::Variable(_, ll) => {
+                if ll.len() > 1 {
                     self.clone()
+                } else if ll.len() == 0 {
+                    Self::Constant(Wrap::zero())
+                } else {
+                    let front = ll.front().unwrap();
+                    if front.0 == WrapVar::one() {
+                        Self::Constant(front.1)
+                    } else {
+                        self.clone()
+                    }
                 }
             },
             &Self::Constant(v) => Self::Constant(v)
@@ -302,7 +374,7 @@ impl <E:Engine> Signal<E> {
     ) -> Result<Self, SynthesisError>
     {
         let var = cs.alloc(|| "num", || value.grab())?;
-        Ok(Self::Variable(value, hashmap!{var =>Wrap::one()}))
+        Ok(Self::from_var(value, var))
     }
 
     pub fn inputize<CS>(
@@ -371,7 +443,7 @@ impl <E:Engine> Signal<E> {
                 };
                 let a_mul_b = cs.alloc(|| "a mul b", || a_mul_b_value.grab())?;
                 cs.enforce(|| "<== a mul b", |_| a.lc(), |_| b.lc(), |zero| zero + a_mul_b);
-                Self::Variable(a_mul_b_value, hashmap!{a_mul_b => Wrap::one()})
+                Self::from_var(a_mul_b_value, a_mul_b)
             }
         };
         Ok(signal)
@@ -391,7 +463,8 @@ impl <E:Engine> Signal<E> {
                 };
                 let a_div_b = cs.alloc(|| "a div b", || a_div_b_value.grab())?;
                 cs.enforce(|| "(a div b) * b == a ", |zero| zero + a_div_b, |_| b.lc(), |_| a.lc());
-                Self::Variable(a_div_b_value, hashmap!{a_div_b => Wrap::one()})
+                Self::from_var(a_div_b_value, a_div_b)
+                
             }
         };
         Ok(signal)

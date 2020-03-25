@@ -13,6 +13,7 @@ rand = "0.4"
 byteorder = "1"
 num = "0.2.1"
 maplit = "1.0.2"
+linked-list = "0.0.3"
 
 [dependencies.bellman]
 version = "0.3.1"

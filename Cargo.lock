@@ -204,6 +204,7 @@ dependencies = [
  "blake2-rfc",
  "byteorder",
  "ff_ce",
+ "linked-list",
  "maplit",
  "num",
  "pairing_ce",
@@ -294,6 +295,12 @@ name = "libc"
 version = "0.2.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb147597cdf94ed43ab7a9038716637d2d1bf2bc571da995d0028dec06bd3018"
+
+[[package]]
+name = "linked-list"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4dacf969043dc69f1f731b5042eb05e030d264bcf34f2242889fcbdc7a65f06"
 
 [[package]]
 name = "maplit"
