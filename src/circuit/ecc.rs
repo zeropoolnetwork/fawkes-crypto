@@ -37,8 +37,8 @@ impl<E:Engine> EdwardsPoint<E> {
             None => (None, None)
         };
 
-        let x = Signal::alloc(cs.namespace(|| "alloc x"), x_value)?;
-        let y = Signal::alloc(cs.namespace(|| "alloc y"), y_value)?;
+        let x = Signal::alloc(cs.namespace(|| ":=x"), x_value)?;
+        let y = Signal::alloc(cs.namespace(|| ":=y"), y_value)?;
         Ok(Self {x, y})
     }
 
@@ -52,15 +52,16 @@ impl<E:Engine> EdwardsPoint<E> {
         let v = self.x.multiply(cs.namespace(|| "xy"), &self.y)?;
         let v2 = v.square(cs.namespace(|| "x^2 y^2"))?;
         let u = (&self.x+&self.y).square(cs.namespace(|| "(x+y)^2"))?;
-        let new_x = (&v+&v).divide(cs.namespace(|| "out x"), &(Signal::one() +  params.edwards_d()*&v2))?;
-        let new_y = (&u-&v-&v).divide(cs.namespace(|| "out y"), &(Signal::one() -  params.edwards_d()*&v2))?;
-        Ok(Self {x: new_x, y: new_y})
+        Ok(Self {
+            x: (&v+&v).divide(cs.namespace(|| "x3"), &(Signal::one() +  params.edwards_d()*&v2))?,
+            y: (&u-&v-&v).divide(cs.namespace(|| "y3"), &(Signal::one() -  params.edwards_d()*&v2))?
+        })
     }
 
     pub fn mul_cofactor<CS:ConstraintSystem<E>, J:JubJubParams<E>>(&self, mut cs:CS, params: &J) -> Result<Self, SynthesisError>{
-        let p2 = self.double(cs.namespace(|| "2*self"), params)?;
-        let p4 = p2.double(cs.namespace(|| "4*self"), params)?;
-        let p8 = p4.double(cs.namespace(|| "8*self"), params)?;
+        let p2 = self.double(cs.namespace(|| "2p"), params)?;
+        let p4 = p2.double(cs.namespace(|| "4p"), params)?;
+        let p8 = p4.double(cs.namespace(|| "8p"), params)?;
         Ok(p8)
     }
 
@@ -71,15 +72,16 @@ impl<E:Engine> EdwardsPoint<E> {
         let v2 = p.x.multiply(cs.namespace(|| "x2y1"), &self.y)?;
         let v12 = v1.multiply(cs.namespace(|| "x1y2x2y1"), &v2)?;
         let u = (&self.x+&self.y).multiply(cs.namespace(|| "(x1+y1)*(x2+y2)"), &(&p.x+&p.y))?;
-        let new_x = (&v1+&v2).divide(cs.namespace(|| "out x"), &(Signal::one() +  params.edwards_d()*&v12))?;
-        let new_y = (&u-&v1-&v2).divide(cs.namespace(|| "out y"), &(Signal::one() -  params.edwards_d()*&v12))?;
-        Ok(Self {x: new_x, y: new_y})
+        Ok(Self {
+            x: (&v1+&v2).divide(cs.namespace(|| "x3"), &(Signal::one() +  params.edwards_d()*&v12))?,
+            y: (&u-&v1-&v2).divide(cs.namespace(|| "y3"), &(Signal::one() -  params.edwards_d()*&v12))?
+        })
     }
 
     pub fn assert_in_curve<CS:ConstraintSystem<E>, J:JubJubParams<E>>(&self, mut cs:CS, params: &J) -> Result<(), SynthesisError> {
         let x2 = self.x.square(cs.namespace(|| "x^2"))?;
         let y2 = self.y.square(cs.namespace(|| "y^2"))?;
-        cs.enforce(|| "point should be on curve", |_| y2.lc(), |zero| zero + CS::one() - (params.edwards_d().into_inner(), &y2.lc()), |zero| zero + CS::one() + &x2.lc());
+        cs.enforce(|| "on_curve", |_| y2.lc(), |zero| zero + CS::one() - (params.edwards_d().into_inner(), &y2.lc()), |zero| zero + CS::one() + &x2.lc());
         Ok(())
     }
 
@@ -92,11 +94,11 @@ impl<E:Engine> EdwardsPoint<E> {
             _ => None
         };
 
-        let preimage = EdwardsPoint::alloc(cs.namespace(|| "alloc preimage point"), preimage_value)?;
-        let preimage8 = preimage.mul_cofactor(cs.namespace(|| "8*preimage"), params)?;
+        let preimage = EdwardsPoint::alloc(cs.namespace(|| "q"), preimage_value)?;
+        let preimage8 = preimage.mul_cofactor(cs.namespace(|| "8q"), params)?;
 
-        (&self.x - &preimage8.x).assert_zero(cs.namespace(|| "assert x equality"))?;
-        (&self.y - &preimage8.y).assert_zero(cs.namespace(|| "assert y equality"))?;
+        (&self.x - &preimage8.x).assert_zero(cs.namespace(|| "assert_x"))?;
+        (&self.y - &preimage8.y).assert_zero(cs.namespace(|| "assert_y"))?;
         
         Ok(())
     }
@@ -110,25 +112,26 @@ impl<E:Engine> EdwardsPoint<E> {
             _ => None
         };
 
-        let preimage = EdwardsPoint::alloc(cs.namespace(|| "alloc preimage point"), preimage_value)?;
-        let preimage8 = preimage.mul_cofactor(cs.namespace(|| "8*preimage"), params)?;
+        let preimage = EdwardsPoint::alloc(cs.namespace(|| "q"), preimage_value)?;
+        let preimage8 = preimage.mul_cofactor(cs.namespace(|| "8q"), params)?;
 
-        (x - &preimage8.x).assert_zero(cs.namespace(|| "assert x equality"))?;
+        (x - &preimage8.x).assert_zero(cs.namespace(|| "assert_x"))?;
         
         Ok(preimage8)
     }
 
     // assume nonzero subgroup point
     pub fn into_montgomery<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<MontgomeryPoint<E>, SynthesisError> {
-        let x = (&Signal::one() + &self.y).divide(cs.namespace(|| "compute montgomery x"), &(Signal::one() - &self.y))?;
-        let y = x.divide(cs.namespace(|| "compute montgomery y"), &self.x)?;
+        let x = (&Signal::one() + &self.y).divide(cs.namespace(|| "x3"), &(Signal::one() - &self.y))?;
+        let y = x.divide(cs.namespace(|| "y3"), &self.x)?;
         Ok(MontgomeryPoint {x, y})
     }
 
     pub fn switch<CS:ConstraintSystem<E>>(&self, mut cs:CS, bit:&Signal<E>, if_else:&Self) -> Result<Self, SynthesisError> {
-        let x = self.x.switch(cs.namespace(|| "switch x"), bit, &if_else.x)?;
-        let y = self.y.switch(cs.namespace(|| "switch y"), bit, &if_else.y)?;
-        Ok(Self {x, y})
+        Ok(Self {
+            x: self.x.switch(cs.namespace(|| "x3"), bit, &if_else.x)?,
+            y: self.y.switch(cs.namespace(|| "y3"), bit, &if_else.y)?
+        })
     }
 
     // assume subgroup point, bits
@@ -175,27 +178,27 @@ impl<E:Engine> EdwardsPoint<E> {
         
                     for i in 0..nwindows {
                         let table = gen_table(&base, params);
-                        let res = mux3(cs.namespace(|| format!("{}th mux3", i)), &all_bits[3*i..3*(i+1)], &table)?;
+                        let res = mux3(cs.namespace(|| format!("mux3[{}]", i)), &all_bits[3*i..3*(i+1)], &table)?;
                         let p = MontgomeryPoint {x: res[0].clone(), y: res[1].clone()};
-                        acc = acc.add(cs.namespace(|| format!("{}th adder", i)), &p, params)?;
+                        acc = acc.add(cs.namespace(|| format!("adder[{}]", i)), &p, params)?;
                         base = base.double().double().double();
                     }
                     
-                    let res = acc.into_edwards(cs.namespace(|| "convert point to edwards"))?;
+                    let res = acc.into_edwards(cs.namespace(|| "to_edwards"))?;
                     Ok(EdwardsPoint {x:-res.x, y:-res.y})
                 }
             },
             _ => {
-                let base_is_zero = self.x.is_zero(cs.namespace(|| "check is base zero"))?;
+                let base_is_zero = self.x.is_zero(cs.namespace(|| "is_base_zero"))?;
                 let dummy_point = EdwardsPoint::constant(params.edwards_g8().clone());
-                let base_point = dummy_point.switch(cs.namespace(|| "optional switch point to dummy"), &base_is_zero, self)?;
+                let base_point = dummy_point.switch(cs.namespace(|| "dummy_switch"), &base_is_zero, self)?;
 
-                let mut base_point = base_point.into_montgomery(cs.namespace(|| "convert point to montgomery"))?;
+                let mut base_point = base_point.into_montgomery(cs.namespace(|| "to_montgomery"))?;
         
                 let mut exponents = vec![base_point.clone()];
         
                 for i in 1..bits.len() {
-                    base_point = base_point.double(cs.namespace(|| format!("{}th doubling", i)), params)?;
+                    base_point = base_point.double(cs.namespace(|| format!("dlb[{}]", i)), params)?;
                     exponents.push(base_point.clone());
                 }
 
@@ -204,13 +207,13 @@ impl<E:Engine> EdwardsPoint<E> {
                 let mut acc = empty_acc.clone();
         
                 for i in 0..bits.len() {
-                    let inc_acc = acc.add(cs.namespace(|| format!("{}th addition", i)), &exponents[i], params)?;
-                    acc = inc_acc.switch(cs.namespace(|| format!("{}th switch", i)), &bits[i], &acc)?;
+                    let inc_acc = acc.add(cs.namespace(|| format!("add[{}]", i)), &exponents[i], params)?;
+                    acc = inc_acc.switch(cs.namespace(|| format!("addsw[{}]", i)), &bits[i], &acc)?;
                 }
         
-                acc = empty_acc.switch(cs.namespace(|| "optional switch acc to empty"), &base_is_zero, &acc)?;
+                acc = empty_acc.switch(cs.namespace(|| "switch_empty"), &base_is_zero, &acc)?;
         
-                let res = acc.into_edwards(cs.namespace(|| "convert point to edwards"))?;
+                let res = acc.into_edwards(cs.namespace(|| "to_edwards"))?;
                 Ok(EdwardsPoint {x:-res.x, y:-res.y})
             }
         }
@@ -227,10 +230,10 @@ impl<E:Engine> MontgomeryPoint<E> {
             },
             None => (None, None)
         };
-
-        let x = Signal::alloc(cs.namespace(|| "x"), x_value)?;
-        let y = Signal::alloc(cs.namespace(|| "y"), y_value)?;
-        Ok(Self {x, y})
+        Ok(Self {
+            x: Signal::alloc(cs.namespace(|| "x"), x_value)?,
+            y: Signal::alloc(cs.namespace(|| "y"), y_value)?
+        })
     }
 
     // assume self != (0, 0)
@@ -244,7 +247,7 @@ impl<E:Engine> MontgomeryPoint<E> {
         
         Ok(Self {
             x: &b_l2 - &a - &self.x - &self.x,
-            y: l.multiply(cs.namespace(|| "(3 x + A - B*l^2)*l"), &(Wrap::from(3u64)*&self.x + &a - &b_l2))? - &self.y
+            y: l.multiply(cs.namespace(|| "y3"), &(Wrap::from(3u64)*&self.x + &a - &b_l2))? - &self.y
         })
     }
 
@@ -256,23 +259,23 @@ impl<E:Engine> MontgomeryPoint<E> {
         
         Ok(Self {
             x: &b_l2 - &a - &self.x - &p.x,
-            y: l.multiply(cs.namespace(|| "(2 x1 + x2 + A - B*l^2)*l"), &(Wrap::from(2u64)*&self.x + &p.x + &a - &b_l2))? - &self.y
+            y: l.multiply(cs.namespace(|| "y3"), &(Wrap::from(2u64)*&self.x + &p.x + &a - &b_l2))? - &self.y
         })
     }
 
     // assume any nonzero point
     pub fn into_edwards<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<EdwardsPoint<E>, SynthesisError> {
-        let y_is_zero = self.y.is_zero(cs.namespace(|| "check (0, 0) point"))?;
+        let y_is_zero = self.y.is_zero(cs.namespace(|| "is_(0,0)"))?;
         Ok(EdwardsPoint {
-            x: self.x.divide(cs.namespace(|| "x"), &(&self.y+&y_is_zero))?,
-            y: (&self.x - &Signal::one()).divide(cs.namespace(|| "y"), &(&self.x+&Signal::one()))?
+            x: self.x.divide(cs.namespace(|| "x3"), &(&self.y+&y_is_zero))?,
+            y: (&self.x - &Signal::one()).divide(cs.namespace(|| "y3"), &(&self.x+&Signal::one()))?
         })
     }
 
     pub fn switch<CS:ConstraintSystem<E>>(&self, mut cs:CS, bit:&Signal<E>, if_else:&Self) -> Result<Self, SynthesisError> {
         Ok(Self {
-            x: self.x.switch(cs.namespace(|| "switch x"), bit, &if_else.x)?,
-            y: self.y.switch(cs.namespace(|| "switch y"), bit, &if_else.y)?
+            x: self.x.switch(cs.namespace(|| "x3"), bit, &if_else.x)?,
+            y: self.y.switch(cs.namespace(|| "y3"), bit, &if_else.y)?
         })
     }
 }

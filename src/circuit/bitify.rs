@@ -38,13 +38,13 @@ pub fn into_bits_le<E:Engine, CS:ConstraintSystem<E>>(
 
             for i in 1..limit {
                 k=k.double();
-                let s = Signal::alloc(cs.namespace(|| format!("alloc bit {}", i)), value_bits[i].map(|b| Wrap::from(b)))?;
-                s.assert_bit(cs.namespace(|| format!("assert bit {}", i)))?;
+                let s = Signal::alloc(cs.namespace(|| format!(":=bit[{}]", i)), value_bits[i].map(|b| Wrap::from(b)))?;
+                s.assert_bit(cs.namespace(|| format!("bit[{}]", i)))?;
                 remained_signal = remained_signal - k * &s;
                 bits[i] = s;    
             }
 
-            remained_signal.assert_bit(cs.namespace(|| "assert 0th bit"))?;
+            remained_signal.assert_bit(cs.namespace(|| "bit[0]"))?;
             bits[0]=remained_signal;
             Ok(bits)
         },
@@ -91,7 +91,7 @@ pub fn comp_constant<E:Engine, CS:ConstraintSystem<E>>(
         let sig_l = sig_bits.next().unwrap();
         let sig_u = sig_bits.next().unwrap();
 
-        let sig_lu = sig_l.multiply(cs.namespace(|| format!("sig_l*sig_u; i={}", i)), &sig_u)?;
+        let sig_lu = sig_l.multiply(cs.namespace(|| format!("lu[{}]", i)), &sig_u)?;
 
         acc = acc + k * match (ct_l, ct_u) {
             (false, false) => -sig_lu + sig_l + sig_u,
@@ -105,7 +105,7 @@ pub fn comp_constant<E:Engine, CS:ConstraintSystem<E>>(
     k -= Wrap::one();
 
     acc = acc + &Signal::Constant(k);
-    let acc_bits = into_bits_le(cs.namespace(|| "bitify acc"), &acc, nsteps+1)?;
+    let acc_bits = into_bits_le(cs.namespace(|| "bitify(acc)"), &acc, nsteps+1)?;
     Ok(acc_bits[nsteps].clone())
 }
 
@@ -116,9 +116,9 @@ pub fn into_bits_le_strict<E:Engine, CS:ConstraintSystem<E>>(
 ) -> Result<Vec<Signal<E>>, SynthesisError>
     where CS: ConstraintSystem<E>
 {
-    let bits = into_bits_le(cs.namespace(|| "split to bits"), signal, E::Fr::NUM_BITS as usize)?;
-    let cmp_res = comp_constant(cs.namespace(|| "cmp with minus one"), &bits, Wrap::minusone())?;
-    cmp_res.assert_zero(cs.namespace(||"should be <= -1"))?;
+    let bits = into_bits_le(cs.namespace(|| "bitify"), signal, E::Fr::NUM_BITS as usize)?;
+    let cmp_res = comp_constant(cs.namespace(|| "cmp"), &bits, Wrap::minusone())?;
+    cmp_res.assert_zero(cs.namespace(||"assert"))?;
     Ok(bits)
 }
 

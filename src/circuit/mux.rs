@@ -20,7 +20,7 @@ pub fn mux3<E:Engine, CS:ConstraintSystem<E>>(mut cs:CS, s:&[Signal<E>], c:&[Vec
         assert!(c[i].len() == 8, "should be 8 constants");
     }
 
-    let s10 = s[0].multiply(cs.namespace(|| "compute s10"), &s[1])?;
+    let s10 = s[0].multiply(cs.namespace(|| "s10"), &s[1])?;
     let mut res = vec![];
 
     for i in 0..c.len() {
@@ -34,7 +34,7 @@ pub fn mux3<E:Engine, CS:ConstraintSystem<E>>(mut cs:CS, s:&[Signal<E>], c:&[Vec
         let a0 = (c[i][1]-c[i][0]) * &s[0];
         let a = Signal::Constant(c[i][0]);
 
-        res.push( (&a210 + &a21 + &a20 + &a2).multiply(cs.namespace(|| format!("{}th selector", i)), &s[2])? + &a10 +  &a1 +  &a0 +  &a);
+        res.push( (&a210 + &a21 + &a20 + &a2).multiply(cs.namespace(|| format!("out[{}]", i)), &s[2])? + &a10 +  &a1 +  &a0 +  &a);
     }
 
     Ok(res)

@@ -48,10 +48,10 @@ pub fn poseidon<E:Engine, CS:ConstraintSystem<E>>(mut cs:CS, inputs:&[Signal<E>]
         ark(&mut state, params.c[i]);
         if i < half_f || i >= half_f + params.p {
             for j in 0..params.t {
-                state[j] = sigma(cs.namespace(|| format!("sigma i={}, j={}", i, j)), &state[j])?;
+                state[j] = sigma(cs.namespace(|| format!("sigma[{},{}]", i, j)), &state[j])?;
             }
         } else {
-            state[0] = sigma(cs.namespace(|| format!("sigma i={}", i)), &state[0])?;
+            state[0] = sigma(cs.namespace(|| format!("sigma[{}]", i)), &state[0])?;
         }
         mix(&mut state, params);
     }
@@ -70,9 +70,9 @@ pub fn poseidon_merkle_root<E:Engine, CS:ConstraintSystem<E>>(
     let mut i = 0;
     for (p, s) in path.iter().zip(sibling.iter()) {
         i+=1;
-        let first = s.switch(cs.namespace(|| format!("selector i={}", i)), p, &root)?; 
+        let first = s.switch(cs.namespace(|| format!("sel[{}]", i)), p, &root)?; 
         let second = &root + s - &first;
-        root = poseidon(cs.namespace(|| format!("node i={}", i)), [first, second].as_ref(), params)?;
+        root = poseidon(cs.namespace(|| format!("r[{}]", i)), [first, second].as_ref(), params)?;
     }
     Ok(root)
 }

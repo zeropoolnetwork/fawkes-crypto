@@ -1,5 +1,5 @@
 use bellman::pairing::{
-    Engine,
+    Engine
 };
 
 use bellman::pairing::ff::{
@@ -58,6 +58,7 @@ pub enum Signal<E:Engine> {
     Variable(Option<Wrap<E::Fr>>, LinkedList<(WrapVar, Wrap<E::Fr>)>),
     Constant(Wrap<E::Fr>)
 }
+
 
 pub fn enforce<E:Engine, CS:ConstraintSystem<E>>(mut cs:CS, a:&Signal<E>, b:&Signal<E>, c:&Signal<E>) {
     cs.enforce(|| "enforce", |_| a.lc(), |_| b.lc(), |_| c.lc());
@@ -471,7 +472,7 @@ impl <E:Engine> Signal<E> {
     }
 
     pub fn square<CS:ConstraintSystem<E>>(&self, mut cs: CS) -> Result<Self, SynthesisError> {
-        self.multiply(cs.namespace(|| "square"), self)
+        self.multiply(cs.namespace(|| "^2"), self)
     }
 
     pub fn is_zero<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<Self, SynthesisError> {
@@ -488,11 +489,11 @@ impl <E:Engine> Signal<E> {
                     Some(t) => t.inverse().or(Some(Wrap::one())),
                     None => None
                 };
-                let inv_signal = Self::alloc(cs.namespace(|| "alloc inverse value"), inv_value)?;
-                let res_signal = self.multiply(cs.namespace(|| "compute signal*inv_signal"), &inv_signal)?;
+                let inv_signal = Self::alloc(cs.namespace(|| ":=inv"), inv_value)?;
+                let res_signal = self.multiply(cs.namespace(|| "s inv"), &inv_signal)?;
 
-                inv_signal.assert_nonzero(cs.namespace(|| "assert inv_signal nonzero"))?;
-                res_signal.assert_bit(cs.namespace(|| "assert res_signal bit"))?;
+                inv_signal.assert_nonzero(cs.namespace(|| "inv_nonzero"))?;
+                res_signal.assert_bit(cs.namespace(|| "res_bit"))?;
                 Ok(Signal::one() - &res_signal)
             }
         }
@@ -513,9 +514,9 @@ impl <E:Engine> Signal<E> {
                 }
             },
             _ => if if_else.len() < self.len() {
-                Ok(if_else + &bit.multiply(cs.namespace(|| "compute flag*(if_ok-if_else)"), &(self-if_else))?)
+                Ok(if_else + &bit.multiply(cs.namespace(|| "switch"), &(self-if_else))?)
             } else {
-                Ok(self + &(Signal::one() - bit).multiply(cs.namespace(|| "compute flag*(if_ok-if_else)"), &(if_else - self))?)
+                Ok(self + &(Signal::one() - bit).multiply(cs.namespace(|| "switch"), &(if_else - self))?)
             }
             
             
@@ -570,8 +571,8 @@ impl <E:Engine> Signal<E> {
                     Some(t) => Some(t.inverse().ok_or(SynthesisError::DivisionByZero)?),
                     None => None
                 };
-                let inv_signal = Self::alloc(cs.namespace(|| "alloc inverse value"), inv_value)?;
-                cs.enforce(|| "signal*inv_signal==1", |_| self.lc(), |_| inv_signal.lc(), |zero| zero + CS::one());
+                let inv_signal = Self::alloc(cs.namespace(|| ":=inv"), inv_value)?;
+                cs.enforce(|| "s*invl==1", |_| self.lc(), |_| inv_signal.lc(), |zero| zero + CS::one());
                 Ok(())
             }
         }
@@ -587,7 +588,7 @@ impl <E:Engine> Signal<E> {
                 }
             },
             Signal::Variable(_, _) => {
-                cs.enforce(|| "self*(self-1)==self", |_| self.lc(), |_| self.lc() - (E::Fr::one(), CS::one()), |zero| zero);
+                cs.enforce(|| "assert_bit", |_| self.lc(), |_| self.lc() - (E::Fr::one(), CS::one()), |zero| zero);
                 Ok(())
             }
         }
