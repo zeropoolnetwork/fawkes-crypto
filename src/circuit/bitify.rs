@@ -30,22 +30,22 @@ pub fn into_bits_le<E:Engine, CS:ConstraintSystem<E>>(
             let value = signal.get_value();
             let mut remained_signal = signal.clone();
             let mut k = Wrap::one();
-            let mut bits = Vec::<Signal<E>>::new();
+            let mut bits = vec![Signal::zero(); limit];
             let value_bits = match value {
                 Some(v) => BitIteratorLE::new(v.into_repr()).map(|e| Some(e)).collect::<Vec<_>>(),
                 None => vec![None; E::Fr::NUM_BITS as usize]
             };
-            
-            for i in 0..limit-1 {
+
+            for i in 1..limit {
+                k=k.double();
                 let s = Signal::alloc(cs.namespace(|| format!("alloc bit {}", i)), value_bits[i].map(|b| Wrap::from(b)))?;
                 s.assert_bit(cs.namespace(|| format!("assert bit {}", i)))?;
                 remained_signal = remained_signal - k * &s;
-                bits.push(s);
-                k=k.double();
+                bits[i] = s;    
             }
-            let remained_signal = remained_signal.normalize();
-            remained_signal.assert_bit(cs.namespace(|| format!("assert last bit {}", limit-1)))?;
-            bits.push(remained_signal);
+
+            remained_signal.assert_bit(cs.namespace(|| "assert 0th bit"))?;
+            bits[0]=remained_signal;
             Ok(bits)
         },
         Signal::Constant(value) => {

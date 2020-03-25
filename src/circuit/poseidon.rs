@@ -85,10 +85,8 @@ mod poseidon_test {
     use bellman::pairing::bn256::{Bn256, Fr};
     use rand::{Rng, thread_rng};
 
-
-
     #[test]
-    fn poseidon_hash() {
+    fn test_circuit_poseidon() {
         const N_INPUTS: usize = 3;
         let mut rng = thread_rng();
         let poseidon_params = PoseidonParams::<Fr>::new(N_INPUTS+1, 8, 54);
@@ -100,10 +98,11 @@ mod poseidon_test {
         let res = poseidon(cs.namespace(|| "compute poseidon"), &inputs, &poseidon_params).unwrap();
 
         let res2 = crate::poseidon::poseidon(&data, &poseidon_params);
-        assert!(cs.is_satisfied(), "cs should be satisfied");
+        
+        if !cs.is_satisfied() {
+            let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
+            assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
+        }
         assert!(res.get_value().unwrap() == res2);
     }
-    
-
-
 }

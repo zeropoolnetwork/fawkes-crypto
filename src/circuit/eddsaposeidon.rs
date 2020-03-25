@@ -43,3 +43,42 @@ pub fn eddsaposeidon_verify<E: Engine, J:JubJubParams<E>, CS:ConstraintSystem<E>
 
     (&ha_plus_r.x - &sb.x).is_zero(cs.namespace(|| "check sB == hA+R"))
 }
+
+
+#[cfg(test)]
+mod poseidon_test {
+    use super::*;
+    use sapling_crypto::circuit::test::TestConstraintSystem;
+    use bellman::pairing::bn256::{Bn256, Fr};
+    use rand::{Rng, thread_rng};
+    use crate::ecc::{JubJubBN256};
+    use crate::wrappedmath::Wrap;
+
+    #[test]
+    fn test_circuit_eddsaposeidon_verify() {
+        let mut rng = thread_rng();
+        let poseidon_params = PoseidonParams::<Fr>::new(4, 8, 54);
+        let jubjub_params = JubJubBN256::new();
+
+        let sk = rng.gen();
+        let m = rng.gen();
+        let (s, r) = crate::eddsaposeidon::eddsaposeidon_sign(sk, m, &poseidon_params, &jubjub_params);
+        let a = jubjub_params.edwards_g8().mul(sk.into_repr(), &jubjub_params).into_xy().0;
+        
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let signal_s = Signal::alloc(cs.namespace(||"s"), Some(Wrap::from_other(s))).unwrap();
+        let signal_r = Signal::alloc(cs.namespace(||"r"), Some(r)).unwrap();
+        let signal_a = Signal::alloc(cs.namespace(||"a"), Some(a)).unwrap();
+        let signal_m = Signal::alloc(cs.namespace(||"m"), Some(m)).unwrap();
+
+        let res = eddsaposeidon_verify(cs.namespace(||"verify"), &signal_s, &signal_r, &signal_a, &signal_m, &poseidon_params, &jubjub_params).unwrap();
+
+
+        if !cs.is_satisfied() {
+            let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
+            assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
+        }
+
+        assert!(res.get_value().unwrap() == Wrap::one());
+    }
+}

@@ -81,11 +81,8 @@ mod eddsaposeidon_test {
 
     use crate::ecc::{JubJubBN256};
 
-
-
-
     #[test]
-    fn eddsaposeidon() {
+    fn test_eddsaposeidon() {
         let mut rng = thread_rng();
         let poseidon_params = PoseidonParams::<Fr>::new(4, 8, 54);
         let jubjub_params = JubJubBN256::new();
@@ -94,7 +91,7 @@ mod eddsaposeidon_test {
         let m = rng.gen();
         let (s, r) = eddsaposeidon_sign(sk, m, &poseidon_params, &jubjub_params);
         let a = jubjub_params.edwards_g8().mul(sk.into_repr(), &jubjub_params).into_xy().0;
-        assert!(eddsaposeidon_verify(s, r, a, m, &poseidon_params, &jubjub_params), "signature should be valid")
+        assert!(eddsaposeidon_verify(s, r, a, m, &poseidon_params, &jubjub_params), "signature should be valid");
     
     }
 

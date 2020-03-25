@@ -270,7 +270,7 @@ mod signal_test {
 
 
     #[test]
-    fn calculations() {
+    fn test_wrap() {
         let mut rng = thread_rng();
         let order  = Into::<BigUint>::into(Wrap::<Fr>::minusone()) + BigUint::from(1u64);
         let a : Wrap<Fr> = rng.gen();

@@ -52,8 +52,8 @@ impl<E:Engine> EdwardsPoint<E> {
         let v = self.x.multiply(cs.namespace(|| "xy"), &self.y)?;
         let v2 = v.square(cs.namespace(|| "x^2 y^2"))?;
         let u = (&self.x+&self.y).square(cs.namespace(|| "(x+y)^2"))?;
-        let new_x = (&v+&v).divide(cs.namespace(|| "compute point.x"), &(Signal::one() +  params.edwards_d()*&v2))?;
-        let new_y = (&u-&v-&v).divide(cs.namespace(|| "compute point.x"), &(Signal::one() -  params.edwards_d()*&v2))?;
+        let new_x = (&v+&v).divide(cs.namespace(|| "out x"), &(Signal::one() +  params.edwards_d()*&v2))?;
+        let new_y = (&u-&v-&v).divide(cs.namespace(|| "out y"), &(Signal::one() -  params.edwards_d()*&v2))?;
         Ok(Self {x: new_x, y: new_y})
     }
 
@@ -71,8 +71,8 @@ impl<E:Engine> EdwardsPoint<E> {
         let v2 = p.x.multiply(cs.namespace(|| "x2y1"), &self.y)?;
         let v12 = v1.multiply(cs.namespace(|| "x1y2x2y1"), &v2)?;
         let u = (&self.x+&self.y).multiply(cs.namespace(|| "(x1+y1)*(x2+y2)"), &(&p.x+&p.y))?;
-        let new_x = (&v1+&v2).divide(cs.namespace(|| "compute point.x"), &(Signal::one() +  params.edwards_d()*&v12))?;
-        let new_y = (&u-&v1-&v2).divide(cs.namespace(|| "compute point.x"), &(Signal::one() -  params.edwards_d()*&v12))?;
+        let new_x = (&v1+&v2).divide(cs.namespace(|| "out x"), &(Signal::one() +  params.edwards_d()*&v12))?;
+        let new_y = (&u-&v1-&v2).divide(cs.namespace(|| "out y"), &(Signal::one() -  params.edwards_d()*&v12))?;
         Ok(Self {x: new_x, y: new_y})
     }
 
@@ -175,7 +175,7 @@ impl<E:Engine> EdwardsPoint<E> {
         
                     for i in 0..nwindows {
                         let table = gen_table(&base, params);
-                        let res = mux3(cs.namespace(|| format!("{}th mux3", i)), &bits[3*i..3*(i+1)], &table)?;
+                        let res = mux3(cs.namespace(|| format!("{}th mux3", i)), &all_bits[3*i..3*(i+1)], &table)?;
                         let p = MontgomeryPoint {x: res[0].clone(), y: res[1].clone()};
                         acc = acc.add(cs.namespace(|| format!("{}th adder", i)), &p, params)?;
                         base = base.double().double().double();
@@ -187,11 +187,9 @@ impl<E:Engine> EdwardsPoint<E> {
             },
             _ => {
                 let base_is_zero = self.x.is_zero(cs.namespace(|| "check is base zero"))?;
-
-                let g8 = params.edwards_g8();
-                let dummy_point = EdwardsPoint {x: Signal::Constant(g8.x), y: Signal::Constant(g8.y)};
-        
+                let dummy_point = EdwardsPoint::constant(params.edwards_g8().clone());
                 let base_point = dummy_point.switch(cs.namespace(|| "optional switch point to dummy"), &base_is_zero, self)?;
+
                 let mut base_point = base_point.into_montgomery(cs.namespace(|| "convert point to montgomery"))?;
         
                 let mut exponents = vec![base_point.clone()];
@@ -200,6 +198,7 @@ impl<E:Engine> EdwardsPoint<E> {
                     base_point = base_point.double(cs.namespace(|| format!("{}th doubling", i)), params)?;
                     exponents.push(base_point.clone());
                 }
+
         
                 let empty_acc = MontgomeryPoint {x:Signal::zero(), y:Signal::zero()};
                 let mut acc = empty_acc.clone();
@@ -229,52 +228,280 @@ impl<E:Engine> MontgomeryPoint<E> {
             None => (None, None)
         };
 
-        let x = Signal::alloc(cs.namespace(|| "alloc x"), x_value)?;
-        let y = Signal::alloc(cs.namespace(|| "alloc y"), y_value)?;
+        let x = Signal::alloc(cs.namespace(|| "x"), x_value)?;
+        let y = Signal::alloc(cs.namespace(|| "y"), y_value)?;
         Ok(Self {x, y})
     }
 
     // assume self != (0, 0)
     pub fn double<CS:ConstraintSystem<E>, J:JubJubParams<E>>(&self, mut cs:CS, params: &J) -> Result<Self, SynthesisError> {
-        let x2 = self.x.square(cs.namespace(|| "compute x^2"))?;
-        let ax = params.montgomery_a() * &self.x;
-        let by = params.montgomery_b() * &self.y;
-
-        let l = (&x2 + &x2 + &x2 + &ax + &ax + &Signal::one()).divide(cs.namespace(|| "compute (3 x^2 + 2 a x + 1)/(2 b y)"), &(&by + &by))?;
+        let x2 = self.x.square(cs.namespace(|| "x^2"))?;
+        let l = (Wrap::from(3u64)*&x2 + Wrap::from(2u64)*params.montgomery_a()*&self.x + &Signal::one())
+            .divide(cs.namespace(|| "l"), &(Wrap::from(2u64)*params.montgomery_b() * &self.y))?;
         
-        let b_l2 = params.montgomery_b()*&l.square(cs.namespace(|| "compute l^2"))?;
+        let b_l2 = params.montgomery_b()*&l.square(cs.namespace(|| "l^2"))?;
         let a = Signal::Constant(params.montgomery_a());
-    
-        let x = &b_l2 - &a - &self.x - &self.x;
-        let y = l.multiply(cs.namespace(|| "compute (3 x + A - B*l^2)*l"), &(&self.x + &self.x + &self.x + &a - &b_l2))? - &self.y;
-
-        Ok(Self {x, y})
+        
+        Ok(Self {
+            x: &b_l2 - &a - &self.x - &self.x,
+            y: l.multiply(cs.namespace(|| "(3 x + A - B*l^2)*l"), &(Wrap::from(3u64)*&self.x + &a - &b_l2))? - &self.y
+        })
     }
 
     // assume self != p
     pub fn add<CS:ConstraintSystem<E>, J:JubJubParams<E>>(&self, mut cs:CS, p: &Self, params: &J) -> Result<Self, SynthesisError> {
-        let l = (&p.y - &self.y).divide(cs.namespace(|| "compute l"), &(&p.x - &self.x))?;
-        let b_l2 = params.montgomery_b()*&l.square(cs.namespace(|| "compute l^2"))?;
+        let l = (&p.y - &self.y).divide(cs.namespace(|| "l"), &(&p.x - &self.x))?;
+        let b_l2 = params.montgomery_b()*&l.square(cs.namespace(|| "l^2"))?;
         let a = Signal::Constant(params.montgomery_a());
-    
-        let x = &b_l2 - &a - &self.x - &p.x;
-        let y = l.multiply(cs.namespace(|| "compute (2 x1 + x2 + A - B*l^2)*l"), &(&self.x + &self.x + &self.x + &a - &b_l2))? - &self.y;
-
-        Ok(Self {x, y})
+        
+        Ok(Self {
+            x: &b_l2 - &a - &self.x - &p.x,
+            y: l.multiply(cs.namespace(|| "(2 x1 + x2 + A - B*l^2)*l"), &(Wrap::from(2u64)*&self.x + &p.x + &a - &b_l2))? - &self.y
+        })
     }
 
     // assume any nonzero point
     pub fn into_edwards<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<EdwardsPoint<E>, SynthesisError> {
         let y_is_zero = self.y.is_zero(cs.namespace(|| "check (0, 0) point"))?;
-        let x = self.x.divide(cs.namespace(|| "compute edwards x"), &(&self.y+&y_is_zero))?;
-        let y = (&self.y - &Signal::one()).divide(cs.namespace(|| "compute edwards y"), &(&self.y+&Signal::one()))?;
-        Ok(EdwardsPoint {x, y})
+        Ok(EdwardsPoint {
+            x: self.x.divide(cs.namespace(|| "x"), &(&self.y+&y_is_zero))?,
+            y: (&self.x - &Signal::one()).divide(cs.namespace(|| "y"), &(&self.x+&Signal::one()))?
+        })
     }
 
     pub fn switch<CS:ConstraintSystem<E>>(&self, mut cs:CS, bit:&Signal<E>, if_else:&Self) -> Result<Self, SynthesisError> {
-        let x = self.x.switch(cs.namespace(|| "switch x"), bit, &if_else.x)?;
-        let y = self.y.switch(cs.namespace(|| "switch y"), bit, &if_else.y)?;
-        Ok(Self {x, y})
+        Ok(Self {
+            x: self.x.switch(cs.namespace(|| "switch x"), bit, &if_else.x)?,
+            y: self.y.switch(cs.namespace(|| "switch y"), bit, &if_else.y)?
+        })
     }
 }
 
+
+
+#[cfg(test)]
+mod poseidon_test {
+    use super::*;
+    use sapling_crypto::circuit::test::TestConstraintSystem;
+    use bellman::pairing::bn256::{Bn256, Fr};
+    use rand::{Rng, thread_rng};
+    use crate::ecc::{JubJubBN256, Fs};
+    use crate::wrappedmath::Wrap;
+    use crate::circuit::bitify::{into_bits_le_strict};
+
+    #[test]
+    fn test_subgroup_decompress() {
+        let mut rng = thread_rng();
+        let jubjub_params = JubJubBN256::new();
+
+        let (x, y) = crate::ecc::EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params).mul(Wrap::<Fs>::from(8u64).into_repr(), &jubjub_params).into_xy();
+
+        
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let signal_x = Signal::alloc(cs.namespace(||"x"), Some(x)).unwrap();
+        let res = EdwardsPoint::subgroup_decompress(cs.namespace(||"decompress point"), &signal_x, &jubjub_params).unwrap();
+        res.y.assert_constant(cs.namespace(||"check final value"), y).unwrap();
+
+        if !cs.is_satisfied() {
+            let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
+            assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
+        }
+        assert!(res.y.get_value().unwrap() == y);
+    }
+
+    #[test]
+    fn test_edwards_add() {
+        let mut rng = thread_rng();
+        let jubjub_params = JubJubBN256::new();
+
+        let p1 = crate::ecc::EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params);
+        let p2 = crate::ecc::EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params);
+        
+        let (p3_x, p3_y) = p1.add(&p2, &jubjub_params).into_xy();
+        
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let signal_p1 = EdwardsPoint::alloc(cs.namespace(||"p1"), Some(p1)).unwrap();
+        let signal_p2 = EdwardsPoint::alloc(cs.namespace(||"p2"), Some(p2)).unwrap();
+
+        let signal_p3 = signal_p1.add(cs.namespace(||"p1+p2"), &signal_p2, &jubjub_params).unwrap();
+
+        signal_p3.x.assert_constant(cs.namespace(||"check x"), p3_x).unwrap();
+        signal_p3.y.assert_constant(cs.namespace(||"check y"), p3_y).unwrap();
+
+        if !cs.is_satisfied() {
+            let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
+            assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
+        }
+    }
+
+    #[test]
+    fn test_circuit_edwards_into_montgomery() {
+        let mut rng = thread_rng();
+        let jubjub_params = JubJubBN256::new();
+
+        let p = crate::ecc::EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params);
+        
+        let (mp_x, mp_y) = p.into_montgomery_xy().unwrap();
+        
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let signal_p = EdwardsPoint::alloc(cs.namespace(||"p"), Some(p)).unwrap();
+        let signal_mp = signal_p.into_montgomery(cs.namespace(|| "mp")).unwrap();
+
+        signal_mp.x.assert_constant(cs.namespace(||"check x"), mp_x).unwrap();
+        signal_mp.y.assert_constant(cs.namespace(||"check y"), mp_y).unwrap();
+
+        if !cs.is_satisfied() {
+            let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
+            assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
+        }
+    }
+
+    #[test]
+    fn test_circuit_montgomery_into_edwards() {
+        let mut rng = thread_rng();
+        let jubjub_params = JubJubBN256::new();
+
+        let p = crate::ecc::EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params);
+        
+        let (p_x, p_y) = p.into_xy();
+        let (mp_x, mp_y) = p.into_montgomery_xy().unwrap();
+        
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+
+        let signal_mp = MontgomeryPoint {
+            x: Signal::alloc(cs.namespace(||"mp_x"), Some(mp_x)).unwrap(),
+            y: Signal::alloc(cs.namespace(||"mp_y"), Some(mp_y)).unwrap()
+        };
+        
+        let signal_p = signal_mp.into_edwards(cs.namespace(||"p")).unwrap();
+
+        signal_p.x.assert_constant(cs.namespace(||"check x"), p_x).unwrap();
+        signal_p.y.assert_constant(cs.namespace(||"check y"), p_y).unwrap();
+
+        if !cs.is_satisfied() {
+            let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
+            assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
+        }
+    }
+
+
+    #[test]
+    fn test_montgomery_add() {
+        let mut rng = thread_rng();
+        let jubjub_params = JubJubBN256::new();
+
+        let p1 = crate::ecc::EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params);
+        let p2 = crate::ecc::EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params);
+        
+        let (p3_x, p3_y) = p1.add(&p2, &jubjub_params).into_xy();
+        
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let signal_p1 = EdwardsPoint::alloc(cs.namespace(||"p1"), Some(p1)).unwrap();
+        let signal_p2 = EdwardsPoint::alloc(cs.namespace(||"p2"), Some(p2)).unwrap();
+
+        let signal_mp1 = signal_p1.into_montgomery(cs.namespace(|| "mp1")).unwrap();
+        let signal_mp2 = signal_p2.into_montgomery(cs.namespace(|| "mp2")).unwrap();
+
+        let signal_mp3 = signal_mp1.add(cs.namespace(||"mp1+mp2"), &signal_mp2, &jubjub_params).unwrap();
+        let signal_p3 = signal_mp3.into_edwards(cs.namespace(||"p3")).unwrap();
+        
+        signal_p3.x.assert_constant(cs.namespace(||"check x"), p3_x).unwrap();
+        signal_p3.y.assert_constant(cs.namespace(||"check y"), p3_y).unwrap();
+
+        if !cs.is_satisfied() {
+            let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
+            assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
+        }
+    }
+
+    #[test]
+    fn test_montgomery_double() {
+        let mut rng = thread_rng();
+        let jubjub_params = JubJubBN256::new();
+
+        let p = crate::ecc::EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params);
+        
+        let (p3_x, p3_y) = p.double().into_xy();
+        
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let signal_p = EdwardsPoint::alloc(cs.namespace(||"p"), Some(p)).unwrap();
+        let signal_mp = signal_p.into_montgomery(cs.namespace(|| "mp")).unwrap();
+        let signal_mp3 = signal_mp.double(cs.namespace(||"2 mp"), &jubjub_params).unwrap();
+        let signal_p3 = signal_mp3.into_edwards(cs.namespace(||"p3")).unwrap();
+        
+        signal_p3.x.assert_constant(cs.namespace(||"check x"), p3_x).unwrap();
+        signal_p3.y.assert_constant(cs.namespace(||"check y"), p3_y).unwrap();
+
+        if !cs.is_satisfied() {
+            let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
+            assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
+        }
+    }
+
+
+    // #[test]
+    // fn test_edwards_mul_simplified() {
+    //     let mut rng = thread_rng();
+    //     let jubjub_params = JubJubBN256::new();
+
+    //     let p = crate::ecc::EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params)
+    //         .mul(Wrap::<Fs>::from(8u64).into_repr(), &jubjub_params);
+        
+    //     let n = Wrap::<Fr>::from(14u64);
+        
+    //     let (p3_x, p3_y) = p.mul(n.into_repr(), &jubjub_params).into_xy();
+
+        
+    //     let mut cs = TestConstraintSystem::<Bn256>::new();
+    //     let signal_p = EdwardsPoint::alloc(cs.namespace(||"p"), Some(p)).unwrap();
+        
+
+    //     let signal_n_bits = vec![Signal::zero(), Signal::one(), Signal::one(), Signal::one()];
+
+
+    //     let signal_p3 = signal_p.multiply(cs.namespace(||"p*n"), &signal_n_bits, &jubjub_params).unwrap();
+
+    //     signal_p3.x.assert_constant(cs.namespace(||"check x"), p3_x).unwrap();
+    //     signal_p3.y.assert_constant(cs.namespace(||"check y"), p3_y).unwrap();
+
+    //     if !cs.is_satisfied() {
+    //         let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
+    //         assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
+    //     }
+    // }    
+
+
+    #[test]
+    fn test_edwards_mul() {
+        let mut rng = thread_rng();
+        let jubjub_params = JubJubBN256::new();
+
+        let p = crate::ecc::EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params)
+            .mul(Wrap::<Fs>::from(8u64).into_repr(), &jubjub_params);
+        let n : Wrap<Fr> = rng.gen();
+        
+        let (p3_x, p3_y) = p.mul(n.into_repr(), &jubjub_params).into_xy();
+        
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let signal_p = EdwardsPoint::alloc(cs.namespace(||"p"), Some(p)).unwrap();
+        let signal_n = Signal::alloc(cs.namespace(||"n"), Some(n)).unwrap();
+
+        let signal_n_bits = into_bits_le_strict(cs.namespace(|| "bitify n"), &signal_n).unwrap();
+
+        let mut n_constraints = cs.num_constraints();
+        let signal_p3 = signal_p.multiply(cs.namespace(||"p*n"), &signal_n_bits, &jubjub_params).unwrap();
+        n_constraints=cs.num_constraints()-n_constraints;
+
+        signal_p3.x.assert_constant(cs.namespace(||"check x"), p3_x).unwrap();
+        signal_p3.y.assert_constant(cs.namespace(||"check y"), p3_y).unwrap();
+
+        println!("num constraints = {}", n_constraints);
+        
+        if !cs.is_satisfied() {
+            let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
+            assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
+        }
+
+        
+    }    
+}

@@ -353,24 +353,34 @@ mod ecc_test {
     use super::*;
 
     use rand::{Rng, thread_rng};
-    use bellman::pairing::bn256::{Fr};
 
 
     #[test]
-    fn jubjubbn256() {
+    fn test_jubjubn256() {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
         assert!(!jubjub_params.edwards_g().is_in_subgroup(&jubjub_params), "generator should be not in subgroup");        
         assert!(jubjub_params.edwards_g8().is_in_subgroup(&jubjub_params), "subgroup generator should be in subgroup");
 
-        const SAMPLES: usize = 20;
-        for _ in 0..SAMPLES {
-            let s:Wrap<Fs> = rng.gen();
-            let p = jubjub_params.edwards_g8().mul(s.into_repr(), &jubjub_params);
-            assert!(p.is_in_subgroup(&jubjub_params), "point should be in subgroup");
-        }
+        let s:Wrap<Fs> = rng.gen();
+        let p = jubjub_params.edwards_g8().mul(s.into_repr(), &jubjub_params);
+        assert!(p.is_in_subgroup(&jubjub_params), "point should be in subgroup");
+        assert!(jubjub_params.edwards_g().mul(Wrap::<Fs>::from(8u64).into_repr(), &jubjub_params) == jubjub_params.edwards_g8().clone());
+
+        let q = EdwardsPoint::rand(&mut rng, &jubjub_params);
+        assert!(q.add(&q, &jubjub_params) == q.double());
+
+        
     }
 
+    #[test]
+    fn test_edwards_to_montgomery_and_back() {
+        let mut rng = thread_rng();
+        let jubjub_params = JubJubBN256::new();
+        let p = EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params);
+        let (mx, my) = p.into_montgomery_xy().unwrap();
+        assert!(EdwardsPoint::from_montgomery_xy_unchecked(mx, my) == p, "point should be the same");
+    }
 
 }

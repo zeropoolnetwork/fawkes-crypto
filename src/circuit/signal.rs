@@ -129,7 +129,7 @@ fn _sub<E: Engine>(a: &Signal<E>, b: &Signal<E>) -> Signal<E> {
         (&Signal::Constant(a), &Signal::Constant(b)) => Signal::Constant(a-b),
         _ => {
             let value = match (a.get_value(), b.get_value()) {
-                (Some(a), Some(b)) => {Some(a+b)},
+                (Some(a), Some(b)) => {Some(a-b)},
                 _ => None
             };
             let mut a_m = a.get_varmap();
@@ -251,14 +251,21 @@ impl <E:Engine> Signal<E> {
 
     pub fn lc(&self) -> LinearCombination<E> {
         match self {
-            Self::Variable(_, lc) => {
+            Self::Variable(_, m) => {
                 let mut acc = LinearCombination::<E>::zero();
-                for (k, v) in lc {
+                for (k, v) in m {
                     acc = acc + (v.into_inner(), *k)
                 }
                 acc
             }
             Self::Constant(v) => LinearCombination::<E>::zero() + (v.into_inner(), Variable::new_unchecked(Index::Input(0)))
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Self::Variable(_, m) => m.keys().len(),
+           _ => 1
         }
     }
 
@@ -273,7 +280,7 @@ impl <E:Engine> Signal<E> {
 
     pub fn normalize(&self) -> Self {
         match self {
-            Self::Variable(value, m) => {
+            Self::Variable(_, m) => {
                 let lc_items = m.iter().collect::<Vec<_>>();
 
                 if lc_items.len()==0 {
@@ -363,7 +370,7 @@ impl <E:Engine> Signal<E> {
                     _ => None
                 };
                 let a_mul_b = cs.alloc(|| "a mul b", || a_mul_b_value.grab())?;
-                cs.enforce(|| "enforce res == a mul b", |_| a.lc(), |_| b.lc(), |zero| zero + a_mul_b);
+                cs.enforce(|| "<== a mul b", |_| a.lc(), |_| b.lc(), |zero| zero + a_mul_b);
                 Self::Variable(a_mul_b_value, hashmap!{a_mul_b => Wrap::one()})
             }
         };
@@ -373,15 +380,6 @@ impl <E:Engine> Signal<E> {
     pub fn divide<CS:ConstraintSystem<E>>(&self, mut cs: CS, b: &Self) -> Result<Self, SynthesisError> {
         let a = self.normalize();
         let b = b.normalize();
-
-        let b_value = b.get_value();
-        
-        if let Some(t) = b_value {
-            if t.is_zero() {
-                return Err(SynthesisError::DivisionByZero);
-            }
-        }
-
         let signal = match (a, b) {
             (Self::Constant(a), Self::Constant(b)) => Self::Constant(a*b.inverse().ok_or(SynthesisError::DivisionByZero)?),
             (a, Self::Constant(b)) => b.inverse().ok_or(SynthesisError::DivisionByZero)? * &a,
@@ -391,10 +389,8 @@ impl <E:Engine> Signal<E> {
                     (Some(a), Some(b)) => Some(a*b.inverse().ok_or(SynthesisError::DivisionByZero)?),
                     _ => None
                 };
-
                 let a_div_b = cs.alloc(|| "a div b", || a_div_b_value.grab())?;
-
-                cs.enforce(|| "enforce res * b == a ", |zero| zero + a_div_b, |_| b.lc(), |_| a.lc());
+                cs.enforce(|| "(a div b) * b == a ", |zero| zero + a_div_b, |_| b.lc(), |_| a.lc());
                 Self::Variable(a_div_b_value, hashmap!{a_div_b => Wrap::one()})
             }
         };
@@ -402,7 +398,7 @@ impl <E:Engine> Signal<E> {
     }
 
     pub fn square<CS:ConstraintSystem<E>>(&self, mut cs: CS) -> Result<Self, SynthesisError> {
-        self.multiply(cs.namespace(|| "multiply self*self"), self)
+        self.multiply(cs.namespace(|| "square"), self)
     }
 
     pub fn is_zero<CS:ConstraintSystem<E>>(&self, mut cs:CS) -> Result<Self, SynthesisError> {
@@ -443,7 +439,13 @@ impl <E:Engine> Signal<E> {
                     }
                 }
             },
-            _ => Ok(if_else + &bit.multiply(cs.namespace(|| "compute flag*(if_ok-if_else)"), &(self-if_else))?)
+            _ => if if_else.len() < self.len() {
+                Ok(if_else + &bit.multiply(cs.namespace(|| "compute flag*(if_ok-if_else)"), &(self-if_else))?)
+            } else {
+                Ok(self + &(Signal::one() - bit).multiply(cs.namespace(|| "compute flag*(if_ok-if_else)"), &(if_else - self))?)
+            }
+            
+            
         }
         
     }
@@ -459,7 +461,23 @@ impl <E:Engine> Signal<E> {
                 }
             },
             Signal::Variable(_, _) => {
-                cs.enforce(|| "0*0==self", |zero| zero, |zero| zero, |_| self.lc());
+                cs.enforce(|| "self==0", |zero| zero, |zero| zero, |_| self.lc());
+                Ok(())
+            }
+        }
+    }
+
+    pub fn assert_constant<CS:ConstraintSystem<E>>(&self, mut cs:CS, c: Wrap<E::Fr>) -> Result<(), SynthesisError> {
+        match self {
+            Signal::Constant(con) => {
+                if *con == c {
+                    Ok(())
+                } else {
+                    Err(SynthesisError::Unsatisfiable)
+                }
+            },
+            Signal::Variable(_, _) => {
+                cs.enforce(|| "self==const", |zero| zero+(c.into_inner(), CS::one()), |zero| zero+CS::one(), |_| self.lc());
                 Ok(())
             }
         }
@@ -510,7 +528,7 @@ impl <E:Engine> Signal<E> {
 mod signal_test {
     use super::*;
     use sapling_crypto::circuit::test::TestConstraintSystem;
-    use bellman::pairing::bn256::{Bn256, Fr};
+    use bellman::pairing::bn256::{Bn256};
     use rand::{Rng, thread_rng};
 
 
