@@ -290,7 +290,7 @@ mod poseidon_test {
     use crate::circuit::bitify::{into_bits_le_strict};
 
     #[test]
-    fn test_subgroup_decompress() {
+    fn test_circuit_subgroup_decompress() {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
@@ -310,7 +310,7 @@ mod poseidon_test {
     }
 
     #[test]
-    fn test_edwards_add() {
+    fn test_circuit_edwards_add() {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
@@ -386,7 +386,7 @@ mod poseidon_test {
 
 
     #[test]
-    fn test_montgomery_add() {
+    fn test_circuit_montgomery_add() {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
@@ -415,7 +415,7 @@ mod poseidon_test {
     }
 
     #[test]
-    fn test_montgomery_double() {
+    fn test_circuit_montgomery_double() {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
@@ -439,40 +439,8 @@ mod poseidon_test {
     }
 
 
-    // #[test]
-    // fn test_edwards_mul_simplified() {
-    //     let mut rng = thread_rng();
-    //     let jubjub_params = JubJubBN256::new();
-
-    //     let p = crate::ecc::EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params)
-    //         .mul(Wrap::<Fs>::from(8u64).into_repr(), &jubjub_params);
-        
-    //     let n = Wrap::<Fr>::from(14u64);
-        
-    //     let (p3_x, p3_y) = p.mul(n.into_repr(), &jubjub_params).into_xy();
-
-        
-    //     let mut cs = TestConstraintSystem::<Bn256>::new();
-    //     let signal_p = EdwardsPoint::alloc(cs.namespace(||"p"), Some(p)).unwrap();
-        
-
-    //     let signal_n_bits = vec![Signal::zero(), Signal::one(), Signal::one(), Signal::one()];
-
-
-    //     let signal_p3 = signal_p.multiply(cs.namespace(||"p*n"), &signal_n_bits, &jubjub_params).unwrap();
-
-    //     signal_p3.x.assert_constant(cs.namespace(||"check x"), p3_x).unwrap();
-    //     signal_p3.y.assert_constant(cs.namespace(||"check y"), p3_y).unwrap();
-
-    //     if !cs.is_satisfied() {
-    //         let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
-    //         assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
-    //     }
-    // }    
-
-
     #[test]
-    fn test_edwards_mul() {
+    fn test_circuit_edwards_mul() {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
@@ -495,13 +463,44 @@ mod poseidon_test {
         signal_p3.x.assert_constant(cs.namespace(||"check x"), p3_x).unwrap();
         signal_p3.y.assert_constant(cs.namespace(||"check y"), p3_y).unwrap();
 
-        println!("num constraints = {}", n_constraints);
+        println!("edwards_mul constraints = {}", n_constraints);
         
         if !cs.is_satisfied() {
             let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
             assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
         }
+    }
 
+
+    #[test]
+    fn test_circuit_edwards_mul_const() {
+        let mut rng = thread_rng();
+        let jubjub_params = JubJubBN256::new();
+
+        let p = crate::ecc::EdwardsPoint::<Bn256>::rand(&mut rng, &jubjub_params)
+            .mul(Wrap::<Fs>::from(8u64).into_repr(), &jubjub_params);
+        let n : Wrap<Fr> = rng.gen();
         
+        let (p3_x, p3_y) = p.mul(n.into_repr(), &jubjub_params).into_xy();
+        
+        let mut cs = TestConstraintSystem::<Bn256>::new();
+        let signal_p = EdwardsPoint::constant(p.clone()); 
+        let signal_n = Signal::alloc(cs.namespace(||"n"), Some(n)).unwrap();
+
+        let signal_n_bits = into_bits_le_strict(cs.namespace(|| "bitify n"), &signal_n).unwrap();
+
+        let mut n_constraints = cs.num_constraints();
+        let signal_p3 = signal_p.multiply(cs.namespace(||"p*n"), &signal_n_bits, &jubjub_params).unwrap();
+        n_constraints=cs.num_constraints()-n_constraints;
+
+        signal_p3.x.assert_constant(cs.namespace(||"check x"), p3_x).unwrap();
+        signal_p3.y.assert_constant(cs.namespace(||"check y"), p3_y).unwrap();
+
+        println!("edwards_mul_const constraints = {}", n_constraints);
+        
+        if !cs.is_satisfied() {
+            let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
+            assert!(false, format!("Constraints not satisfied: {}", not_satisfied));
+        }
     }    
 }

@@ -46,7 +46,7 @@ pub fn eddsaposeidon_verify<E: Engine, J:JubJubParams<E>, CS:ConstraintSystem<E>
 
 
 #[cfg(test)]
-mod poseidon_test {
+mod eddsaposeidon_test {
     use super::*;
     use sapling_crypto::circuit::test::TestConstraintSystem;
     use bellman::pairing::bn256::{Bn256, Fr};
@@ -71,8 +71,13 @@ mod poseidon_test {
         let signal_a = Signal::alloc(cs.namespace(||"a"), Some(a)).unwrap();
         let signal_m = Signal::alloc(cs.namespace(||"m"), Some(m)).unwrap();
 
+        let mut n_constraints = cs.num_constraints();
         let res = eddsaposeidon_verify(cs.namespace(||"verify"), &signal_s, &signal_r, &signal_a, &signal_m, &poseidon_params, &jubjub_params).unwrap();
+        n_constraints=cs.num_constraints()-n_constraints;
+        
+        res.assert_constant(cs.namespace(|| "check res"), Wrap::one()).unwrap();
 
+        println!("eddsaposeidon_verify constraints = {}", n_constraints);
 
         if !cs.is_satisfied() {
             let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");

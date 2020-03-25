@@ -12,7 +12,6 @@ blake2-rfc = {git = "https://github.com/gtank/blake2-rfc", rev = "7a5b5fc99ae483
 rand = "0.4"
 byteorder = "1"
 num = "0.2.1"
-maplit = "1.0.2"
 linked-list = "0.0.3"
 
 [dependencies.bellman]

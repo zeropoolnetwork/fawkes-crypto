@@ -77,11 +77,11 @@ pub fn poseidon<F:PrimeField>(inputs:&[Wrap<F>], params:&PoseidonParams<F>) -> W
 }
 
 
-pub fn merkle_root<F:PrimeField>(leaf:&Wrap<F>, siblings:&[Wrap<F>], path:&[bool], params:&PoseidonParams<F>) -> Wrap<F> {
-    assert!(siblings.len() == path.len(), "merkle proof path should be the same");
+pub fn poseidon_merkle_root<F:PrimeField>(leaf:Wrap<F>, sibling:&[Wrap<F>], path:&[bool], params:&PoseidonParams<F>) -> Wrap<F> {
+    assert!(sibling.len() == path.len(), "merkle proof path should be the same");
     let mut root = leaf.clone();
     
-    for (&p, &s) in path.iter().zip(siblings.iter()) {
+    for (&p, &s) in path.iter().zip(sibling.iter()) {
         let pair = if p {[s, root]} else {[root, s]};
         root = poseidon(pair.as_ref(), params);
     }
