@@ -7,7 +7,7 @@ readme = "README.md"
 homepage = "https://github.com/zeropoolnetwork/fawkes-crypto"
 repository = "https://github.com/zeropoolnetwork/fawkes-crypto"
 edition = "2018"
-
+license = "MIT OR Apache-2.0"
 
 [lib]
 crate-type = ["cdylib", "lib", "staticlib"]
