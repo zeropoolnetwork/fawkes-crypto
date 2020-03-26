@@ -12,7 +12,7 @@ All final field or circuit math is wrapped and operators are implemented, so, in
 ## Example
 
 Here is an example, how Merkle tree implementation is working.
-Also you may check rollup [here](https://github.com/snjax/fawkes-rollup)
+Also you may check rollup [here](https://github.com/snjax/fawkes-rollup).
 
 ```rust
 pub fn poseidon_merkle_root<E:Engine, CS:ConstraintSystem<E>>(
@@ -59,7 +59,7 @@ Source code of the rollup is available at [https://github.com/snjax/fawkes-rollu
 * ecmul and ecmul_cost operations are working assuming that the base point is in the subgroup. This allows us to use Montgomery (0, 0) point as adder initial state. Then the adder never reaches zero point and subgroup point, because (0, 0) is not in subgroup and we can use cheap montgomery_add circuit safely.
 * improved compconstant circuit. The same PR into circomlib available [here](https://github.com/iden3/circomlib/pull/40)
 
-See more as ethresear.ch
+See more as ethresear.ch [here](https://ethresear.ch/t/fawkes-crypto-zksnarks-framework-from-zeropool/7201).
 
 ## Authors
 
