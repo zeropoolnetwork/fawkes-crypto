@@ -1,4 +1,4 @@
-# Fawkes-Crypto - zkSNARKs building framework
+# Fawkes-Crypto - zkSNARKs framework
 
 
 ## Abstract
