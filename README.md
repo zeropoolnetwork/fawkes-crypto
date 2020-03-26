@@ -7,9 +7,12 @@ Fawkes-Crypto is a lightweight framework for building circuits in bellman, using
 
 The framework is targeted to use best practices for circuit building from circom and sapling-crypto. 
 
+All final field or circuit math is wrapped and operators are implemented, so, in mostly cases if you want to type `a+b`, you can do it.
+
 ## Example
 
 Here is an example, how Merkle tree implementation is working.
+Also you may check rollup [here](https://github.com/snjax/fawkes-rollup)
 
 ```rust
 pub fn poseidon_merkle_root<E:Engine, CS:ConstraintSystem<E>>(
