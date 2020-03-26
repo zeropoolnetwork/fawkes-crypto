@@ -39,16 +39,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02b4ff8b16e6076c3e14220b39fbc1fabb6737522281a388998046859400895f"
 
 [[package]]
-name = "blake2-rfc"
-version = "0.2.18"
-source = "git+https://github.com/gtank/blake2-rfc?rev=7a5b5fc99ae483a0043db7547fb79a6fa44b88a9#7a5b5fc99ae483a0043db7547fb79a6fa44b88a9"
-dependencies = [
- "arrayvec",
- "byteorder",
- "constant_time_eq",
-]
-
-[[package]]
 name = "blake2-rfc_bellman_edition"
 version = "0.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -201,7 +191,7 @@ name = "fawkes-crypto"
 version = "0.2.3"
 dependencies = [
  "bellman_ce",
- "blake2-rfc",
+ "blake2-rfc_bellman_edition",
  "byteorder",
  "ff_ce",
  "linked-list",
