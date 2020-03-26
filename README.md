@@ -7,7 +7,7 @@ Fawkes-Crypto is a lightweight framework for building circuits in bellman, using
 
 The framework is targeted to use best practices for circuit building from circom and sapling-crypto. 
 
-All final field or circuit math is wrapped and operators are implemented, so, in mostly cases if you want to type `a+b`, you can do it.
+Final fields and circuit math are wrapped and operators are implemented, so, in most cases if you want to type `a+b`, you can do it.
 
 ## Example
 
