@@ -12,7 +12,7 @@ Final fields and circuit math are wrapped and operators are implemented, so, in 
 ## Example
 
 Here is an example, how Merkle tree implementation is working.
-Also you may check rollup [here](https://github.com/snjax/fawkes-rollup).
+Also you may check the rollup [here](https://github.com/snjax/fawkes-rollup).
 
 ```rust
 pub fn poseidon_merkle_root<E:Engine, CS:ConstraintSystem<E>>(
