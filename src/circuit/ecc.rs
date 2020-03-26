@@ -292,6 +292,9 @@ mod poseidon_test {
     use crate::wrappedmath::Wrap;
     use crate::circuit::bitify::{into_bits_le_strict};
 
+
+    
+
     #[test]
     fn test_circuit_subgroup_decompress() {
         let mut rng = thread_rng();
@@ -302,8 +305,14 @@ mod poseidon_test {
         
         let mut cs = TestConstraintSystem::<Bn256>::new();
         let signal_x = Signal::alloc(cs.namespace(||"x"), Some(x)).unwrap();
+
+        let mut n_constraints = cs.num_constraints();
         let res = EdwardsPoint::subgroup_decompress(cs.namespace(||"decompress point"), &signal_x, &jubjub_params).unwrap();
+        n_constraints=cs.num_constraints()-n_constraints;
+
         res.y.assert_constant(cs.namespace(||"check final value"), y).unwrap();
+
+        println!("subgroup_decompress constraints = {}", n_constraints);
 
         if !cs.is_satisfied() {
             let not_satisfied = cs.which_is_unsatisfied().unwrap_or("");
