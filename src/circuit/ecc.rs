@@ -8,7 +8,7 @@ use bellman::pairing::{
 };
 
 
-use super::signal::Signal;
+use super::signal::{Signal, enforce};
 use crate::ecc::{JubJubParams};
 use crate::wrappedmath::Wrap;
 use crate::circuit::mux::mux3;
@@ -81,7 +81,8 @@ impl<E:Engine> EdwardsPoint<E> {
     pub fn assert_in_curve<CS:ConstraintSystem<E>, J:JubJubParams<E>>(&self, mut cs:CS, params: &J) -> Result<(), SynthesisError> {
         let x2 = self.x.square(cs.namespace(|| "x^2"))?;
         let y2 = self.y.square(cs.namespace(|| "y^2"))?;
-        cs.enforce(|| "on_curve", |_| y2.lc(), |zero| zero + CS::one() - (params.edwards_d().into_inner(), &y2.lc()), |zero| zero + CS::one() + &x2.lc());
+
+        enforce(cs.namespace(||"in_curve"), &(params.edwards_d()*&x2), &y2, &(&y2-&x2-&Signal::one()));
         Ok(())
     }
 
@@ -95,6 +96,7 @@ impl<E:Engine> EdwardsPoint<E> {
         };
 
         let preimage = EdwardsPoint::alloc(cs.namespace(|| "q"), preimage_value)?;
+        preimage.assert_in_curve(cs.namespace(||"incurve"), params)?;
         let preimage8 = preimage.mul_cofactor(cs.namespace(|| "8q"), params)?;
 
         (&self.x - &preimage8.x).assert_zero(cs.namespace(|| "assert_x"))?;
@@ -113,6 +115,7 @@ impl<E:Engine> EdwardsPoint<E> {
         };
 
         let preimage = EdwardsPoint::alloc(cs.namespace(|| "q"), preimage_value)?;
+        preimage.assert_in_curve(cs.namespace(||"incurve"), params)?;
         let preimage8 = preimage.mul_cofactor(cs.namespace(|| "8q"), params)?;
 
         (x - &preimage8.x).assert_zero(cs.namespace(|| "assert_x"))?;

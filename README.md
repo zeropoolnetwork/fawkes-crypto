@@ -39,19 +39,22 @@ pub fn poseidon_merkle_root<E:Engine, CS:ConstraintSystem<E>>(
 | Circuit | Constraints | Per bit | 
 | - | - | - |
 | poseidon hash (4, 8, 54) | 255 | 0.33 |
-| jubjub oncurve+subgroup check | 16 | |
+| jubjub oncurve+subgroup check | 19 | |
 | ecmul_const 254 bits | 513 | 2.02 |
 | ecmul 254 bits | 2296 | 9.04 |
 | poseidon merkle proof 32| 7328 | |
 | poseidon eddsa | 3860 | |
 | rollup 1024 txs, 2^32 set | 35695616 |
 
-At i9-9900K rollup is proved for 628 seconds
+At i9-9900K rollup is proved for 628 seconds. 
+
+Source code of the rollup is available at [https://github.com/snjax/fawkes-rollup](https://github.com/snjax/fawkes-rollup).
 
 ## Circuit improvements
 
 * We are using indeterministic subgroup checks, performing most part of computations as witness-only and perform cofactor multiplication at the circuit.
 * ecmul and ecmul_cost operations are working assuming that the base point is in the subgroup. This allows us to use Montgomery (0, 0) point as adder initial state. Then the adder never reaches zero point and subgroup point, because (0, 0) is not in subgroup and we can use cheap montgomery_add circuit safely.
+* improved compconstant circuit. The same PR into circomlib available [here](https://github.com/iden3/circomlib/pull/40)
 
 See more as ethresear.ch
 
