@@ -322,11 +322,14 @@ impl <E:Engine> Signal<E> {
     pub fn lc(&self) -> LinearCombination<E> {
         match self {
             Self::Variable(_, ll) => {
-                let mut acc = LinearCombination::<E>::zero();
-                for (k, v) in ll {
-                    acc = acc + (v.into_inner(), k.into_var())
-                }
-                acc
+                // let mut acc = LinearCombination::<E>::zero();
+                // for (k, v) in ll {
+                //     acc = acc + (v.into_inner(), k.into_var())
+                // }
+                // acc
+                let acc = ll.iter().map(|(k, v)| (k.into_var(), v.into_inner())).collect::<Vec<_>>();
+                unsafe {std::mem::transmute(acc)}
+
             }
             Self::Constant(v) => LinearCombination::<E>::zero() + (v.into_inner(), WrapVar::one().into_var())
         }
