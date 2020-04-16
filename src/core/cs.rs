@@ -1,6 +1,6 @@
 use crate::core::num::{Num, Assignment};
 use bellman::{self};
-use ff::{Field, SqrtField, PrimeField, PrimeFieldRepr};
+use ff::{PrimeField};
 use std::cell::RefCell;
 
 use crate::core::signal::{Signal, Index};
@@ -43,12 +43,6 @@ impl<BE:bellman::pairing::Engine, BCS: bellman::ConstraintSystem<BE>> Constraint
                 unsafe {std::mem::transmute(res)}
 
         }
-        match (a.value, b.value, c.value) {
-            (Some(a), Some(b), Some(c)) => {
-                assert!(a*b==c, "Not satisfied constraint");
-            },
-            _ => {}
-        }
         
         let mut ncons_ref = self.ncons.borrow_mut();
         let ncons = *ncons_ref;
@@ -64,6 +58,7 @@ impl<BE:bellman::pairing::Engine, BCS: bellman::ConstraintSystem<BE>> Constraint
 pub struct TestCS<F:PrimeField> {
     pub ninputs:RefCell<usize>,
     pub naux:RefCell<usize>,
+    pub ncons:RefCell<usize>,
     f: std::marker::PhantomData<F>
 }
 
@@ -72,8 +67,13 @@ impl<F:PrimeField> TestCS<F> {
         Self {
             ninputs: RefCell::new(1),
             naux: RefCell::new(0),
+            ncons: RefCell::new(0),
             f: std::marker::PhantomData
         }
+    }
+
+    pub fn num_constraints(&self) -> usize {
+        *self.ncons.borrow()
     }
 }
 
@@ -95,6 +95,7 @@ impl<F:PrimeField> ConstraintSystem for TestCS<F> {
     }
 
     fn enforce(&self, a:&Signal<Self>, b:&Signal<Self>, c:&Signal<Self>) {
+        *self.ncons.borrow_mut() += 1;
         match (a.value, b.value, c.value) {
             (Some(a), Some(b), Some(c)) => {
                 assert!(a*b==c, "Not satisfied constraint");

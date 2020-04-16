@@ -1,4 +1,3 @@
-use ff::{Field, SqrtField, PrimeField, PrimeFieldRepr};
 use linked_list::{LinkedList, Cursor};
 use std::cmp::{Ordering};
 use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssign};
@@ -52,10 +51,13 @@ impl<'a, CS:ConstraintSystem> Clone for Signal<'a, CS> {
     
 
 impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
+    
+    #[inline]
     pub fn capacity(&self) -> usize {
         self.lc.len()
     }
 
+    #[inline]
     pub fn get_value(&self) -> Option<Num<CS::F>> {
         self.value
     }
@@ -75,12 +77,14 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
         }
     }
 
+    #[inline]
     pub fn from_var(cs:&'a CS, value: Option<Num<CS::F>>, var: Index) -> Self {
         let mut lc = LinkedList::new();
         lc.push_back((var, Num::one()));
         Self {value, lc, cs}
     }
 
+    #[inline]
     pub fn from_const(cs:&'a CS, value: Num<CS::F>) -> Self {
         let mut lc = LinkedList::new();
         lc.push_back((Index::Input(0), value));
@@ -88,19 +92,45 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
         Self {value, lc, cs}
     }
 
+    #[inline]
+    pub fn derive_var(&self, value: Option<Num<CS::F>>, var: Index) -> Self {
+        Signal::from_var(self.cs, value, var)
+    }
+
+    #[inline]
+    pub fn derive_const(&self, value: Num<CS::F>) -> Self {
+        Signal::from_const(self.cs, value)
+    }
+
+    #[inline]
     pub fn zero(cs:&'a CS) -> Self {
         Self::from_const(cs, Num::zero())
     }
 
+    #[inline]
     pub fn one(cs:&'a CS) -> Self {
         Self::from_const(cs, Num::one())
     }
 
+    #[inline]
+    pub fn derive_zero(&self) -> Self {
+        Self::zero(self.cs)
+    }
+
+    #[inline]
+    pub fn derive_one(&self) -> Self {
+        Self::one(self.cs)
+    }
 
 
     pub fn alloc(cs:&'a CS, value:Option<Num<CS::F>>) -> Self {
         let var = cs.alloc(value);
         Self::from_var(cs, value, var)
+    }
+
+    #[inline]
+    pub fn derive_alloc(&self, value:Option<Num<CS::F>>) -> Self {
+        Self::alloc(self.cs, value)
     }
 
     pub fn inputize(&self) {
@@ -121,7 +151,121 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
             },
         }
     }
+
+    pub fn assert_const(&self, c:Num<CS::F>) {
+        match self.as_const() {
+            Some(v) => {
+                assert!(v==c); 
+            },
+            _ => {
+                let cs = self.cs;
+                cs.enforce(self, &Signal::one(cs), &Signal::from_const(cs, c));
+            }
+        }
+    }
+
+    pub fn assert_zero(&self) {
+        self.assert_const(Num::zero());
+    }
+
+    pub fn assert_nonzero(&self) {
+        match self.as_const() {
+            Some(v) => {
+                assert!(v!=Num::zero());
+            },
+            _ => {
+                let inv_value = match self.get_value() {
+                    Some(t) => if t.is_zero() {
+                        Some(Num::one())
+                    } else {
+                        Some(t.inverse())
+                    }
+                    None => None
+                };
+                let inv_signal = self.derive_alloc(inv_value);
+                self.cs.enforce(self, &inv_signal, &self.derive_one());
+            }
+        }
+    }
+
+    pub fn assert_bit(&self) {
+        match self.as_const() {
+            Some(c) => {
+                assert!(c==Num::one() || c== Num::zero());
+            },
+            _ => {
+                self.cs.enforce(self, &(self - Num::one()), &self.derive_zero());
+            }
+        }
+    }
+
+    pub fn is_zero(&self) -> Self {
+        match self.as_const() {
+            Some(c) => {
+                if c.is_zero() {
+                    self.derive_one()
+                } else {
+                    self.derive_zero()
+                }
+            },
+            _ => {
+                let inv_value = match self.get_value() {
+                    Some(t) => if t.is_zero() {
+                        Some(Num::one())
+                    } else {
+                        Some(t.inverse())
+                    }
+                    None => None
+                };
+                
+                let inv_signal = self.derive_alloc(inv_value);
+                inv_signal.assert_nonzero();
+
+                let res_signal = inv_signal * self;
+                res_signal.assert_bit();
+                self.derive_one() - res_signal
+            }
+        }
+    }
+
+
+    pub fn switch(&self, bit: &Self, if_else: &Self) -> Self {
+        match bit.as_const() {
+            Some(b) => {
+                if b == Num::one() {
+                    self.clone()
+                } else if b == Num::zero() {
+                    if_else.clone()
+                } else {
+                    panic!("wrong bit value")
+                }
+   
+            },
+            _ => if if_else.capacity() < self.capacity() {
+                if_else + bit * (self - if_else)
+            } else {
+                self + (Num::one() - bit) * (if_else - self)
+            }
+        }
+    }
+
+
 }
+
+
+impl<'a, CS:ConstraintSystem> Neg for Signal<'a, CS> {
+    type Output = Signal<'a, CS>;
+    fn neg(mut self) -> Self::Output {
+        self.value = self.value.map(|x| -x);
+
+        for (_, v) in self.lc.iter_mut() {
+            *v = -*v;
+        }
+        self
+    }
+}
+
+forward_unop_ex!(impl<'a, CS:ConstraintSystem> Neg for Signal<'a, CS>, neg);
 
 #[derive(Eq,PartialEq)]
 enum LookupAction {
@@ -174,6 +318,13 @@ impl<'l, 'a, CS:ConstraintSystem> AddAssign<&'l Signal<'a, CS>> for Signal<'a, C
     }
 }
 
+impl<'l, 'a, CS:ConstraintSystem> AddAssign<&'l Num<CS::F>> for Signal<'a, CS> {
+    #[inline]
+    fn add_assign(&mut self, other: &'l Num<CS::F>)  {
+        *self += self.derive_const(*other)
+    }
+}
+
 
 impl<'l, 'a, CS:ConstraintSystem> SubAssign<&'l Signal<'a, CS>> for Signal<'a, CS> {
 
@@ -199,6 +350,14 @@ impl<'l, 'a, CS:ConstraintSystem> SubAssign<&'l Signal<'a, CS>> for Signal<'a, C
         }
     }
 }
+
+impl<'l, 'a, CS:ConstraintSystem> SubAssign<&'l Num<CS::F>> for Signal<'a, CS> {
+    #[inline]
+    fn sub_assign(&mut self, other: &'l Num<CS::F>)  {
+        *self -= self.derive_const(*other)
+    }
+}
+
 
 impl<'l, 'a, CS:ConstraintSystem> MulAssign<&'l Num<CS::F>> for Signal<'a, CS> {
     #[inline]
@@ -227,6 +386,8 @@ impl<'l, 'a, CS:ConstraintSystem> DivAssign<&'l Num<CS::F>> for Signal<'a, CS> {
 
 forward_val_assign_ex!(impl<'a, CS:ConstraintSystem> AddAssign<Signal<'a, CS>> for Signal<'a, CS>, add_assign);
 forward_val_assign_ex!(impl<'a, CS:ConstraintSystem> SubAssign<Signal<'a, CS>> for Signal<'a, CS>, sub_assign);
+forward_val_assign_ex!(impl<'a, CS:ConstraintSystem> AddAssign<Num<CS::F>> for Signal<'a, CS>, add_assign);
+forward_val_assign_ex!(impl<'a, CS:ConstraintSystem> SubAssign<Num<CS::F>> for Signal<'a, CS>, sub_assign);
 forward_val_assign_ex!(impl<'a, CS:ConstraintSystem> MulAssign<Num<CS::F>> for Signal<'a, CS>, mul_assign);
 forward_val_assign_ex!(impl<'a, CS:ConstraintSystem> DivAssign<Num<CS::F>> for Signal<'a, CS>, div_assign);
 
@@ -395,7 +556,7 @@ mod signal_test {
 
 
     #[test]
-    fn add_test() {
+    fn add() {
         let mut rng = thread_rng();
         let ref cs = crate::core::cs::TestCS::<Fr>::new();
         let n_a = rng.gen();
