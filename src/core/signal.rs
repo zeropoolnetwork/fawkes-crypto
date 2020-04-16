@@ -133,6 +133,11 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
         Self::alloc(self.cs, value)
     }
 
+    #[inline]
+    pub fn square(&self) -> Self {
+        self * self
+    }
+
     pub fn inputize(&self) {
         match self.as_const() {
             Some(v) => {

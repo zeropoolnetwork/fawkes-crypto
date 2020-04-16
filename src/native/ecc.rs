@@ -38,7 +38,7 @@ pub trait JubJubParams<Fr:PrimeField>: Sized {
 
     fn montgomery_b(&self) -> Num<Fr>;
 
-    fn edwards_inv_cofactor(&self) -> Num<Fs>;
+    fn edwards_inv_cofactor(&self) -> Num<Self::Fs>;
 }
 
 pub struct JubJubBN256 {

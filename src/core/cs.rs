@@ -1,12 +1,12 @@
 use crate::core::num::{Num, Assignment};
 use bellman::{self};
-use ff::{PrimeField};
+use ff::{PrimeField, SqrtField};
 use std::cell::RefCell;
 
 use crate::core::signal::{Signal, Index};
 
 pub trait ConstraintSystem: Sized {
-    type F: PrimeField;
+    type F: PrimeField+SqrtField;
 
     fn alloc(&self, value: Option<Num<Self::F>>) -> Index;
     fn alloc_input(&self, value: Option<Num<Self::F>>) -> Index;
@@ -78,7 +78,7 @@ impl<F:PrimeField> TestCS<F> {
 }
 
 
-impl<F:PrimeField> ConstraintSystem for TestCS<F> {
+impl<F:PrimeField+SqrtField> ConstraintSystem for TestCS<F> {
     type F = F;
 
     fn alloc(&self, _: Option<Num<Self::F>>) -> Index {
