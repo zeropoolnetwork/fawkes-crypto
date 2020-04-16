@@ -4,9 +4,10 @@ use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssi
 use std::default::Default;
 use std::fmt;
 use rand::{Rand, Rng};
+use bellman::SynthesisError;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Num<T:Field>(T);
+pub struct Num<T:Field>(pub T);
 
 
 impl<T:Field> fmt::Display for Num<T> {
@@ -243,10 +244,10 @@ impl<'a, T:Field> DivAssign<&'a Num<T>> for Num<T> {
 }
 
 
-forward_val_assign_ex!(impl<T:Field> AddAssign for Num<T>, add_assign);
-forward_val_assign_ex!(impl<T:Field> SubAssign for Num<T>, sub_assign);
-forward_val_assign_ex!(impl<T:Field> MulAssign for Num<T>, mul_assign);
-forward_val_assign_ex!(impl<T:Field> DivAssign for Num<T>, div_assign);
+forward_val_assign_ex!(impl<T:Field> AddAssign<Num<T>> for Num<T>, add_assign);
+forward_val_assign_ex!(impl<T:Field> SubAssign<Num<T>> for Num<T>, sub_assign);
+forward_val_assign_ex!(impl<T:Field> MulAssign<Num<T>> for Num<T>, mul_assign);
+forward_val_assign_ex!(impl<T:Field> DivAssign<Num<T>> for Num<T>, div_assign);
 
 
 impl<'a, T:Field> Add<&'a Num<T>> for Num<T> {
@@ -291,8 +292,8 @@ impl<'a, T:Field> Div<&'a Num<T>> for Num<T> {
 }
 
 
-forward_all_binop_to_val_ref_ex!(impl<T:Field> Sub for Num<T>, sub);
-forward_all_binop_to_val_ref_ex!(impl<T:Field> Div for Num<T>, div);
+forward_all_binop_to_val_ref_ex!(impl<T:Field> Sub<Num<T>> for Num<T>, sub -> Num<T>);
+forward_all_binop_to_val_ref_ex!(impl<T:Field> Div<Num<T>> for Num<T>, div -> Num<T>);
 
 
 impl<T:Field> Neg for Num<T> {
@@ -307,6 +308,43 @@ impl<T:Field> Neg for Num<T> {
 forward_unop_ex!(impl<T:Field> Neg for Num<T>, neg);
 
 
+
+pub trait Assignment<T> {
+    fn get(&self) -> Result<&T, SynthesisError>;
+    fn grab(self) -> Result<T, SynthesisError>;
+}
+
+impl<T: Clone> Assignment<T> for Option<T> {
+    fn get(&self) -> Result<&T, SynthesisError> {
+        match *self {
+            Some(ref v) => Ok(v),
+            None => Err(SynthesisError::AssignmentMissing)
+        }
+    }
+
+    fn grab(self) -> Result<T, SynthesisError> {
+        match self {
+            Some(v) => Ok(v),
+            None => Err(SynthesisError::AssignmentMissing)
+        }
+    }
+}
+
+impl<T: Field> Assignment<T> for Option<Num<T>> {
+    fn get(&self) -> Result<&T, SynthesisError> {
+        match self {
+            Some(ref v) => Ok(&v.0),
+            None => Err(SynthesisError::AssignmentMissing)
+        }
+    }
+
+    fn grab(self) -> Result<T, SynthesisError> {
+        match self {
+            Some(v) => Ok(v.into_inner()),
+            None => Err(SynthesisError::AssignmentMissing)
+        }
+    }
+}
 
 #[cfg(test)]
 mod num_test {
