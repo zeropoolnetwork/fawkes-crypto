@@ -12,6 +12,15 @@ pub trait ConstraintSystem: Sized {
     fn enforce(&self, a:&Signal<Self>, b:&Signal<Self>, c:&Signal<Self>);
 }
 
+pub trait Circuit {
+    type F: PrimeField+SqrtField;
+
+    fn synthesize<CS: ConstraintSystem<F=Self::F>>(
+        &self,
+        cs: &CS
+    );
+}
+
 
 pub struct TestCS<F:PrimeField> {
     pub ninputs:RefCell<usize>,

@@ -1,12 +1,12 @@
 use std::cell::RefCell;
-use crate::core::cs::{ConstraintSystem};
+use crate::core::cs::{ConstraintSystem, Circuit};
 use crate::core::num::Num;
 use crate::core::signal::{Signal, Index};
 use crate::core::osrng::OsRng;
 use ff::Field;
 
-use bellman::{self, SynthesisError, Circuit};
-use bellman::pairing::Engine;
+use bellman::{self, SynthesisError};
+
 
 
 
@@ -104,11 +104,26 @@ impl<BE:bellman::pairing::Engine, BCS: bellman::ConstraintSystem<BE>> Constraint
     }
 }
 
+struct HelperCircuit<'a, C:Circuit>(pub &'a C);
 
-struct HelperCircuit<BE:bellman::pairing::Engine, BCS: bellman::ConstraintSystem<BE>, F:FnOnce(&Groth16CS<BE, BCS>)>(F,std::marker::PhantomData<BE>,std::marker::PhantomData<BCS>);
+impl <'a, BE:bellman::pairing::Engine, C:Circuit<F=BE::Fr>> bellman::Circuit<BE> for HelperCircuit<'a, C> {
+    fn synthesize<CS: bellman::ConstraintSystem<BE>>(self, cs: &mut CS) -> Result<(), SynthesisError> {
+        let ref cs = Groth16CS::new(cs.namespace(|| "root"));
+        self.0.synthesize(cs);
+        Ok(())
+    }
+}
 
+pub fn groth16_generate_keys<BE:bellman::pairing::Engine, C:Circuit<F=BE::Fr>+Default>() -> bellman::groth16::Parameters<BE> {
+    let ref mut rng = OsRng::new();
+    let c = C::default();
+    bellman::groth16::generate_random_parameters(HelperCircuit(&c), rng).unwrap()
+}
 
-
+pub fn groth16_proof<BE:bellman::pairing::Engine, C:Circuit<F=BE::Fr>>(c:&C, params:&bellman::groth16::Parameters<BE>) -> bellman::groth16::Proof<BE>{
+    let ref mut rng = OsRng::new();
+    bellman::groth16::create_random_proof(HelperCircuit(c), params, rng).unwrap()
+}
 
 #[test]
 fn test_helper() {
