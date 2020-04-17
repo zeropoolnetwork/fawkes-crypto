@@ -6,7 +6,7 @@ use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssi
 use crate::core::cs::ConstraintSystem;
 use crate::core::num::Num;
 
-#[derive(Eq, PartialEq, Clone, Copy)]
+#[derive(Eq, PartialEq, Clone, Copy, Debug, Hash)]
 pub enum Index{
     Input(usize),
     Aux(usize)
@@ -142,17 +142,18 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
         match self.as_const() {
             Some(v) => {
                 let input = self.cs.alloc_input(Some(v));
-                let a = Self::from_var(&self.cs, Some(v), input);
-                let b = Self::one(&self.cs);
-                let c = Self::from_const(&self.cs, v);
-                self.cs.enforce(&a, &b, &c);
+                self.cs.enforce(
+                    &self.derive_var(Some(v), input), 
+                    &self.derive_one(), 
+                    &self.derive_const(v));
 
             },
             _ => {
                 let input = self.cs.alloc_input(self.get_value());
-                let a = Self::from_var(&self.cs, self.get_value(), input);
-                let b = Self::one(&self.cs);
-                self.cs.enforce(&a, &b, self);
+                self.cs.enforce(
+                    &self.derive_var(self.get_value(), input), 
+                    &self.derive_one(), 
+                    self);
             },
         }
     }
@@ -163,8 +164,7 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
                 assert!(v==c); 
             },
             _ => {
-                let cs = self.cs;
-                cs.enforce(self, &Signal::one(cs), &Signal::from_const(cs, c));
+                self.cs.enforce(self, &self.derive_one(), &self.derive_const(c));
             }
         }
     }
@@ -345,12 +345,12 @@ impl<'l, 'a, CS:ConstraintSystem> SubAssign<&'l Signal<'a, CS>> for Signal<'a, C
         for (k, v) in other.lc.iter() {
             if ll_lookup(&mut cur_a_ll, *k) == LookupAction::Add {
                 let t = cur_a_ll.peek_next().unwrap();
-                t.1 += *v;
+                t.1 -= *v;
                 if t.1.is_zero() {
                     cur_a_ll.remove();
                 }
             } else {
-                cur_a_ll.insert((*k, *v))
+                cur_a_ll.insert((*k, -*v))
             }
         }
     }
@@ -368,7 +368,7 @@ impl<'l, 'a, CS:ConstraintSystem> MulAssign<&'l Num<CS::F>> for Signal<'a, CS> {
     #[inline]
     fn mul_assign(&mut self, other: &'l Num<CS::F>)  {
         if other.is_zero() {
-            *self = Self::zero(&self.cs)
+            *self = self.derive_zero()
         } else {
             self.value = self.value.map(|v| v*other);
             for (_, v) in self.lc.iter_mut() {
@@ -484,21 +484,20 @@ swap_commutative!(impl<'a, CS:ConstraintSystem> Mul<Num<CS::F>> for Signal<'a, C
 impl<'l, 'a, CS:ConstraintSystem> MulAssign<&'l Signal<'a, CS>> for Signal<'a, CS> {
     #[inline]
     fn mul_assign(&mut self, other: &'l Signal<'a, CS>)  {
-        let res = match (self.as_const(), other.as_const()) {
-            (Some(a), _) => other*a,
-            (_, Some(b)) => &*self*b,
+        match (self.as_const(), other.as_const()) {
+            (Some(a), _) => {*self = other*a;},
+            (_, Some(b)) => {*self*=b;},
             _ => {
                 let value = match(self.get_value(), other.get_value()) {
                     (Some(a), Some(b)) => Some(a*b),
                     _ => None
                 };
 
-                let a_mul_b = Signal::alloc(self.cs, value);
+                let a_mul_b = self.derive_alloc(value);
                 self.cs.enforce(self, other, &a_mul_b);
-                a_mul_b
+                *self = a_mul_b;
             }
-        };
-        *self = res;
+        }
     }
 }
 
@@ -506,9 +505,9 @@ impl<'l, 'a, CS:ConstraintSystem> MulAssign<&'l Signal<'a, CS>> for Signal<'a, C
 impl<'l, 'a, CS:ConstraintSystem> DivAssign<&'l Signal<'a, CS>> for Signal<'a, CS> {
     #[inline]
     fn div_assign(&mut self, other: &'l Signal<'a, CS>)  {
-        let res = match (self.as_const(), other.as_const()) {
-            (Some(a), _) => other/a,
-            (_, Some(b)) => &*self/b,
+        match (self.as_const(), other.as_const()) {
+            (Some(a), _) => {*self = other/a; },
+            (_, Some(b)) => {*self /= b},
             _ => {
                 let value = match(self.get_value(), other.get_value()) {
                     (Some(a), Some(b)) => Some(a/b),
@@ -518,10 +517,9 @@ impl<'l, 'a, CS:ConstraintSystem> DivAssign<&'l Signal<'a, CS>> for Signal<'a, C
 
                 let a_div_b = Signal::alloc(self.cs, value);
                 self.cs.enforce(&a_div_b, other, self);
-                a_div_b
+                *self = a_div_b;
             }
-        };
-        *self = res;
+        }
     }
 }
 

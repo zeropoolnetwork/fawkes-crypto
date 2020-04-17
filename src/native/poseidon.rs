@@ -7,6 +7,7 @@ use rand::Rng;
 use crate::core::seedbox::SeedboxBlake2;
 use crate::core::num::Num;
 
+#[derive(Debug)]
 pub struct PoseidonParams<F:PrimeField> {
     pub c: Vec<Num<F>>, 
     pub m: Vec<Vec<Num<F>>>, 

@@ -1,6 +1,7 @@
 use crate::core::num::{Num};
 use ff::{PrimeField, SqrtField};
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 use crate::core::signal::{Signal, Index};
 
@@ -26,6 +27,7 @@ pub struct TestCS<F:PrimeField> {
     pub ninputs:RefCell<usize>,
     pub naux:RefCell<usize>,
     pub ncons:RefCell<usize>,
+    pub variables:RefCell<HashMap<Index, Num<F>>>,
     f: std::marker::PhantomData<F>
 }
 
@@ -35,6 +37,7 @@ impl<F:PrimeField> TestCS<F> {
             ninputs: RefCell::new(1),
             naux: RefCell::new(0),
             ncons: RefCell::new(0),
+            variables: RefCell::new(HashMap::new()),
             f: std::marker::PhantomData
         }
     }
@@ -48,17 +51,25 @@ impl<F:PrimeField> TestCS<F> {
 impl<F:PrimeField+SqrtField> ConstraintSystem for TestCS<F> {
     type F = F;
 
-    fn alloc(&self, _: Option<Num<Self::F>>) -> Index {
+    fn alloc(&self, v: Option<Num<Self::F>>) -> Index {
         let mut naux_ref = self.ninputs.borrow_mut();
         let naux = *naux_ref;
         *naux_ref+=1;
-        Index::Input(naux)
+        let index = Index::Input(naux);
+        if v.is_some() {
+            (*self.variables.borrow_mut()).insert(index, v.unwrap());
+        }
+        index
     }
-    fn alloc_input(&self, _: Option<Num<Self::F>>) -> Index {
+    fn alloc_input(&self, v: Option<Num<Self::F>>) -> Index {
         let mut ninputs_ref = self.ninputs.borrow_mut();
         let ninputs = *ninputs_ref;
         *ninputs_ref+=1;
-        Index::Input(ninputs)
+        let index = Index::Input(ninputs);
+        if v.is_some() {
+            (*self.variables.borrow_mut()).insert(index, v.unwrap());
+        }
+        index
     }
 
     fn enforce(&self, a:&Signal<Self>, b:&Signal<Self>, c:&Signal<Self>) {
