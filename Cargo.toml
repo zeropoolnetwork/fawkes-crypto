@@ -13,31 +13,27 @@ license = "MIT OR Apache-2.0"
 crate-type = ["cdylib", "lib", "staticlib"]
 
 [dependencies]
-rand = "0.4"
+rand = "=0.4"
 byteorder = "1"
 num = "0.2.1"
 linked-list = "0.0.3"
-getrandom = "0.1"
+getrandom = "=0.1"
 
 [dependencies.bellman]
-version = "0.3.1"
+version = "=0.3.1"
 package = "bellman_ce"
 default-features = false
 
 [dependencies.ff]
-version = "0.7"
+version = "=0.7"
 features = ["derive"]
 package = "ff_ce"
 
 
 [dependencies.pairing]
-version = "0.18.0"
+version = "=0.18"
 package = "pairing_ce"
 
 [dependencies.blake2_rfc]
 version = "0.0.1"
 package = "blake2-rfc_bellman_edition"
-
-[dev-dependencies.sapling_crypto]
-version = "0.1.2"
-package = "sapling-crypto_ce" 
