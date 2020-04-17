@@ -1,6 +1,6 @@
 [package]
 name = "fawkes-crypto"
-version = "0.2.3"
+version = "1.0.0"
 authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
 description = "zk-SNARK circuit building framework"
 readme = "README.md"
