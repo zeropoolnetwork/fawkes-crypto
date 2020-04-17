@@ -4,7 +4,6 @@ use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssi
 use std::default::Default;
 use std::fmt;
 use rand::{Rand, Rng};
-use bellman::SynthesisError;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Num<T:Field>(pub T);
@@ -349,43 +348,6 @@ impl<T:Field> Neg for Num<T> {
 forward_unop_ex!(impl<T:Field> Neg for Num<T>, neg);
 
 
-
-pub trait Assignment<T> {
-    fn get(&self) -> Result<&T, SynthesisError>;
-    fn grab(self) -> Result<T, SynthesisError>;
-}
-
-impl<T: Clone> Assignment<T> for Option<T> {
-    fn get(&self) -> Result<&T, SynthesisError> {
-        match *self {
-            Some(ref v) => Ok(v),
-            None => Err(SynthesisError::AssignmentMissing)
-        }
-    }
-
-    fn grab(self) -> Result<T, SynthesisError> {
-        match self {
-            Some(v) => Ok(v),
-            None => Err(SynthesisError::AssignmentMissing)
-        }
-    }
-}
-
-impl<T: Field> Assignment<T> for Option<Num<T>> {
-    fn get(&self) -> Result<&T, SynthesisError> {
-        match self {
-            Some(ref v) => Ok(&v.0),
-            None => Err(SynthesisError::AssignmentMissing)
-        }
-    }
-
-    fn grab(self) -> Result<T, SynthesisError> {
-        match self {
-            Some(v) => Ok(v.into_inner()),
-            None => Err(SynthesisError::AssignmentMissing)
-        }
-    }
-}
 
 #[cfg(test)]
 mod num_test {

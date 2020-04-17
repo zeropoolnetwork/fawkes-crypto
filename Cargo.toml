@@ -17,6 +17,7 @@ rand = "0.4"
 byteorder = "1"
 num = "0.2.1"
 linked-list = "0.0.3"
+getrandom = "0.1"
 
 [dependencies.bellman]
 version = "0.3.1"
