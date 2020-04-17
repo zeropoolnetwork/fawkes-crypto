@@ -126,7 +126,7 @@ pub fn groth16_proof<BE:bellman::pairing::Engine, C:Circuit<F=BE::Fr>>(c:&C, par
 #[cfg(test)]
 mod bellman_test {
     use super::*;
-    
+    use ff::{PrimeField, SqrtField};
     use bellman::pairing::bn256::{Fr, Bn256};
     use crate::core::signal::Signal;
     use crate::native::poseidon::PoseidonParams;
@@ -134,12 +134,12 @@ mod bellman_test {
     use rand::{Rng, thread_rng};
 
 
-    struct CheckPreimageKnowledge {
-        image:Option<Num<Fr>>,
-        preimage:Option<Num<Fr>>
+    struct CheckPreimageKnowledge<F:PrimeField+SqrtField> {
+        image:Option<Num<F>>,
+        preimage:Option<Num<F>>
     }
 
-    impl Default for CheckPreimageKnowledge {
+    impl<F:PrimeField+SqrtField> Default for CheckPreimageKnowledge<F> {
         fn default() -> Self {
             Self {
                 image: None,
@@ -148,16 +148,16 @@ mod bellman_test {
         }
     }
 
-    impl Circuit for CheckPreimageKnowledge {
-        type F = Fr;
-        fn synthesize<CS: ConstraintSystem<F=Fr>>(
+    impl<F:PrimeField+SqrtField> Circuit for CheckPreimageKnowledge<F> {
+        type F = F;
+        fn synthesize<CS: ConstraintSystem<F=F>>(
             &self,
             cs: &CS
         ) {
             let image = Signal::alloc(cs, self.image);
             image.inputize();
             let preimage = Signal::alloc(cs, self.preimage);
-            let ref poseidon_params = PoseidonParams::<Fr>::new(2, 8, 53);
+            let ref poseidon_params = PoseidonParams::<F>::new(2, 8, 53);
             let image_computed = poseidon([preimage].as_ref(), poseidon_params);
             (&image-&image_computed).assert_zero();
         }
@@ -167,7 +167,7 @@ mod bellman_test {
     #[test]
     fn test_helper() {
         let mut rng = thread_rng();
-        let params = groth16_generate_keys::<Bn256, CheckPreimageKnowledge>();
+        let params = groth16_generate_keys::<Bn256, CheckPreimageKnowledge<Fr>>();
         let preimage = rng.gen();
         let ref poseidon_params = PoseidonParams::<Fr>::new(2, 8, 53);
         let image = crate::native::poseidon::poseidon([preimage].as_ref(), poseidon_params);
