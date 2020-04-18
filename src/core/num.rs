@@ -121,6 +121,16 @@ impl<T:PrimeField> Num<T> {
         ((T::NUM_BITS >> 3) + if T::NUM_BITS & 7 == 0 { 0 } else { 1 }) as usize
     }
 
+    #[inline]
+    pub fn is_odd(&self) -> bool {
+        self.0.into_repr().is_odd()
+    }
+
+    #[inline]
+    pub fn is_even(&self) -> bool {
+        self.0.into_repr().is_even()
+    }
+
     pub fn into_binary_be(&self) -> Vec<u8> {
         let t_bytes = Self::num_bytes();
         let mut buff = vec![0u8;t_bytes];

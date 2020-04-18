@@ -2,8 +2,10 @@
 use crate::core::signal::{Signal};
 use crate::core::num::Num;
 use crate::core::cs::ConstraintSystem;
+use crate::circuit::bitify::into_bits_le_strict;
 use crate::circuit::mux::mux3;
 use crate::native::ecc::{JubJubParams};
+
 
 use ff::{PrimeField};
 
@@ -64,7 +66,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
 
     pub fn double<J:JubJubParams<CS::F>>(&self, params: &J) -> Self{
         let v = &self.x * &self.y;
-        let v2 = &v * &v;
+        let v2 = v.square();
         let u = (&self.x + &self.y).square();
         Self {
             x: &v*num!(2) / (Num::one() + params.edwards_d()*&v2),
@@ -72,7 +74,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
         }
     }
 
-    pub fn mul_cofactor<J:JubJubParams<CS::F>>(&self, params: &J) -> Self {
+    pub fn mul_by_cofactor<J:JubJubParams<CS::F>>(&self, params: &J) -> Self {
         self.double(params).double(params).double(params)
     }
 
@@ -108,7 +110,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
 
         let preimage = EdwardsPoint::alloc(cs, preimage_value);
         preimage.assert_in_curve(params);
-        let preimage8 = preimage.mul_cofactor(params);
+        let preimage8 = preimage.mul_by_cofactor(params);
 
         (&self.x - &preimage8.x).assert_zero();
         (&self.y - &preimage8.y).assert_zero();
@@ -127,7 +129,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
 
         let preimage = EdwardsPoint::alloc(cs, preimage_value);
         preimage.assert_in_curve(params);
-        let preimage8 = preimage.mul_cofactor(params);
+        let preimage8 = preimage.mul_by_cofactor(params);
 
         (x - &preimage8.x).assert_zero();
         
@@ -233,6 +235,54 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
             }
         }
     }
+
+    // assuming t!=-1
+    pub fn from_scalar<J:JubJubParams<CS::F>>(t:Signal<'a, CS>, params: &J) -> Self {
+
+        fn filter_even<F:PrimeField>(x:Num<F>) -> Num<F> {
+            if x.is_even() {x} else {-x}
+        }
+
+        fn check_and_get_y<'a, CS:ConstraintSystem, J:JubJubParams<CS::F>>(x:&Signal<'a, CS>, params: &J) -> (Signal<'a, CS>, Signal<'a, CS>) {
+            let g = (x.square()*(x+params.montgomery_a())+x) / params.montgomery_b();
+
+            let preimage_value = g.get_value().map(|g| {
+                match g.sqrt() {
+                    Some(g_sqrt) => filter_even(g_sqrt),
+                    _ => filter_even((g*params.montgomery_g1()).sqrt().unwrap())
+                }
+            });
+
+            let preimage = x.derive_alloc(preimage_value);
+            let preimage_bits = into_bits_le_strict(&preimage);
+            preimage_bits[0].assert_zero();
+
+            let preimage_square = preimage.square();
+
+            let is_square = (&g-&preimage_square).is_zero();
+            let isnot_square = (&g*params.montgomery_g1() - &preimage_square).is_zero();
+
+            (&is_square+isnot_square-Num::one()).assert_zero();
+            (is_square, preimage)
+        }
+
+
+        let t = t + Num::one();
+
+        let t2g1 = t.square()*params.montgomery_g1();
+        
+
+        let x3 = - Num::one()/params.montgomery_a() * (&t2g1 + Num::one());
+        let x2 = &x3 / &t2g1;
+
+        let (is_valid, y2) = check_and_get_y(&x2, params);        
+        let (_, y3) = check_and_get_y(&x3, params);
+
+        let x = x2.switch(&is_valid, &x3);
+        let y = y2.switch(&is_valid, &y3);
+
+        MontgomeryPoint {x, y}.into_edwards().mul_by_cofactor(params)
+    }
 }
 
 
@@ -306,7 +356,24 @@ mod ecc_test {
     use crate::core::cs::TestCS;
 
 
-    
+
+    #[test]
+    fn test_scalar_point_picker() {
+        let mut rng = thread_rng();
+        let jubjub_params = JubJubBN256::new();
+
+        let t = rng.gen();
+
+        let ref mut cs = TestCS::<Fr>::new();
+        let signal_t = Signal::alloc(cs, Some(t));
+
+        let signal_p = EdwardsPoint::from_scalar(signal_t, &jubjub_params);
+        let (x, y) = crate::native::ecc::EdwardsPoint::from_scalar(t, &jubjub_params).into_xy();
+
+        signal_p.x.assert_const(x);
+        signal_p.y.assert_const(y);
+    }
+
 
     #[test]
     fn test_circuit_subgroup_decompress() {
@@ -345,6 +412,26 @@ mod ecc_test {
         let signal_p2 = EdwardsPoint::alloc(cs, Some(p2));
 
         let signal_p3 = signal_p1.add(&signal_p2, &jubjub_params);
+
+        signal_p3.x.assert_const(p3_x);
+        signal_p3.y.assert_const(p3_y);
+
+    }
+
+
+    #[test]
+    fn test_circuit_edwards_double() {
+        let mut rng = thread_rng();
+        let jubjub_params = JubJubBN256::new();
+
+        let p = crate::native::ecc::EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
+        
+        let (p3_x, p3_y) = p.double().into_xy();
+        
+        let ref mut cs = TestCS::<Fr>::new();
+        let signal_p = EdwardsPoint::alloc(cs, Some(p));
+
+        let signal_p3 = signal_p.double(&jubjub_params);
 
         signal_p3.x.assert_const(p3_x);
         signal_p3.y.assert_const(p3_y);

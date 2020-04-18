@@ -17,7 +17,7 @@ use crate::core::num::Num;
 pub struct Fs(FsRepr);
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct EdwardsPoint<F:PrimeField> {
     pub x: Num<F>,
     pub y: Num<F>,
@@ -38,6 +38,8 @@ pub trait JubJubParams<Fr:PrimeField>: Sized {
 
     fn montgomery_b(&self) -> Num<Fr>;
 
+    fn montgomery_g1(&self) -> Num<Fr>;
+
     fn edwards_inv_cofactor(&self) -> Num<Self::Fs>;
 }
 
@@ -47,6 +49,7 @@ pub struct JubJubBN256 {
     edwards_d: Num<Fr>,
     montgomery_a: Num<Fr>,
     montgomery_b: Num<Fr>,
+    montgomery_g1: Num<Fr>,
     edwards_inv_cofactor: Num<Fs>
 }
 
@@ -67,8 +70,9 @@ impl JubJubBN256 {
 
         let edwards_d = num!("12181644023421730124874158521699555681764249180949974110617291017600649128846");
 
-        let montgomery_a = num!("168698");
+        let montgomery_a = num!(168698);
         let montgomery_b = num!("21888242871839275222246405745257275088548364400416034343698204186575808326917");
+        let montgomery_g1= num!(337401);
 
         
         let edwards_inv_cofactor = num!("2394026564107420727433200628387514462817212225638746351800188703329891451411");
@@ -79,6 +83,7 @@ impl JubJubBN256 {
             edwards_d,
             montgomery_a,
             montgomery_b,
+            montgomery_g1,
             edwards_inv_cofactor
         }
     }
@@ -109,6 +114,11 @@ impl JubJubParams<Fr> for JubJubBN256 {
     fn montgomery_b(&self) -> Num<Fr> {
         self.montgomery_b
     }
+
+    fn montgomery_g1(&self) -> Num<Fr> {
+        self.montgomery_g1
+    }
+
 
     fn edwards_inv_cofactor(&self) -> Num<Fs> {
         self.edwards_inv_cofactor
@@ -167,6 +177,33 @@ impl <F: PrimeField+SqrtField> EdwardsPoint<F> {
         }
     }
 
+    // assume t!= -1
+    pub fn from_scalar<J: JubJubParams<F>>(t:Num<F>, params: &J) -> Self {
+        fn g<F:PrimeField+SqrtField, J: JubJubParams<F>>(x:Num<F>, params: &J) -> Num<F> {
+            (x.square()*(x+params.montgomery_a())+x) / params.montgomery_b()
+        }
+
+        fn filter_even<F:PrimeField>(x:Num<F>) -> Num<F> {
+            if x.is_even() {x} else {-x}
+        }
+
+        let t = t + Num::one();
+        let t2g1 = t.square()*params.montgomery_g1();
+
+        
+        let x2 = - Num::one()/params.montgomery_a() * (Num::one() + t2g1.inverse());
+
+        let (mx, my) = match g(x2, params).sqrt() {
+            Some(y2) => (x2, filter_even(y2)),
+            _ => {
+                let x3 = x2*t2g1;
+                let y3 = g(x3, params).sqrt().unwrap();
+                (x3, filter_even(y3))
+            }
+        };
+
+        Self::from_montgomery_xy_unchecked(mx, my).mul_by_cofactor()
+    }
 }
 
 
@@ -216,11 +253,7 @@ impl <F: PrimeField> EdwardsPoint<F> {
     
     pub fn mul_by_cofactor(&self) -> EdwardsPoint<F>
     {
-        let tmp = self.double()
-                      .double()
-                      .double();
-
-        tmp
+        self.double().double().double()
     }
 
 
@@ -395,6 +428,17 @@ mod ecc_test {
         let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
         let (mx, my) = p.into_montgomery_xy().unwrap();
         assert!(EdwardsPoint::from_montgomery_xy_unchecked(mx, my) == p, "point should be the same");
+    }
+
+    #[test]
+    fn mul_by_cofactor_test() {
+        let mut rng = thread_rng();
+        let jubjub_params = JubJubBN256::new();
+        let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
+
+        let p8_1 = p.mul_by_cofactor();
+        let p8_2 = p.mul(num!(8), &jubjub_params);
+        assert!(p8_1 == p8_2, "points should be the same");
     }
 
 }
