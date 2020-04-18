@@ -53,7 +53,7 @@ pub fn into_bits_le<'a, CS:ConstraintSystem>(
     }
 }
 
-// return 1 if ct > signal
+// return 1 if signal > ct 
 pub fn comp_constant<'a, CS:ConstraintSystem>(
     signal:&[Signal<'a, CS>],
     ct: Num<CS::F>
