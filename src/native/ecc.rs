@@ -58,6 +58,8 @@ impl JubJubBN256 {
 
         let montgomery_a = num!(168698);
         let montgomery_b = num!("21888242871839275222246405745257275088548364400416034343698204186575808326917");
+        
+        // value of montgomery polynomial for x=montgomery_b (has no square root in Fr)
         let montgomery_u= num!(337401);
 
         let edwards_g = EdwardsPoint::from_scalar_raw(Num::from_seed(b"edwards_g"), montgomery_a, montgomery_b, montgomery_u);
