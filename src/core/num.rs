@@ -4,6 +4,7 @@ use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssi
 use std::default::Default;
 use std::fmt;
 use rand::{Rand, Rng};
+use blake2_rfc::blake2s::Blake2s;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Num<T:Field>(pub T);
@@ -165,6 +166,12 @@ impl<T:PrimeField> Num<T> {
         let mut buff = vec![0u8;self_bytes];
         self.0.into_repr().write_be(&mut buff[..]).unwrap();
         Num::<G>::from_binary_be(buff.as_ref())
+    }
+
+    pub fn from_seed(blob: &[u8]) -> Self {
+        let mut h = Blake2s::with_params(32, &[], &[], b"zeropool");
+        h.update(blob);
+        Self::from_binary_be(h.finalize().as_ref())
     }
     
     pub fn iterbit_be(&self) -> BitIterator<T::Repr> {

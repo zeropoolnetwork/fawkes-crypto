@@ -119,7 +119,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
     pub fn subgroup_decompress<J:JubJubParams<CS::F>>(x:&Signal<'a, CS>, params: &J) -> Self {
         let preimage_value = match x.get_value() {
             Some(x) => {
-                let p = crate::native::ecc::EdwardsPoint::subgroup_decompress(x, params).unwrap_or(params.edwards_g8().clone());
+                let p = crate::native::ecc::EdwardsPoint::subgroup_decompress(x, params).unwrap_or(params.edwards_g().clone());
                 Some(p.mul(params.edwards_inv_cofactor(), params))
             },
             _ => None
@@ -207,7 +207,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
             },
             _ => {
                 let base_is_zero = self.x.is_zero();
-                let dummy_point = EdwardsPoint::from_const(cs, params.edwards_g8().clone());
+                let dummy_point = EdwardsPoint::from_const(cs, params.edwards_g().clone());
                 let base_point = dummy_point.switch(&base_is_zero, self);
 
                 let mut base_point = base_point.into_montgomery();
@@ -249,7 +249,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
             let preimage_value = g.get_value().map(|g| {
                 match g.sqrt() {
                     Some(g_sqrt) => filter_even(g_sqrt),
-                    _ => filter_even((g*params.montgomery_g1()).sqrt().unwrap())
+                    _ => filter_even((g*params.montgomery_u()).sqrt().unwrap())
                 }
             });
 
@@ -260,7 +260,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
             let preimage_square = preimage.square();
 
             let is_square = (&g-&preimage_square).is_zero();
-            let isnot_square = (&g*params.montgomery_g1() - &preimage_square).is_zero();
+            let isnot_square = (&g*params.montgomery_u() - &preimage_square).is_zero();
 
             (&is_square+isnot_square-Num::one()).assert_zero();
             (is_square, preimage)
@@ -269,7 +269,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
 
         let t = t + Num::one();
 
-        let t2g1 = t.square()*params.montgomery_g1();
+        let t2g1 = t.square()*params.montgomery_u();
         
 
         let x3 = - Num::one()/params.montgomery_a() * (&t2g1 + Num::one());

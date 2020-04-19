@@ -30,26 +30,23 @@ pub trait JubJubParams<Fr:PrimeField>: Sized {
 
     fn edwards_g(&self) -> &EdwardsPoint<Fr>;
 
-    fn edwards_g8(&self) -> &EdwardsPoint<Fr>;
-
     fn edwards_d(&self) -> Num<Fr>;
 
     fn montgomery_a(&self) -> Num<Fr>;
 
     fn montgomery_b(&self) -> Num<Fr>;
 
-    fn montgomery_g1(&self) -> Num<Fr>;
+    fn montgomery_u(&self) -> Num<Fr>;
 
     fn edwards_inv_cofactor(&self) -> Num<Self::Fs>;
 }
 
 pub struct JubJubBN256 {
     edwards_g: EdwardsPoint<Fr>,
-    edwards_g8: EdwardsPoint<Fr>,
     edwards_d: Num<Fr>,
     montgomery_a: Num<Fr>,
     montgomery_b: Num<Fr>,
-    montgomery_g1: Num<Fr>,
+    montgomery_u: Num<Fr>,
     edwards_inv_cofactor: Num<Fs>
 }
 
@@ -57,33 +54,23 @@ pub struct JubJubBN256 {
 
 impl JubJubBN256 {
     pub fn new() -> Self {
-        let edwards_g = EdwardsPoint::from_xy_unchecked(
-                num!("16901293129775574849288765577905167854488686131085253343138009607974540831890"),
-                num!("5472060717959818805561601436314318772137091100104008585924551046643952123905")
-        );
-
-        let edwards_g8 = EdwardsPoint::from_xy_unchecked(
-            num!("12216525397769193039033285140139874868932027386087289415053270333399021305954"),
-            num!("16950150798460657717958625567821834550301663161624707787222815936182638968203")
-        );
-       
-
         let edwards_d = num!("12181644023421730124874158521699555681764249180949974110617291017600649128846");
 
         let montgomery_a = num!(168698);
         let montgomery_b = num!("21888242871839275222246405745257275088548364400416034343698204186575808326917");
-        let montgomery_g1= num!(337401);
+        let montgomery_u= num!(337401);
+
+        let edwards_g = EdwardsPoint::from_scalar_raw(Num::from_seed(b"edwards_g"), montgomery_a, montgomery_b, montgomery_u);
 
         
         let edwards_inv_cofactor = num!("2394026564107420727433200628387514462817212225638746351800188703329891451411");
 
         Self {
             edwards_g,
-            edwards_g8,
             edwards_d,
             montgomery_a,
             montgomery_b,
-            montgomery_g1,
+            montgomery_u,
             edwards_inv_cofactor
         }
     }
@@ -98,9 +85,6 @@ impl JubJubParams<Fr> for JubJubBN256 {
         &self.edwards_g
     }
 
-    fn edwards_g8(&self) -> &EdwardsPoint<Fr> {
-        &self.edwards_g8
-    }
 
     fn edwards_d(&self) -> Num<Fr> {
         self.edwards_d
@@ -115,8 +99,8 @@ impl JubJubParams<Fr> for JubJubBN256 {
         self.montgomery_b
     }
 
-    fn montgomery_g1(&self) -> Num<Fr> {
-        self.montgomery_g1
+    fn montgomery_u(&self) -> Num<Fr> {
+        self.montgomery_u
     }
 
 
@@ -177,10 +161,9 @@ impl <F: PrimeField+SqrtField> EdwardsPoint<F> {
         }
     }
 
-    // assume t!= -1
-    pub fn from_scalar<J: JubJubParams<F>>(t:Num<F>, params: &J) -> Self {
-        fn g<F:PrimeField+SqrtField, J: JubJubParams<F>>(x:Num<F>, params: &J) -> Num<F> {
-            (x.square()*(x+params.montgomery_a())+x) / params.montgomery_b()
+    fn from_scalar_raw(t:Num<F>, montgomery_a:Num<F>, montgomery_b:Num<F>, montgomery_u:Num<F>) -> Self {
+        fn g<F:PrimeField+SqrtField>(x:Num<F>, montgomery_a:Num<F>, montgomery_b:Num<F>) -> Num<F> {
+            (x.square()*(x+montgomery_a)+x) / montgomery_b
         }
 
         fn filter_even<F:PrimeField>(x:Num<F>) -> Num<F> {
@@ -188,21 +171,27 @@ impl <F: PrimeField+SqrtField> EdwardsPoint<F> {
         }
 
         let t = t + Num::one();
-        let t2g1 = t.square()*params.montgomery_g1();
+        let t2g1 = t.square()*montgomery_u;
 
         
-        let x2 = - Num::one()/params.montgomery_a() * (Num::one() + t2g1.inverse());
+        let x2 = - Num::one()/montgomery_a * (Num::one() + t2g1.inverse());
 
-        let (mx, my) = match g(x2, params).sqrt() {
+        let (mx, my) = match g(x2, montgomery_a, montgomery_b).sqrt() {
             Some(y2) => (x2, filter_even(y2)),
             _ => {
                 let x3 = x2*t2g1;
-                let y3 = g(x3, params).sqrt().unwrap();
+                let y3 = g(x3, montgomery_a, montgomery_b).sqrt().unwrap();
                 (x3, filter_even(y3))
             }
         };
 
         Self::from_montgomery_xy_unchecked(mx, my).mul_by_cofactor()
+    }
+
+
+    // assume t!= -1
+    pub fn from_scalar<J: JubJubParams<F>>(t:Num<F>, params: &J) -> Self {
+        Self::from_scalar_raw(t, params.montgomery_a(), params.montgomery_b(), params.montgomery_u())
     }
 }
 
@@ -406,14 +395,12 @@ mod ecc_test {
     fn test_jubjubn256() {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
-
-        assert!(!jubjub_params.edwards_g().is_in_subgroup(&jubjub_params), "generator should be not in subgroup");        
-        assert!(jubjub_params.edwards_g8().is_in_subgroup(&jubjub_params), "subgroup generator should be in subgroup");
+    
+        assert!(jubjub_params.edwards_g().is_in_subgroup(&jubjub_params), "subgroup generator should be in subgroup");
 
         let s:Num<Fs> = rng.gen();
-        let p = jubjub_params.edwards_g8().mul(s, &jubjub_params);
+        let p = jubjub_params.edwards_g().mul(s, &jubjub_params);
         assert!(p.is_in_subgroup(&jubjub_params), "point should be in subgroup");
-        assert!(jubjub_params.edwards_g().mul(num!(8), &jubjub_params) == jubjub_params.edwards_g8().clone());
 
         let q = EdwardsPoint::rand(&mut rng, &jubjub_params);
         assert!(q.add(&q, &jubjub_params) == q.double());

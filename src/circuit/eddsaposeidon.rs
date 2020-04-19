@@ -29,7 +29,7 @@ pub fn eddsaposeidon_verify<'a, CS: ConstraintSystem, J:JubJubParams<CS::F>>(
     let ha = p_a.multiply(&h_bits, jubjub_params);
 
     let s_bits = into_bits_le(&s, J::Fs::NUM_BITS as usize);
-    let jubjub_generator = EdwardsPoint::from_const(cs,jubjub_params.edwards_g8().clone());
+    let jubjub_generator = EdwardsPoint::from_const(cs,jubjub_params.edwards_g().clone());
     let sb = jubjub_generator.multiply(&s_bits, jubjub_params);
     let ha_plus_r = ha.add(&p_r, jubjub_params);
 
@@ -55,7 +55,7 @@ mod eddsaposeidon_test {
         let sk = rng.gen();
         let m = rng.gen();
         let (s, r) = crate::native::eddsaposeidon::eddsaposeidon_sign(sk, m, &poseidon_params, &jubjub_params);
-        let a = jubjub_params.edwards_g8().mul(sk, &jubjub_params).into_xy().0;
+        let a = jubjub_params.edwards_g().mul(sk, &jubjub_params).into_xy().0;
         
         let ref mut cs = TestCS::<Fr>::new();
         let signal_s = Signal::alloc(cs, Some(s.into_other()));

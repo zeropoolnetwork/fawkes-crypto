@@ -36,8 +36,8 @@ pub fn eddsaposeidon_sign<Fr:PrimeField, J:JubJubParams<Fr>>(
     jubjub_params:&J
 ) -> (Num<J::Fs>, Num<Fr>) {
     let rho = hash_r(sk, m);
-    let (r_x, _) = jubjub_params.edwards_g8().mul(rho, jubjub_params).into_xy();
-    let (a_x, _) = jubjub_params.edwards_g8().mul(sk, jubjub_params).into_xy();
+    let (r_x, _) = jubjub_params.edwards_g().mul(rho, jubjub_params).into_xy();
+    let (a_x, _) = jubjub_params.edwards_g().mul(sk, jubjub_params).into_xy();
     let s = rho + hash_ram(r_x, a_x, m, poseidon_params).into_other()*sk;
     (s, r_x)
 }
@@ -62,7 +62,7 @@ pub fn eddsaposeidon_verify<Fr:PrimeField+SqrtField, J:JubJubParams<Fr>>(
     };
 
     let ha = p_a.mul(hash_ram(r, a, m, poseidon_params).into_other(), jubjub_params);
-    let sb = jubjub_params.edwards_g8().mul(s, jubjub_params);
+    let sb = jubjub_params.edwards_g().mul(s, jubjub_params);
     let ha_plus_r = ha.add(&p_r, jubjub_params);
 
     sb == ha_plus_r
@@ -86,7 +86,7 @@ mod eddsaposeidon_test {
         let sk = rng.gen();
         let m = rng.gen();
         let (s, r) = eddsaposeidon_sign(sk, m, &poseidon_params, &jubjub_params);
-        let a = jubjub_params.edwards_g8().mul(sk, &jubjub_params).into_xy().0;
+        let a = jubjub_params.edwards_g().mul(sk, &jubjub_params).into_xy().0;
         assert!(eddsaposeidon_verify(s, r, a, m, &poseidon_params, &jubjub_params), "signature should be valid");
     
     }
