@@ -169,7 +169,7 @@ impl<T:PrimeField> Num<T> {
     }
 
     pub fn from_seed(blob: &[u8]) -> Self {
-        let mut h = Blake2s::with_params(32, &[], &[], b"zeropool");
+        let mut h = Blake2s::with_params(Self::num_bytes(), &[], &[], b"zeropool");
         h.update(blob);
         Self::from_binary_be(h.finalize().as_ref())
     }
