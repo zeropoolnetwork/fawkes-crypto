@@ -71,6 +71,23 @@ pub fn c_poseidon_merkle_root<'a, CS:ConstraintSystem>(
     root
 }
 
+pub fn c_merkle_tree_root<'a, CS:ConstraintSystem>(leaf: &[Signal<'a, CS>], params: &PoseidonParams<CS::F>) -> Signal<'a, CS> {
+    let leaf_sz = leaf.len();
+    assert!(leaf_sz>0, "should be at least one leaf in the tree");
+    let cs = leaf[0].cs;
+    let proof_sz = std::mem::size_of::<usize>() * 8 - (leaf_sz-1).leading_zeros() as usize;
+    let total_leaf_sz = 1usize << proof_sz;
+    let mut state = leaf.to_vec();
+    state.extend_from_slice(&vec![Signal::zero(cs); total_leaf_sz-leaf_sz]);
+    for j in 0..proof_sz {
+        for i in 0..total_leaf_sz>>(j + 1) {
+            state[i] = c_poseidon(&[state[2*i].clone(), state[2*i+1].clone()], params);
+        }
+    }
+    state[0].clone()
+}
+
+
 
 #[cfg(test)]
 mod poseidon_test {
