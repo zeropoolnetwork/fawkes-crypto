@@ -1,10 +1,55 @@
 use linked_list::{LinkedList, Cursor};
 use std::cmp::{Ordering};
 use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssign};
-
+use std::marker::Sized;
 
 use crate::core::cs::ConstraintSystem;
 use crate::core::num::Num;
+
+
+
+
+pub trait AbstractSignal <'a, CS:'a+ConstraintSystem> : Sized {
+    type Value: Clone + Copy + Default;
+
+    fn get_cs(&self) -> &'a CS;
+
+
+    fn from_const(cs:&'a CS, value: Self::Value) -> Self;
+    
+    fn get_value(&self) -> Option<Self::Value>;
+
+    fn as_const(&self) -> Option<Self::Value>;
+
+    fn alloc(cs:&'a CS, value:Option<Self::Value>) -> Self;
+
+    #[inline]
+    fn derive_const(&self, value: Self::Value) -> Self {
+        Self::from_const(self.get_cs(), value)
+    }
+
+    #[inline]
+    fn derive_alloc(&self, value:Option<Self::Value>) -> Self {
+        Self::alloc(self.get_cs(), value)
+    }
+
+    #[inline]
+    fn default(cs:&'a CS) -> Self {
+        Self::from_const(cs, Self::Value::default())
+    }
+
+    #[inline]
+    fn derive_default(&self) -> Self {
+        Self::default(self.get_cs())
+    }
+}
+
+
+pub trait AbstractSignalSwitch <'a, CS:'a+ConstraintSystem> : AbstractSignal<'a, CS> {
+    fn switch(&self, bit: &Signal<'a, CS>, if_else: &Self) -> Self;
+}
+
+
 
 #[derive(Eq, PartialEq, Clone, Copy, Debug, Hash)]
 pub enum Index{
@@ -48,21 +93,21 @@ impl<'a, CS:ConstraintSystem> Clone for Signal<'a, CS> {
         }
     }
 }
-    
 
-impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
-    
-    #[inline]
-    pub fn capacity(&self) -> usize {
-        self.lc.len()
-    }
+impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for Signal<'a, CS> {
+    type Value = Num<CS::F>;
 
     #[inline]
-    pub fn get_value(&self) -> Option<Num<CS::F>> {
+    fn get_value(&self) -> Option<Self::Value> {
         self.value
     }
 
-    pub fn as_const(&self) -> Option<Num<CS::F>> {
+    #[inline]
+    fn get_cs(&self) -> &'a CS {
+        self.cs
+    }
+
+    fn as_const(&self) -> Option<Self::Value> {
         if self.lc.len()==0 {
             Some(Num::zero())
         } else if self.lc.len() == 1 {
@@ -78,17 +123,54 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
     }
 
     #[inline]
-    pub fn from_var(cs:&'a CS, value: Option<Num<CS::F>>, var: Index) -> Self {
-        let mut lc = LinkedList::new();
-        lc.push_back((var, Num::one()));
-        Self {value, lc, cs}
-    }
-
-    #[inline]
-    pub fn from_const(cs:&'a CS, value: Num<CS::F>) -> Self {
+    fn from_const(cs:&'a CS, value: Self::Value) -> Self {
         let mut lc = LinkedList::new();
         lc.push_back((Index::Input(0), value));
         let value = Some(value);
+        Self {value, lc, cs}
+    }
+
+    fn alloc(cs:&'a CS, value:Option<Self::Value>) -> Self {
+        let var = cs.alloc(value);
+        Self::from_var(cs, value, var)
+    }
+}
+
+impl<'a, CS:ConstraintSystem> AbstractSignalSwitch<'a, CS> for Signal<'a, CS> {
+    fn switch(&self, bit: &Signal<'a, CS>, if_else: &Self) -> Self {
+        match bit.as_const() {
+            Some(b) => {
+                if b == Num::one() {
+                    self.clone()
+                } else if b == Num::zero() {
+                    if_else.clone()
+                } else {
+                    panic!("wrong bit value")
+                }
+   
+            },
+            _ => if if_else.capacity() < self.capacity() {
+                if_else + bit * (self - if_else)
+            } else {
+                self + (Num::one() - bit) * (if_else - self)
+            }
+        }
+    }
+}
+
+
+impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
+    
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        self.lc.len()
+    }
+
+
+    #[inline]
+    pub fn from_var(cs:&'a CS, value: Option<Num<CS::F>>, var: Index) -> Self {
+        let mut lc = LinkedList::new();
+        lc.push_back((var, Num::one()));
         Self {value, lc, cs}
     }
 
@@ -97,14 +179,10 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
         Signal::from_var(self.cs, value, var)
     }
 
-    #[inline]
-    pub fn derive_const(&self, value: Num<CS::F>) -> Self {
-        Signal::from_const(self.cs, value)
-    }
 
     #[inline]
     pub fn zero(cs:&'a CS) -> Self {
-        Self::from_const(cs, Num::zero())
+        Self::default(cs)
     }
 
     #[inline]
@@ -120,17 +198,6 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
     #[inline]
     pub fn derive_one(&self) -> Self {
         Self::one(self.cs)
-    }
-
-
-    pub fn alloc(cs:&'a CS, value:Option<Num<CS::F>>) -> Self {
-        let var = cs.alloc(value);
-        Self::from_var(cs, value, var)
-    }
-
-    #[inline]
-    pub fn derive_alloc(&self, value:Option<Num<CS::F>>) -> Self {
-        Self::alloc(self.cs, value)
     }
 
     #[inline]
@@ -232,29 +299,6 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
             }
         }
     }
-
-
-    pub fn switch(&self, bit: &Self, if_else: &Self) -> Self {
-        match bit.as_const() {
-            Some(b) => {
-                if b == Num::one() {
-                    self.clone()
-                } else if b == Num::zero() {
-                    if_else.clone()
-                } else {
-                    panic!("wrong bit value")
-                }
-   
-            },
-            _ => if if_else.capacity() < self.capacity() {
-                if_else + bit * (self - if_else)
-            } else {
-                self + (Num::one() - bit) * (if_else - self)
-            }
-        }
-    }
-
-
 }
 
 

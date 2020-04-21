@@ -53,7 +53,6 @@ fn mix<F:PrimeField>(state: &mut[Num<F>], params:&PoseidonParams<F>) {
 }
 
 
-
 pub fn poseidon<F:PrimeField>(inputs:&[Num<F>], params:&PoseidonParams<F>) -> Num<F> {
     let mut state = vec![Num::zero(); params.t];
     let n_inputs = inputs.len();
@@ -78,11 +77,18 @@ pub fn poseidon<F:PrimeField>(inputs:&[Num<F>], params:&PoseidonParams<F>) -> Nu
 }
 
 
-pub fn poseidon_merkle_root<F:PrimeField>(leaf:Num<F>, sibling:&[Num<F>], path:&[bool], params:&PoseidonParams<F>) -> Num<F> {
-    assert!(sibling.len() == path.len(), "merkle proof path should be the same");
+#[derive(Debug, Clone, Default)]
+pub struct MerkleProof<F:PrimeField> {
+    pub sibling: Vec<Num<F>>,
+    pub path: Vec<bool>
+}
+
+
+pub fn poseidon_merkle_root<F:PrimeField>(leaf:Num<F>, proof:&MerkleProof<F>, params:&PoseidonParams<F>) -> Num<F> {
+    assert!(proof.sibling.len() == proof.path.len(), "merkle proof path should be the same");
     let mut root = leaf.clone();
     
-    for (&p, &s) in path.iter().zip(sibling.iter()) {
+    for (&p, &s) in proof.path.iter().zip(proof.sibling.iter()) {
         let pair = if p {[s, root]} else {[root, s]};
         root = poseidon(pair.as_ref(), params);
     }

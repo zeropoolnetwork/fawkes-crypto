@@ -17,13 +17,41 @@ use crate::core::num::Num;
 pub struct Fs(FsRepr);
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct EdwardsPoint<F:PrimeField> {
     pub x: Num<F>,
     pub y: Num<F>,
     pub t: Num<F>,
     pub z: Num<F>
 }
+
+impl<F:PrimeField> Default for EdwardsPoint<F> {
+    fn default() -> Self {
+        Self {
+            x: Num::zero(),
+            y: Num::one(),
+            t: Num::zero(),
+            z: Num::one()
+        }
+    }
+}
+
+
+#[derive(Clone, Copy, Debug)]
+pub struct MontgomeryPoint<F:PrimeField> {
+    pub x: Num<F>,
+    pub y: Num<F>
+}
+
+impl<F:PrimeField> Default for MontgomeryPoint<F> {
+    fn default() -> Self {
+        Self {
+            x: Num::zero(),
+            y: Num::zero()
+        }
+    }
+}
+
 
 pub trait JubJubParams<Fr:PrimeField>: Sized {
     type Fs: PrimeField;
@@ -223,11 +251,6 @@ impl <F: PrimeField> EdwardsPoint<F> {
 
         EdwardsPoint { x, y, t, z}
     }
-
-
-
-
-
 
     // compress point into single E::Fr and a sign bit
     pub fn compress_into_y(&self) -> (Num<F>, bool)

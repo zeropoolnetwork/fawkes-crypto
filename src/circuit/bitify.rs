@@ -3,9 +3,10 @@ use ff::{
     PrimeField
 };
 
-use crate::core::signal::Signal;
+use crate::core::signal::{Signal, AbstractSignal};
 use crate::core::num::Num;
 use crate::core::cs::ConstraintSystem;
+
 
 
 pub fn c_into_bits_le<'a, CS:ConstraintSystem>(

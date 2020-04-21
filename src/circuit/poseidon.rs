@@ -1,11 +1,15 @@
 
 
-use crate::core::signal::Signal;
+use crate::core::signal::{Signal, AbstractSignalSwitch};
 use crate::core::num::Num;
 use crate::core::cs::ConstraintSystem;
 use crate::native::poseidon::{PoseidonParams};
 
 
+pub struct CMerkleProof<'a, CS:ConstraintSystem> {
+    pub sibling: Vec<Signal<'a, CS>>,
+    pub path: Vec<Signal<'a, CS>>
+}
 
 fn ark<'a, CS:ConstraintSystem>(state: &mut[Signal<'a, CS>], c:Num<CS::F>) {
     state.iter_mut().for_each(|e| *e += c);
@@ -57,13 +61,12 @@ pub fn c_poseidon<'a, CS:ConstraintSystem>(inputs:&[Signal<'a, CS>], params:&Pos
 
 pub fn c_poseidon_merkle_root<'a, CS:ConstraintSystem>(
     leaf:&Signal<'a, CS>, 
-    sibling:&[Signal<'a, CS>], 
-    path:&[Signal<'a, CS>], 
+    proof:&CMerkleProof<'a, CS>,
     params:&PoseidonParams<CS::F>
 ) -> Signal<'a, CS> {
-    assert!(sibling.len() == path.len(), "merkle proof length should be the same");
+    assert!(proof.sibling.len() == proof.path.len(), "merkle proof length should be the same");
     let mut root = leaf.clone();
-    for (p, s) in path.iter().zip(sibling.iter()) {
+    for (p, s) in proof.path.iter().zip(proof.sibling.iter()) {
         let first = s.switch(p, &root); 
         let second = &root + s - &first;
         root = c_poseidon( [first, second].as_ref(), params);
@@ -93,7 +96,8 @@ pub fn c_merkle_tree_root<'a, CS:ConstraintSystem>(leaf: &[Signal<'a, CS>], para
 mod poseidon_test {
     use super::*;
     use crate::core::cs::TestCS;
-    use crate::native::poseidon::{poseidon, poseidon_merkle_root};
+    use crate::native::poseidon::{poseidon, poseidon_merkle_root, MerkleProof};
+    use crate::core::signal::AbstractSignal;
     use bellman::pairing::bn256::{Fr};
     use rand::{Rng, thread_rng};
     
@@ -144,10 +148,12 @@ mod poseidon_test {
         
         
         let mut n_constraints = cs.num_constraints();
-        let res = c_poseidon_merkle_root(&signal_leaf, &signal_sibling, &signal_path, &poseidon_params);
+        let ref signal_proof = CMerkleProof {sibling:signal_sibling, path:signal_path};
+        let res = c_poseidon_merkle_root(&signal_leaf, &signal_proof, &poseidon_params);
         n_constraints=cs.num_constraints()-n_constraints;
         
-        let res2 = poseidon_merkle_root(leaf, &sibling, &path, &poseidon_params);
+        let proof = MerkleProof {sibling, path};
+        let res2 = poseidon_merkle_root(leaf, &proof, &poseidon_params);
         res.assert_const(res2);
 
         println!("merkle root poseidon(3,8,53)x32 constraints = {}", n_constraints);
