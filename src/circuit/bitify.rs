@@ -98,10 +98,22 @@ pub fn c_comp_constant<'a, CS:ConstraintSystem>(
 
 pub fn c_into_bits_le_strict<'a, CS:ConstraintSystem>(
     signal:&Signal<'a, CS>
-) -> Vec<Signal<'a, CS>>
-{
+) -> Vec<Signal<'a, CS>>{
     let bits = c_into_bits_le(signal, CS::F::NUM_BITS as usize);
     let cmp_res = c_comp_constant( &bits, -Num::one());
     cmp_res.assert_zero();
     bits
+}
+
+pub fn c_from_bits_le<'a, CS:ConstraintSystem>(
+    bits:&[Signal<'a, CS>]
+) -> Signal<'a, CS> {
+    assert!(bits.len()>0, "should be positive number of bits");
+    let mut acc = bits[0].clone();
+    let mut k = Num::one();
+    for i in 1..bits.len() {
+        k = k.double();
+        acc += k*&bits[i];
+    }
+    acc
 }
