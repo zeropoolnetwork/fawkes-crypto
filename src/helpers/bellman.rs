@@ -130,7 +130,7 @@ mod bellman_test {
     use bellman::pairing::bn256::{Fr, Bn256};
     use crate::core::signal::Signal;
     use crate::native::poseidon::PoseidonParams;
-    use crate::circuit::poseidon::poseidon;
+    use crate::circuit::poseidon::c_poseidon;
     use rand::{Rng, thread_rng};
 
 
@@ -158,7 +158,7 @@ mod bellman_test {
             image.inputize();
             let preimage = Signal::alloc(cs, self.preimage);
             let ref poseidon_params = PoseidonParams::<F>::new(2, 8, 53);
-            let image_computed = poseidon([preimage].as_ref(), poseidon_params);
+            let image_computed = c_poseidon([preimage].as_ref(), poseidon_params);
             (&image-&image_computed).assert_zero();
         }
     }

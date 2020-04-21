@@ -3,7 +3,7 @@
 use crate::core::signal::Signal;
 use crate::core::num::Num;
 use crate::core::cs::ConstraintSystem;
-use crate::native::poseidon::PoseidonParams;
+use crate::native::poseidon::{PoseidonParams};
 
 
 
@@ -30,7 +30,7 @@ fn mix<'a, CS:ConstraintSystem>(state: &mut[Signal<'a, CS>], params:&PoseidonPar
 }
 
 
-pub fn poseidon<'a, CS:ConstraintSystem>(inputs:&[Signal<'a, CS>], params:&PoseidonParams<CS::F>) -> Signal<'a, CS> {
+pub fn c_poseidon<'a, CS:ConstraintSystem>(inputs:&[Signal<'a, CS>], params:&PoseidonParams<CS::F>) -> Signal<'a, CS> {
     let n_inputs = inputs.len();
     assert!(n_inputs <= params.t, "number of inputs should be less or equal than t");
     assert!(n_inputs > 0, "number of inputs should be positive nonzero");
@@ -55,7 +55,7 @@ pub fn poseidon<'a, CS:ConstraintSystem>(inputs:&[Signal<'a, CS>], params:&Posei
 }
 
 
-pub fn poseidon_merkle_root<'a, CS:ConstraintSystem>(
+pub fn c_poseidon_merkle_root<'a, CS:ConstraintSystem>(
     leaf:&Signal<'a, CS>, 
     sibling:&[Signal<'a, CS>], 
     path:&[Signal<'a, CS>], 
@@ -66,7 +66,7 @@ pub fn poseidon_merkle_root<'a, CS:ConstraintSystem>(
     for (p, s) in path.iter().zip(sibling.iter()) {
         let first = s.switch(p, &root); 
         let second = &root + s - &first;
-        root = poseidon( [first, second].as_ref(), params);
+        root = c_poseidon( [first, second].as_ref(), params);
     }
     root
 }
@@ -76,8 +76,10 @@ pub fn poseidon_merkle_root<'a, CS:ConstraintSystem>(
 mod poseidon_test {
     use super::*;
     use crate::core::cs::TestCS;
+    use crate::native::poseidon::{poseidon, poseidon_merkle_root};
     use bellman::pairing::bn256::{Fr};
     use rand::{Rng, thread_rng};
+    
 
     #[test]
     fn test_circuit_poseidon() {
@@ -91,10 +93,10 @@ mod poseidon_test {
         let inputs = (0..N_INPUTS).map(|i| Signal::alloc(cs, Some(data[i]))).collect::<Vec<_>>();
         
         let mut n_constraints = cs.num_constraints();
-        let res = poseidon(&inputs, &poseidon_params);
+        let res = c_poseidon(&inputs, &poseidon_params);
         n_constraints=cs.num_constraints()-n_constraints;
         
-        let res2 = crate::native::poseidon::poseidon(&data, &poseidon_params);
+        let res2 = poseidon(&data, &poseidon_params);
         res.assert_const(res2);
 
         
@@ -125,10 +127,10 @@ mod poseidon_test {
         
         
         let mut n_constraints = cs.num_constraints();
-        let res = poseidon_merkle_root(&signal_leaf, &signal_sibling, &signal_path, &poseidon_params);
+        let res = c_poseidon_merkle_root(&signal_leaf, &signal_sibling, &signal_path, &poseidon_params);
         n_constraints=cs.num_constraints()-n_constraints;
         
-        let res2 = crate::native::poseidon::poseidon_merkle_root(leaf, &sibling, &path, &poseidon_params);
+        let res2 = poseidon_merkle_root(leaf, &sibling, &path, &poseidon_params);
         res.assert_const(res2);
 
         println!("merkle root poseidon(3,8,53)x32 constraints = {}", n_constraints);

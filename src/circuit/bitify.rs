@@ -8,7 +8,7 @@ use crate::core::num::Num;
 use crate::core::cs::ConstraintSystem;
 
 
-pub fn into_bits_le<'a, CS:ConstraintSystem>(
+pub fn c_into_bits_le<'a, CS:ConstraintSystem>(
     signal:&Signal<'a, CS>,
     limit: usize
 ) -> Vec<Signal<'a, CS>>
@@ -54,7 +54,7 @@ pub fn into_bits_le<'a, CS:ConstraintSystem>(
 }
 
 // return 1 if signal > ct 
-pub fn comp_constant<'a, CS:ConstraintSystem>(
+pub fn c_comp_constant<'a, CS:ConstraintSystem>(
     signal:&[Signal<'a, CS>],
     ct: Num<CS::F>
 ) -> Signal<'a, CS> {
@@ -91,17 +91,17 @@ pub fn comp_constant<'a, CS:ConstraintSystem>(
     k -= Num::one();
 
     acc = acc + k;
-    let acc_bits = into_bits_le(&acc, nsteps+1);
+    let acc_bits = c_into_bits_le(&acc, nsteps+1);
     acc_bits[nsteps].clone()
 }
 
 
-pub fn into_bits_le_strict<'a, CS:ConstraintSystem>(
+pub fn c_into_bits_le_strict<'a, CS:ConstraintSystem>(
     signal:&Signal<'a, CS>
 ) -> Vec<Signal<'a, CS>>
 {
-    let bits = into_bits_le(signal, CS::F::NUM_BITS as usize);
-    let cmp_res = comp_constant( &bits, -Num::one());
+    let bits = c_into_bits_le(signal, CS::F::NUM_BITS as usize);
+    let cmp_res = c_comp_constant( &bits, -Num::one());
     cmp_res.assert_zero();
     bits
 }

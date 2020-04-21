@@ -2,21 +2,21 @@
 use crate::core::signal::{Signal};
 use crate::core::num::Num;
 use crate::core::cs::ConstraintSystem;
-use crate::circuit::bitify::into_bits_le_strict;
-use crate::circuit::mux::mux3;
-use crate::native::ecc::{JubJubParams};
+use crate::circuit::bitify::c_into_bits_le_strict;
+use crate::circuit::mux::c_mux3;
+use crate::native::ecc::{JubJubParams, EdwardsPoint};
 
 
 use ff::{PrimeField};
 
 
 
-pub struct EdwardsPoint<'a, CS: ConstraintSystem> {
+pub struct CEdwardsPoint<'a, CS: ConstraintSystem> {
     pub x: Signal<'a, CS>,
     pub y: Signal<'a, CS>
 }
 
-impl<'a, CS: ConstraintSystem> Clone for EdwardsPoint<'a, CS> {
+impl<'a, CS: ConstraintSystem> Clone for CEdwardsPoint<'a, CS> {
     fn clone(&self) -> Self {
         Self {
             x: self.x.clone(),
@@ -26,12 +26,12 @@ impl<'a, CS: ConstraintSystem> Clone for EdwardsPoint<'a, CS> {
 }
 
 
-pub struct MontgomeryPoint<'a, CS: ConstraintSystem> {
+pub struct CMontgomeryPoint<'a, CS: ConstraintSystem> {
     pub x: Signal<'a, CS>,
     pub y: Signal<'a, CS>
 }
 
-impl<'a, CS: ConstraintSystem> Clone for MontgomeryPoint<'a, CS> {
+impl<'a, CS: ConstraintSystem> Clone for CMontgomeryPoint<'a, CS> {
     fn clone(&self) -> Self {
         Self {
             x: self.x.clone(),
@@ -42,8 +42,8 @@ impl<'a, CS: ConstraintSystem> Clone for MontgomeryPoint<'a, CS> {
 
 
 
-impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
-    pub fn alloc(cs:&'a CS, p: Option<crate::native::ecc::EdwardsPoint<CS::F>>) -> Self {
+impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
+    pub fn alloc(cs:&'a CS, p: Option<EdwardsPoint<CS::F>>) -> Self {
         let (x_value, y_value) = match p {
             Some(p) => {
                 let (x,y) = p.into_xy();
@@ -58,7 +58,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
         }
     }
 
-    pub fn from_const(cs:&'a CS, p: crate::native::ecc::EdwardsPoint<CS::F>) -> Self {
+    pub fn from_const(cs:&'a CS, p: EdwardsPoint<CS::F>) -> Self {
         let (x, y) = p.into_xy();
         Self {x: Signal::from_const(cs, x), y: Signal::from_const(cs, y)}
     }
@@ -100,7 +100,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
     pub fn assert_in_subgroup<J:JubJubParams<CS::F>>(&self, params: &J) {
         let preimage_value = match (self.x.get_value(), self.y.get_value()) {
             (Some(x), Some(y)) => {
-                let p = crate::native::ecc::EdwardsPoint::from_xy_unchecked(x, y);
+                let p = EdwardsPoint::from_xy_unchecked(x, y);
                 Some(p.mul(params.edwards_inv_cofactor(), params))
             },
             _ => None
@@ -108,7 +108,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
 
         let cs = self.x.cs;
 
-        let preimage = EdwardsPoint::alloc(cs, preimage_value);
+        let preimage = CEdwardsPoint::alloc(cs, preimage_value);
         preimage.assert_in_curve(params);
         let preimage8 = preimage.mul_by_cofactor(params);
 
@@ -119,7 +119,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
     pub fn subgroup_decompress<J:JubJubParams<CS::F>>(x:&Signal<'a, CS>, params: &J) -> Self {
         let preimage_value = match x.get_value() {
             Some(x) => {
-                let p = crate::native::ecc::EdwardsPoint::subgroup_decompress(x, params).unwrap_or(params.edwards_g().clone());
+                let p = EdwardsPoint::subgroup_decompress(x, params).unwrap_or(params.edwards_g().clone());
                 Some(p.mul(params.edwards_inv_cofactor(), params))
             },
             _ => None
@@ -127,7 +127,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
 
         let cs = x.cs;
 
-        let preimage = EdwardsPoint::alloc(cs, preimage_value);
+        let preimage = CEdwardsPoint::alloc(cs, preimage_value);
         preimage.assert_in_curve(params);
         let preimage8 = preimage.mul_by_cofactor(params);
 
@@ -137,10 +137,10 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
     }
 
     // assume nonzero subgroup point
-    pub fn into_montgomery(&self) -> MontgomeryPoint<'a, CS> {
+    pub fn into_montgomery(&self) -> CMontgomeryPoint<'a, CS> {
         let x = (Num::one() + &self.y)/(Num::one() - &self.y);
         let y = &x / &self.x;
-        MontgomeryPoint {x, y}
+        CMontgomeryPoint {x, y}
     }
 
     pub fn switch(&self, bit:&Signal<'a, CS>, if_else:&Self) -> Self {
@@ -151,8 +151,8 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
     }
 
     // assume subgroup point, bits
-    pub fn multiply<J:JubJubParams<CS::F>>(&self, bits:&[Signal<'a, CS>], params: &J) -> Self {
-        fn gen_table<F:PrimeField, J:JubJubParams<F>>(p: &crate::native::ecc::EdwardsPoint<F>, params: &J) -> Vec<Vec<Num<F>>> {
+    pub fn mul<J:JubJubParams<CS::F>>(&self, bits:&[Signal<'a, CS>], params: &J) -> Self {
+        fn gen_table<F:PrimeField, J:JubJubParams<F>>(p: &EdwardsPoint<F>, params: &J) -> Vec<Vec<Num<F>>> {
             let mut x_col = vec![];
             let mut y_col = vec![];
             let mut q = p.clone();
@@ -168,9 +168,9 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
 
         match (self.x.as_const(), self.y.as_const()) {        
             (Some(x), Some(y)) => {
-                let mut base = crate::native::ecc::EdwardsPoint::from_xy_unchecked(x, y);
+                let mut base = EdwardsPoint::from_xy_unchecked(x, y);
                 if base.is_zero() {
-                    EdwardsPoint {x: Signal::zero(cs), y: Signal::one(cs)}
+                    CEdwardsPoint {x: Signal::zero(cs), y: Signal::one(cs)}
                 } else {
                     let bits_len = bits.len();
                     let zeros_len = (3 - (bits_len % 3))%3;
@@ -180,7 +180,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
                     let all_bits_len = all_bits.len();
                     let nwindows = all_bits_len / 3;
 
-                    let mut acc = crate::native::ecc::EdwardsPoint::from_xy_unchecked(Num::zero(), -Num::one());
+                    let mut acc = EdwardsPoint::from_xy_unchecked(Num::zero(), -Num::one());
                     
                     for _ in 0..nwindows {
                         acc = acc.add(&base, params);
@@ -189,25 +189,25 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
 
                     let (m_x, m_y) = acc.negate().into_montgomery_xy().unwrap();
 
-                    let mut acc = MontgomeryPoint {x: Signal::from_const(cs, m_x), y: Signal::from_const(cs, m_y)};
-                    let mut base = crate::native::ecc::EdwardsPoint::from_xy_unchecked(x, y);
+                    let mut acc = CMontgomeryPoint {x: Signal::from_const(cs, m_x), y: Signal::from_const(cs, m_y)};
+                    let mut base = EdwardsPoint::from_xy_unchecked(x, y);
 
         
                     for i in 0..nwindows {
                         let table = gen_table(&base, params);
-                        let res = mux3(&all_bits[3*i..3*(i+1)], &table);
-                        let p = MontgomeryPoint {x: res[0].clone(), y: res[1].clone()};
+                        let res = c_mux3(&all_bits[3*i..3*(i+1)], &table);
+                        let p = CMontgomeryPoint {x: res[0].clone(), y: res[1].clone()};
                         acc = acc.add(&p, params);
                         base = base.double().double().double();
                     }
                     
                     let res = acc.into_edwards();
-                    EdwardsPoint {x:-res.x, y:-res.y}
+                    CEdwardsPoint {x:-res.x, y:-res.y}
                 }
             },
             _ => {
                 let base_is_zero = self.x.is_zero();
-                let dummy_point = EdwardsPoint::from_const(cs, params.edwards_g().clone());
+                let dummy_point = CEdwardsPoint::from_const(cs, params.edwards_g().clone());
                 let base_point = dummy_point.switch(&base_is_zero, self);
 
                 let mut base_point = base_point.into_montgomery();
@@ -220,7 +220,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
                 }
 
         
-                let empty_acc = MontgomeryPoint {x:Signal::zero(cs), y:Signal::zero(cs)};
+                let empty_acc = CMontgomeryPoint {x:Signal::zero(cs), y:Signal::zero(cs)};
                 let mut acc = empty_acc.clone();
         
                 for i in 0..bits.len() {
@@ -231,7 +231,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
                 acc = empty_acc.switch(&base_is_zero, &acc);
         
                 let res = acc.into_edwards();
-                EdwardsPoint {x:-res.x, y:-res.y}
+                CEdwardsPoint {x:-res.x, y:-res.y}
             }
         }
     }
@@ -254,7 +254,7 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
             });
 
             let preimage = x.derive_alloc(preimage_value);
-            let preimage_bits = into_bits_le_strict(&preimage);
+            let preimage_bits = c_into_bits_le_strict(&preimage);
             preimage_bits[0].assert_zero();
 
             let preimage_square = preimage.square();
@@ -281,13 +281,13 @@ impl<'a, CS: ConstraintSystem> EdwardsPoint<'a, CS> {
         let x = x2.switch(&is_valid, &x3);
         let y = y2.switch(&is_valid, &y3);
 
-        MontgomeryPoint {x, y}.into_edwards().mul_by_cofactor(params)
+        CMontgomeryPoint {x, y}.into_edwards().mul_by_cofactor(params)
     }
 }
 
 
-impl<'a, CS: ConstraintSystem> MontgomeryPoint<'a, CS> {
-    pub fn alloc<J:JubJubParams<CS::F>>(cs: &'a CS, p: Option<crate::native::ecc::EdwardsPoint<CS::F>>) -> Self {
+impl<'a, CS: ConstraintSystem> CMontgomeryPoint<'a, CS> {
+    pub fn alloc<J:JubJubParams<CS::F>>(cs: &'a CS, p: Option<EdwardsPoint<CS::F>>) -> Self {
         let (x_value, y_value) = match p {
             Some(p) => {
                 let (x,y) = p.into_xy();
@@ -328,9 +328,9 @@ impl<'a, CS: ConstraintSystem> MontgomeryPoint<'a, CS> {
     }
 
     // assume any nonzero point
-    pub fn into_edwards(&self) -> EdwardsPoint<'a, CS> {
+    pub fn into_edwards(&self) -> CEdwardsPoint<'a, CS> {
         let y_is_zero = self.y.is_zero();
-        EdwardsPoint {
+        CEdwardsPoint {
             x: &self.x / (&self.y + y_is_zero),
             y: (&self.x - Num::one()) / (&self.x + Num::one())
         }
@@ -352,7 +352,7 @@ mod ecc_test {
     use bellman::pairing::bn256::{Fr};
     use rand::{Rng, thread_rng};
     use crate::native::ecc::{JubJubBN256};
-    use crate::circuit::bitify::{into_bits_le_strict};
+    use crate::circuit::bitify::{c_into_bits_le_strict};
     use crate::core::cs::TestCS;
 
 
@@ -367,8 +367,8 @@ mod ecc_test {
         let ref mut cs = TestCS::<Fr>::new();
         let signal_t = Signal::alloc(cs, Some(t));
 
-        let signal_p = EdwardsPoint::from_scalar(signal_t, &jubjub_params);
-        let (x, y) = crate::native::ecc::EdwardsPoint::from_scalar(t, &jubjub_params).into_xy();
+        let signal_p = CEdwardsPoint::from_scalar(signal_t, &jubjub_params);
+        let (x, y) = EdwardsPoint::from_scalar(t, &jubjub_params).into_xy();
 
         signal_p.x.assert_const(x);
         signal_p.y.assert_const(y);
@@ -380,14 +380,14 @@ mod ecc_test {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
-        let (x, y) = crate::native::ecc::EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params).mul(num!(8), &jubjub_params).into_xy();
+        let (x, y) = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params).mul(num!(8), &jubjub_params).into_xy();
 
         
         let ref mut cs = TestCS::<Fr>::new();
         let signal_x = Signal::alloc(cs, Some(x));
 
         let mut n_constraints = cs.num_constraints();
-        let res = EdwardsPoint::subgroup_decompress(&signal_x, &jubjub_params);
+        let res = CEdwardsPoint::subgroup_decompress(&signal_x, &jubjub_params);
         n_constraints=cs.num_constraints()-n_constraints;
 
         res.y.assert_const(y);
@@ -402,14 +402,14 @@ mod ecc_test {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
-        let p1 = crate::native::ecc::EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
-        let p2 = crate::native::ecc::EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
+        let p1 = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
+        let p2 = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
         
         let (p3_x, p3_y) = p1.add(&p2, &jubjub_params).into_xy();
         
         let ref mut cs = TestCS::<Fr>::new();
-        let signal_p1 = EdwardsPoint::alloc(cs, Some(p1));
-        let signal_p2 = EdwardsPoint::alloc(cs, Some(p2));
+        let signal_p1 = CEdwardsPoint::alloc(cs, Some(p1));
+        let signal_p2 = CEdwardsPoint::alloc(cs, Some(p2));
 
         let signal_p3 = signal_p1.add(&signal_p2, &jubjub_params);
 
@@ -424,12 +424,12 @@ mod ecc_test {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
-        let p = crate::native::ecc::EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
+        let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
         
         let (p3_x, p3_y) = p.double().into_xy();
         
         let ref mut cs = TestCS::<Fr>::new();
-        let signal_p = EdwardsPoint::alloc(cs, Some(p));
+        let signal_p = CEdwardsPoint::alloc(cs, Some(p));
 
         let signal_p3 = signal_p.double(&jubjub_params);
 
@@ -443,12 +443,12 @@ mod ecc_test {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
-        let p = crate::native::ecc::EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
+        let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
         
         let (mp_x, mp_y) = p.into_montgomery_xy().unwrap();
         
         let ref mut cs = TestCS::<Fr>::new();
-        let signal_p = EdwardsPoint::alloc(cs, Some(p));
+        let signal_p = CEdwardsPoint::alloc(cs, Some(p));
         let signal_mp = signal_p.into_montgomery();
 
         signal_mp.x.assert_const(mp_x);
@@ -460,14 +460,14 @@ mod ecc_test {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
-        let p = crate::native::ecc::EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
+        let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
         
         let (p_x, p_y) = p.into_xy();
         let (mp_x, mp_y) = p.into_montgomery_xy().unwrap();
         
         let ref mut cs = TestCS::<Fr>::new();
 
-        let signal_mp = MontgomeryPoint {
+        let signal_mp = CMontgomeryPoint {
             x: Signal::alloc(cs, Some(mp_x)),
             y: Signal::alloc(cs, Some(mp_y))
         };
@@ -484,14 +484,14 @@ mod ecc_test {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
-        let p1 = crate::native::ecc::EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
-        let p2 = crate::native::ecc::EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
+        let p1 = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
+        let p2 = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
         
         let (p3_x, p3_y) = p1.add(&p2, &jubjub_params).into_xy();
         
         let ref mut cs = TestCS::<Fr>::new();
-        let signal_p1 = EdwardsPoint::alloc(cs, Some(p1));
-        let signal_p2 = EdwardsPoint::alloc(cs, Some(p2));
+        let signal_p1 = CEdwardsPoint::alloc(cs, Some(p1));
+        let signal_p2 = CEdwardsPoint::alloc(cs, Some(p2));
 
         let signal_mp1 = signal_p1.into_montgomery();
         let signal_mp2 = signal_p2.into_montgomery();
@@ -509,12 +509,12 @@ mod ecc_test {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
-        let p = crate::native::ecc::EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
+        let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
         
         let (p3_x, p3_y) = p.double().into_xy();
         
         let ref mut cs = TestCS::<Fr>::new();
-        let signal_p = EdwardsPoint::alloc(cs, Some(p));
+        let signal_p = CEdwardsPoint::alloc(cs, Some(p));
         let signal_mp = signal_p.into_montgomery();
         let signal_mp3 = signal_mp.double(&jubjub_params);
         let signal_p3 = signal_mp3.into_edwards();
@@ -530,20 +530,20 @@ mod ecc_test {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
-        let p = crate::native::ecc::EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params)
+        let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params)
             .mul(num!(8), &jubjub_params);
         let n : Num<Fr> = rng.gen();
         
         let (p3_x, p3_y) = p.mul(n.into_other(), &jubjub_params).into_xy();
         
         let ref mut cs = TestCS::<Fr>::new();
-        let signal_p = EdwardsPoint::alloc(cs, Some(p));
+        let signal_p = CEdwardsPoint::alloc(cs, Some(p));
         let signal_n = Signal::alloc(cs, Some(n));
 
-        let signal_n_bits = into_bits_le_strict(&signal_n);
+        let signal_n_bits = c_into_bits_le_strict(&signal_n);
 
         let mut n_constraints = cs.num_constraints();
-        let signal_p3 = signal_p.multiply(&signal_n_bits, &jubjub_params);
+        let signal_p3 = signal_p.mul(&signal_n_bits, &jubjub_params);
         n_constraints=cs.num_constraints()-n_constraints;
 
         signal_p3.x.assert_const(p3_x);
@@ -559,20 +559,20 @@ mod ecc_test {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
 
-        let p = crate::native::ecc::EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params)
+        let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params)
             .mul(num!(8), &jubjub_params);
         let n : Num<Fr> = rng.gen();
         
         let (p3_x, p3_y) = p.mul(n.into_other(), &jubjub_params).into_xy();
         
         let ref mut cs = TestCS::<Fr>::new();
-        let signal_p = EdwardsPoint::from_const(cs, p.clone()); 
+        let signal_p = CEdwardsPoint::from_const(cs, p.clone()); 
         let signal_n = Signal::alloc(cs, Some(n));
 
-        let signal_n_bits = into_bits_le_strict(&signal_n);
+        let signal_n_bits = c_into_bits_le_strict(&signal_n);
 
         let mut n_constraints = cs.num_constraints();
-        let signal_p3 = signal_p.multiply(&signal_n_bits, &jubjub_params);
+        let signal_p3 = signal_p.mul(&signal_n_bits, &jubjub_params);
         n_constraints=cs.num_constraints()-n_constraints;
 
         signal_p3.x.assert_const(p3_x);
