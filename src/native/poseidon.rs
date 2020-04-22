@@ -77,14 +77,14 @@ pub fn poseidon<F:PrimeField>(inputs:&[Num<F>], params:&PoseidonParams<F>) -> Nu
 }
 
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct MerkleProof<F:PrimeField> {
     pub sibling: Vec<Num<F>>,
     pub path: Vec<bool>
 }
 
 
-pub fn poseidon_merkle_root<F:PrimeField>(leaf:Num<F>, proof:&MerkleProof<F>, params:&PoseidonParams<F>) -> Num<F> {
+pub fn poseidon_merkle_proof_root<F:PrimeField>(leaf:Num<F>, proof:&MerkleProof<F>, params:&PoseidonParams<F>) -> Num<F> {
     assert!(proof.sibling.len() == proof.path.len(), "merkle proof path should be the same");
     let mut root = leaf.clone();
     
@@ -93,4 +93,19 @@ pub fn poseidon_merkle_root<F:PrimeField>(leaf:Num<F>, proof:&MerkleProof<F>, pa
         root = poseidon(pair.as_ref(), params);
     }
     root
+}
+
+pub fn poseidon_merkle_tree_root<F:PrimeField>(leaf:&[Num<F>], params: &PoseidonParams<F>) -> Num<F> {
+    let leaf_sz = leaf.len();
+    assert!(leaf_sz>0, "should be at least one leaf in the tree");
+    let proof_sz = std::mem::size_of::<usize>() * 8 - (leaf_sz-1).leading_zeros() as usize;
+    let total_leaf_sz = 1usize << proof_sz;
+    let mut state = leaf.to_vec();
+    state.extend_from_slice(&vec![Num::zero(); total_leaf_sz-leaf_sz]);
+    for j in 0..proof_sz {
+        for i in 0..total_leaf_sz>>(j + 1) {
+            state[i] = poseidon(&[state[2*i].clone(), state[2*i+1].clone()], params);
+        }
+    }
+    state[0].clone()
 }

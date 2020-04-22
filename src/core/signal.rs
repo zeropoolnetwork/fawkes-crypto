@@ -10,16 +10,15 @@ use crate::core::num::Num;
 
 
 pub trait AbstractSignal <'a, CS:'a+ConstraintSystem> : Sized {
-    type Value: Clone + Copy + Default;
+    type Value: Clone;
 
     fn get_cs(&self) -> &'a CS;
-
 
     fn from_const(cs:&'a CS, value: Self::Value) -> Self;
     
     fn get_value(&self) -> Option<Self::Value>;
 
-    fn as_const(&self) -> Option<Self::Value>;
+    fn as_const(&self) -> Option<Self::Value> { None }
 
     fn alloc(cs:&'a CS, value:Option<Self::Value>) -> Self;
 
@@ -31,16 +30,6 @@ pub trait AbstractSignal <'a, CS:'a+ConstraintSystem> : Sized {
     #[inline]
     fn derive_alloc(&self, value:Option<Self::Value>) -> Self {
         Self::alloc(self.get_cs(), value)
-    }
-
-    #[inline]
-    fn default(cs:&'a CS) -> Self {
-        Self::from_const(cs, Self::Value::default())
-    }
-
-    #[inline]
-    fn derive_default(&self) -> Self {
-        Self::default(self.get_cs())
     }
 }
 
@@ -182,7 +171,7 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
 
     #[inline]
     pub fn zero(cs:&'a CS) -> Self {
-        Self::default(cs)
+        Self::from_const(cs, Num::zero())
     }
 
     #[inline]

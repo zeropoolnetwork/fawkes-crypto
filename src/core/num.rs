@@ -1,7 +1,6 @@
 use ff::{Field, SqrtField, PrimeField, PrimeFieldRepr, BitIterator};
 use num::bigint::{BigUint};
 use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssign};
-use std::default::Default;
 use std::fmt;
 use rand::{Rand, Rng};
 use blake2_rfc::blake2s::Blake2s;
@@ -22,6 +21,7 @@ impl<T:Field> Rand for Num<T> {
         Num(rng.gen())
     }
 }
+
 
 
 impl<T:Field> Num<T> {
@@ -255,12 +255,6 @@ impl<T:PrimeField> From<&str> for Num<T> {
     }
 }
 
-impl<T:Field> Default for Num<T> {
-    #[inline]
-    fn default() -> Self {
-        Num(T::zero())
-    }
-}
 
 
 

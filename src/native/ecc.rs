@@ -25,31 +25,13 @@ pub struct EdwardsPoint<F:PrimeField> {
     pub z: Num<F>
 }
 
-impl<F:PrimeField> Default for EdwardsPoint<F> {
-    fn default() -> Self {
-        Self {
-            x: Num::zero(),
-            y: Num::one(),
-            t: Num::zero(),
-            z: Num::one()
-        }
-    }
-}
+
 
 
 #[derive(Clone, Copy, Debug)]
 pub struct MontgomeryPoint<F:PrimeField> {
     pub x: Num<F>,
     pub y: Num<F>
-}
-
-impl<F:PrimeField> Default for MontgomeryPoint<F> {
-    fn default() -> Self {
-        Self {
-            x: Num::zero(),
-            y: Num::zero()
-        }
-    }
 }
 
 
