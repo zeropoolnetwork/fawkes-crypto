@@ -1,5 +1,6 @@
 use ff::{Field, SqrtField, PrimeField, PrimeFieldRepr, BitIterator};
-use num::bigint::{BigUint};
+use num::bigint::{BigUint, BigInt, ToBigInt};
+use num::traits::Signed;
 use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssign};
 use std::fmt;
 use rand::{Rand, Rng};
@@ -140,19 +141,9 @@ impl<T:PrimeField> Num<T> {
         buff
     }
 
-    pub fn from_binary_be(blob: &[u8]) -> Self {        
-        let t_bytes = Self::num_bytes();
-        let mut order = vec![0u8;t_bytes];
-        T::char().write_be(&mut order[..]).unwrap();
-        let order = BigUint::from_bytes_be(order.as_ref());
-        let x = BigUint::from_bytes_be(blob);
-        let remainder = (x % order).to_bytes_be();
-        
-        let mut rem_buff = vec![0u8;t_bytes];
-        rem_buff[t_bytes-remainder.len()..].clone_from_slice(&remainder);
-        let mut repr = T::zero().into_raw_repr();
-        repr.read_be(&rem_buff[..]).unwrap();
-        Num(T::from_repr(repr).unwrap())
+    pub fn from_binary_be(blob: &[u8]) -> Self {
+        let x = BigUint::from_bytes_be(blob); 
+        Num::from(x)       
     }
 
     pub fn from_other<G:PrimeField>(n: Num<G>) -> Self {
@@ -199,6 +190,42 @@ impl<T:PrimeField> From<u64> for Num<T> {
         let mut repr = T::zero().into_raw_repr();
         repr.as_mut()[0] = n;
         Num::new(T::from_repr(repr).unwrap())
+    }
+}
+
+impl<T:PrimeField> From<BigUint> for Num<T> {
+    fn from(x: BigUint) -> Self {
+        let t_bytes = Self::num_bytes();
+        let mut order = vec![0u8;t_bytes];
+        T::char().write_be(&mut order[..]).unwrap();
+        let order = BigUint::from_bytes_be(order.as_ref());
+        let remainder = (x % order).to_bytes_be();
+        
+        let mut rem_buff = vec![0u8;t_bytes];
+        rem_buff[t_bytes-remainder.len()..].clone_from_slice(&remainder);
+        let mut repr = T::zero().into_raw_repr();
+        repr.read_be(&rem_buff[..]).unwrap();
+        Num(T::from_repr(repr).unwrap())
+    }
+}
+
+impl<T:PrimeField> From<BigInt> for Num<T> {
+    fn from(x: BigInt) -> Self {
+        let t_bytes = Self::num_bytes();
+        let mut order = vec![0u8;t_bytes];
+        T::char().write_be(&mut order[..]).unwrap();
+        let order = BigUint::from_bytes_be(order.as_ref()).to_bigint().unwrap();
+        let mut remainder = x % &order;
+        if remainder.is_negative() {
+            remainder+=order;
+        }
+        let remainder = remainder.to_biguint().unwrap().to_bytes_be();
+        
+        let mut rem_buff = vec![0u8;t_bytes];
+        rem_buff[t_bytes-remainder.len()..].clone_from_slice(&remainder);
+        let mut repr = T::zero().into_raw_repr();
+        repr.read_be(&rem_buff[..]).unwrap();
+        Num(T::from_repr(repr).unwrap())
     }
 }
 
