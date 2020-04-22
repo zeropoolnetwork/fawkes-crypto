@@ -8,13 +8,13 @@ use crate::core::num::Num;
 
 use crate::native::ecc::{EdwardsPoint, JubJubParams};
 use crate::native::poseidon::{PoseidonParams, poseidon};
-
+use crate::constants::PERSONALIZATION;
 
 fn hash_r<Fr:PrimeField, Fs:PrimeField>(
     sk: Num<Fs>,
     m: Num<Fr>,
 ) -> Num<Fs> {
-    let mut h = Blake2s::with_params(32, &[], &[], b"faw_eddR");
+    let mut h = Blake2s::with_params(32, &[], &[], PERSONALIZATION);
     h.update(sk.into_binary_be().as_ref());
     h.update(m.into_binary_be().as_ref());
     Num::<Fs>::from_binary_be(h.finalize().as_ref())

@@ -18,9 +18,7 @@ pub struct PoseidonParams<F:PrimeField> {
 
 impl<F:PrimeField> PoseidonParams<F> {
     pub fn new(t:usize, f:usize, p:usize) -> Self {
-        let mut seedbox = SeedboxBlake2::new_with_salt(
-            b"faw_pose",
-            format!("fawkes_poseidon(t={},f={},p={})", t, f, p).as_bytes()
+        let mut seedbox = SeedboxBlake2::new_with_salt(format!("fawkes_poseidon(t={},f={},p={})", t, f, p).as_bytes()
         );
 
 

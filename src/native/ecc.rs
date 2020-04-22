@@ -1,15 +1,9 @@
-use ff::{
-    Field,
-    PrimeField,
-    SqrtField,
-    PrimeFieldRepr
-};
-
+use ff::{Field, PrimeField, SqrtField, PrimeFieldRepr};
 use bellman::pairing::BitIterator;
-
 use rand::{Rng};
 use bellman::pairing::bn256::{Fr};
 use crate::core::num::Num;
+use crate::constants::SEED_EDWARDS_G;
 
 #[derive(PrimeField)]
 #[PrimeFieldModulus = "2736030358979909402780800718157159386076813972158567259200215660948447373041"]
@@ -69,7 +63,7 @@ impl JubJubBN256 {
         // value of montgomery polynomial for x=montgomery_b (has no square root in Fr)
         let montgomery_u= num!(337401);
 
-        let edwards_g = EdwardsPoint::from_scalar_raw(Num::from_seed(b"edwards_g"), montgomery_a, montgomery_b, montgomery_u);
+        let edwards_g = EdwardsPoint::from_scalar_raw(Num::from_seed(SEED_EDWARDS_G), montgomery_a, montgomery_b, montgomery_u);
 
     
 

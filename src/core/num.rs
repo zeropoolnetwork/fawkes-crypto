@@ -4,6 +4,7 @@ use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssi
 use std::fmt;
 use rand::{Rand, Rng};
 use blake2_rfc::blake2s::Blake2s;
+use crate::constants::PERSONALIZATION;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Num<T:Field>(pub T);
@@ -169,7 +170,7 @@ impl<T:PrimeField> Num<T> {
     }
 
     pub fn from_seed(blob: &[u8]) -> Self {
-        let mut h = Blake2s::with_params(Self::num_bytes(), &[], &[], b"zeropool");
+        let mut h = Blake2s::with_params(Self::num_bytes(), &[], &[], PERSONALIZATION);
         h.update(blob);
         Self::from_binary_be(h.finalize().as_ref())
     }
