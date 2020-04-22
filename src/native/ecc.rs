@@ -47,8 +47,6 @@ pub trait JubJubParams<Fr:PrimeField>: Sized {
     fn montgomery_b(&self) -> Num<Fr>;
 
     fn montgomery_u(&self) -> Num<Fr>;
-
-    fn edwards_inv_cofactor(&self) -> Num<Self::Fs>;
 }
 
 pub struct JubJubBN256 {
@@ -57,33 +55,30 @@ pub struct JubJubBN256 {
     montgomery_a: Num<Fr>,
     montgomery_b: Num<Fr>,
     montgomery_u: Num<Fr>,
-    edwards_inv_cofactor: Num<Fs>
 }
 
 
 
 impl JubJubBN256 {
     pub fn new() -> Self {
-        let edwards_d = num!("12181644023421730124874158521699555681764249180949974110617291017600649128846");
+        let edwards_d = -num!(168696)/num!(168700);
 
-        let montgomery_a = num!(168698);
-        let montgomery_b = num!("21888242871839275222246405745257275088548364400416034343698204186575808326917");
+        let montgomery_a = num!(2)*(Num::one()-edwards_d)/(Num::one()+edwards_d);
+        let montgomery_b = -num!(4)/(Num::one()+edwards_d);
         
         // value of montgomery polynomial for x=montgomery_b (has no square root in Fr)
         let montgomery_u= num!(337401);
 
         let edwards_g = EdwardsPoint::from_scalar_raw(Num::from_seed(b"edwards_g"), montgomery_a, montgomery_b, montgomery_u);
 
-        
-        let edwards_inv_cofactor = num!("2394026564107420727433200628387514462817212225638746351800188703329891451411");
+    
 
         Self {
             edwards_g,
             edwards_d,
             montgomery_a,
             montgomery_b,
-            montgomery_u,
-            edwards_inv_cofactor
+            montgomery_u
         }
     }
 }
@@ -113,11 +108,6 @@ impl JubJubParams<Fr> for JubJubBN256 {
 
     fn montgomery_u(&self) -> Num<Fr> {
         self.montgomery_u
-    }
-
-
-    fn edwards_inv_cofactor(&self) -> Num<Fs> {
-        self.edwards_inv_cofactor
     }
 }
 

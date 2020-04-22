@@ -168,7 +168,7 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
     }
 
     pub fn assert_in_subgroup<J:JubJubParams<CS::F>>(&self, params: &J) {
-        let preimage_value = self.get_value().map(|p| p.mul(params.edwards_inv_cofactor(), params));
+        let preimage_value = self.get_value().map(|p| p.mul(num!(8).inverse(), params));
         let preimage = self.derive_alloc(preimage_value); 
         preimage.assert_in_curve(params);
         let preimage8 = preimage.mul_by_cofactor(params);
@@ -180,7 +180,7 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
     pub fn subgroup_decompress<J:JubJubParams<CS::F>>(x:&Signal<'a, CS>, params: &J) -> Self {
         let preimage_value = x.get_value()
             .map(|x| EdwardsPoint::subgroup_decompress(x, params)
-            .unwrap_or(params.edwards_g().clone()).mul(params.edwards_inv_cofactor(), params));
+            .unwrap_or(params.edwards_g().clone()).mul(num!(8).inverse(), params));
         let preimage = CEdwardsPoint::alloc(x.get_cs(), preimage_value); 
         preimage.assert_in_curve(params);
         let preimage8 = preimage.mul_by_cofactor(params);
@@ -282,7 +282,7 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
     }
 
     // assuming t!=-1
-    pub fn from_scalar<J:JubJubParams<CS::F>>(t:Signal<'a, CS>, params: &J) -> Self {
+    pub fn from_scalar<J:JubJubParams<CS::F>>(t:&Signal<'a, CS>, params: &J) -> Self {
 
         fn filter_even<F:PrimeField>(x:Num<F>) -> Num<F> {
             if x.is_even() {x} else {-x}
@@ -390,7 +390,7 @@ mod ecc_test {
         let ref mut cs = TestCS::<Fr>::new();
         let signal_t = Signal::alloc(cs, Some(t));
 
-        let signal_p = CEdwardsPoint::from_scalar(signal_t, &jubjub_params);
+        let signal_p = CEdwardsPoint::from_scalar(&signal_t, &jubjub_params);
         let (x, y) = EdwardsPoint::from_scalar(t, &jubjub_params).into_xy();
 
         signal_p.x.assert_const(x);
