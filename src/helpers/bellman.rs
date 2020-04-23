@@ -139,19 +139,10 @@ mod bellman_test {
     use crate::circuit::poseidon::c_poseidon;
     use rand::{Rng, thread_rng};
 
-
+    #[derive(Default)]
     struct CheckPreimageKnowledge<F:PrimeField+SqrtField> {
         image:Option<Num<F>>,
         preimage:Option<Num<F>>
-    }
-
-    impl<F:PrimeField+SqrtField> Default for CheckPreimageKnowledge<F> {
-        fn default() -> Self {
-            Self {
-                image: None,
-                preimage: None
-            }
-        }
     }
 
     impl<F:PrimeField+SqrtField> Circuit for CheckPreimageKnowledge<F> {
