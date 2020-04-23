@@ -46,7 +46,6 @@ impl<T: Field> Assignment<T> for Option<Num<T>> {
 }
 
 
-
 pub struct Groth16CS<BE:bellman::pairing::Engine, BCS: bellman::ConstraintSystem<BE>> {
     pub ninputs:RefCell<usize>,
     pub naux:RefCell<usize>,
@@ -54,6 +53,13 @@ pub struct Groth16CS<BE:bellman::pairing::Engine, BCS: bellman::ConstraintSystem
     pub bcs:RefCell<BCS>,
     be: std::marker::PhantomData<BE>
 }
+
+impl<BE:bellman::pairing::Engine, BCS: bellman::ConstraintSystem<BE>> Clone for Groth16CS<BE, BCS> {
+    fn clone(&self) -> Self {
+        panic!("Clone is not implemented for Groth16CS")
+    }
+}
+
 
 impl<BE:bellman::pairing::Engine, BCS: bellman::ConstraintSystem<BE>>  Groth16CS<BE, BCS> {
     pub fn new(cs:BCS) -> Self {

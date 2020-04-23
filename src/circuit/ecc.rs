@@ -10,35 +10,19 @@ use crate::native::ecc::{JubJubParams, EdwardsPoint, MontgomeryPoint};
 use ff::{PrimeField};
 
 
-
+#[derive(Clone)]
 pub struct CEdwardsPoint<'a, CS: ConstraintSystem> {
     pub x: Signal<'a, CS>,
     pub y: Signal<'a, CS>
 }
 
-impl<'a, CS: ConstraintSystem> Clone for CEdwardsPoint<'a, CS> {
-    fn clone(&self) -> Self {
-        Self {
-            x: self.x.clone(),
-            y: self.y.clone()
-        }
-    }
-}
 
-
+#[derive(Clone)]
 pub struct CMontgomeryPoint<'a, CS: ConstraintSystem> {
     pub x: Signal<'a, CS>,
     pub y: Signal<'a, CS>
 }
 
-impl<'a, CS: ConstraintSystem> Clone for CMontgomeryPoint<'a, CS> {
-    fn clone(&self) -> Self {
-        Self {
-            x: self.x.clone(),
-            y: self.y.clone()
-        }
-    }
-}
 
 impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CEdwardsPoint<'a, CS> {
     type Value = EdwardsPoint<CS::F>;

@@ -5,13 +5,14 @@ use std::collections::HashMap;
 
 use crate::core::signal::{Signal, Index};
 
-pub trait ConstraintSystem: Sized {
+pub trait ConstraintSystem: Sized+Clone {
     type F: PrimeField+SqrtField;
 
     fn alloc(&self, value: Option<Num<Self::F>>) -> Index;
     fn alloc_input(&self, value: Option<Num<Self::F>>) -> Index;
     fn enforce(&self, a:&Signal<Self>, b:&Signal<Self>, c:&Signal<Self>);
 }
+
 
 pub trait Circuit {
     type F: PrimeField+SqrtField;
@@ -46,6 +47,13 @@ impl<F:PrimeField> TestCS<F> {
         *self.ncons.borrow()
     }
 }
+
+impl<F:PrimeField+SqrtField> Clone for TestCS<F> {
+    fn clone(&self) -> Self {
+        panic!("Clone is not implemented for TestCS")
+    }
+}
+
 
 
 impl<F:PrimeField+SqrtField> ConstraintSystem for TestCS<F> {

@@ -65,23 +65,13 @@ impl Ord for Index {
 }
 
 
-
-
+#[derive(Clone)]
 pub struct Signal<'a, CS:ConstraintSystem>{
     pub value:Option<Num<CS::F>>,
     pub lc:LinkedList<(Index,Num<CS::F>)>,
     pub cs:&'a CS
 }
 
-impl<'a, CS:ConstraintSystem> Clone for Signal<'a, CS> {
-    fn clone(&self) -> Self {
-        Self {
-            value: self.value.clone(),
-            lc: self.lc.clone(),
-            cs: self.cs
-        }
-    }
-}
 
 impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for Signal<'a, CS> {
     type Value = Num<CS::F>;
