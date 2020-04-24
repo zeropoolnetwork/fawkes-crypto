@@ -34,6 +34,18 @@ pub trait AbstractSignal <'a, CS:'a+ConstraintSystem> : Sized {
 }
 
 
+pub trait AbstractSignalVec <'a, CS:'a+ConstraintSystem> : AbstractSignal<'a, CS> {
+
+    fn alloc_vec(cs:&'a CS, value:Option<Self::Value>, n:usize) -> Self;
+
+    #[inline]
+    fn derive_alloc(&self, value:Option<Self::Value>, n:usize) -> Self {
+        Self::alloc_vec(self.get_cs(), value, n)
+    }
+}
+
+
+
 pub trait AbstractSignalSwitch <'a, CS:'a+ConstraintSystem> : AbstractSignal<'a, CS> {
     fn switch(&self, bit: &Signal<'a, CS>, if_else: &Self) -> Self;
 }
@@ -70,6 +82,45 @@ pub struct Signal<'a, CS:ConstraintSystem>{
     pub value:Option<Num<CS::F>>,
     pub lc:LinkedList<(Index,Num<CS::F>)>,
     pub cs:&'a CS
+}
+
+
+
+impl <'a, CS:'a+ConstraintSystem, T:AbstractSignal<'a, CS>> AbstractSignal<'a, CS> for Vec<T> {
+    type Value = Vec<T::Value>;
+
+    fn get_value(&self) -> Option<Self::Value> {
+        self.iter().map(|e| e.get_value()).collect()
+    }
+
+
+    fn get_cs(&self) -> &'a CS {
+        self[0].get_cs()
+    }
+
+    fn from_const(cs:&'a CS, value: Self::Value) -> Self {
+        value.iter().map(|v| T::from_const(cs, v.clone())).collect()
+    }
+
+
+    fn alloc(_:&'a CS, _:Option<Self::Value>) -> Self {
+        panic!("not implemented")
+    }
+
+}
+
+impl <'a, CS:'a+ConstraintSystem, T:AbstractSignal<'a, CS>> AbstractSignalVec<'a, CS> for Vec<T> {
+    fn alloc_vec(cs:&'a CS, value:Option<Self::Value>, n:usize) -> Self {
+        let value = match value {
+            Some(value) => {
+                assert!(value.len()==n, "incorrect vector length");
+                value.iter().map(|v| Some(v.clone())).collect()
+            },
+            _ => vec![None; n]
+        };
+
+        value.iter().map(|v| T::alloc(cs, v.clone())).collect()
+    }
 }
 
 
