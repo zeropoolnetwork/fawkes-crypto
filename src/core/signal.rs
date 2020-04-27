@@ -1,54 +1,29 @@
 use linked_list::{LinkedList, Cursor};
 use std::cmp::{Ordering};
 use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssign};
-use std::marker::Sized;
+
 
 use crate::core::cs::ConstraintSystem;
 use crate::core::num::Num;
+use crate::core::abstractsignal::AbstractSignal;
 
 
 
 
-pub trait AbstractSignal <'a, CS:'a+ConstraintSystem> : Sized {
-    type Value: Clone;
 
-    fn get_cs(&self) -> &'a CS;
+// pub trait AbstractSignalVec <'a, CS:'a+ConstraintSystem> : AbstractSignal<'a, CS> {
 
-    fn from_const(cs:&'a CS, value: Self::Value) -> Self;
-    
-    fn get_value(&self) -> Option<Self::Value>;
+//     fn alloc_vec(cs:&'a CS, value:Option<Self::Value>, n:usize) -> Self;
 
-    fn as_const(&self) -> Option<Self::Value> { None }
+//     #[inline]
+//     fn derive_alloc(&self, value:Option<Self::Value>, n:usize) -> Self {
+//         Self::alloc_vec(self.get_cs(), value, n)
+//     }
+// }
 
-    fn alloc(cs:&'a CS, value:Option<Self::Value>) -> Self;
-
-    #[inline]
-    fn derive_const(&self, value: Self::Value) -> Self {
-        Self::from_const(self.get_cs(), value)
-    }
-
-    #[inline]
-    fn derive_alloc(&self, value:Option<Self::Value>) -> Self {
-        Self::alloc(self.get_cs(), value)
-    }
-}
-
-
-pub trait AbstractSignalVec <'a, CS:'a+ConstraintSystem> : AbstractSignal<'a, CS> {
-
-    fn alloc_vec(cs:&'a CS, value:Option<Self::Value>, n:usize) -> Self;
-
-    #[inline]
-    fn derive_alloc(&self, value:Option<Self::Value>, n:usize) -> Self {
-        Self::alloc_vec(self.get_cs(), value, n)
-    }
-}
-
-
-
-pub trait AbstractSignalSwitch <'a, CS:'a+ConstraintSystem> : AbstractSignal<'a, CS> {
-    fn switch(&self, bit: &Signal<'a, CS>, if_else: &Self) -> Self;
-}
+// pub trait AbstractSignalSwitch <'a, CS:'a+ConstraintSystem> : AbstractSignal<'a, CS> {
+//     fn switch(&self, bit: &Signal<'a, CS>, if_else: &Self) -> Self;
+// }
 
 
 
@@ -86,42 +61,43 @@ pub struct Signal<'a, CS:ConstraintSystem>{
 
 
 
-impl <'a, CS:'a+ConstraintSystem, T:AbstractSignal<'a, CS>> AbstractSignal<'a, CS> for Vec<T> {
-    type Value = Vec<T::Value>;
 
-    fn get_value(&self) -> Option<Self::Value> {
-        self.iter().map(|e| e.get_value()).collect()
-    }
+// impl <'a, CS:'a+ConstraintSystem, T:AbstractSignal<'a, CS>> AbstractSignal<'a, CS> for Vec<T> {
+//     type Value = Vec<T::Value>;
 
-
-    fn get_cs(&self) -> &'a CS {
-        self[0].get_cs()
-    }
-
-    fn from_const(cs:&'a CS, value: Self::Value) -> Self {
-        value.iter().map(|v| T::from_const(cs, v.clone())).collect()
-    }
+//     fn get_value(&self) -> Option<Self::Value> {
+//         self.iter().map(|e| e.get_value()).collect()
+//     }
 
 
-    fn alloc(_:&'a CS, _:Option<Self::Value>) -> Self {
-        panic!("not implemented")
-    }
+//     fn get_cs(&self) -> &'a CS {
+//         self[0].get_cs()
+//     }
 
-}
+//     fn from_const(cs:&'a CS, value: Self::Value) -> Self {
+//         value.iter().map(|v| T::from_const(cs, v.clone())).collect()
+//     }
 
-impl <'a, CS:'a+ConstraintSystem, T:AbstractSignal<'a, CS>> AbstractSignalVec<'a, CS> for Vec<T> {
-    fn alloc_vec(cs:&'a CS, value:Option<Self::Value>, n:usize) -> Self {
-        let value = match value {
-            Some(value) => {
-                assert!(value.len()==n, "incorrect vector length");
-                value.iter().map(|v| Some(v.clone())).collect()
-            },
-            _ => vec![None; n]
-        };
 
-        value.iter().map(|v| T::alloc(cs, v.clone())).collect()
-    }
-}
+//     fn alloc(_:&'a CS, _:Option<Self::Value>) -> Self {
+//         std::unimplemented!()
+//     }
+
+// }
+
+// impl <'a, CS:'a+ConstraintSystem, T:AbstractSignal<'a, CS>> AbstractSignalVec<'a, CS> for Vec<T> {
+//     fn alloc_vec(cs:&'a CS, value:Option<Self::Value>, n:usize) -> Self {
+//         let value = match value {
+//             Some(value) => {
+//                 assert!(value.len()==n, "incorrect vector length");
+//                 value.iter().map(|v| Some(v.clone())).collect()
+//             },
+//             _ => vec![None; n]
+//         };
+
+//         value.iter().map(|v| T::alloc(cs, v.clone())).collect()
+//     }
+// }
 
 
 impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for Signal<'a, CS> {
@@ -130,6 +106,26 @@ impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for Signal<'a, CS> {
     #[inline]
     fn get_value(&self) -> Option<Self::Value> {
         self.value
+    }
+
+    fn switch(&self, bit: &Signal<'a, CS>, if_else: &Self) -> Self {
+        match bit.as_const() {
+            Some(b) => {
+                if b == Num::one() {
+                    self.clone()
+                } else if b == Num::zero() {
+                    if_else.clone()
+                } else {
+                    panic!("wrong bit value")
+                }
+   
+            },
+            _ => if if_else.capacity() < self.capacity() {
+                if_else + bit * (self - if_else)
+            } else {
+                self + (Num::one() - bit) * (if_else - self)
+            }
+        }
     }
 
     #[inline]
@@ -166,27 +162,6 @@ impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for Signal<'a, CS> {
     }
 }
 
-impl<'a, CS:ConstraintSystem> AbstractSignalSwitch<'a, CS> for Signal<'a, CS> {
-    fn switch(&self, bit: &Signal<'a, CS>, if_else: &Self) -> Self {
-        match bit.as_const() {
-            Some(b) => {
-                if b == Num::one() {
-                    self.clone()
-                } else if b == Num::zero() {
-                    if_else.clone()
-                } else {
-                    panic!("wrong bit value")
-                }
-   
-            },
-            _ => if if_else.capacity() < self.capacity() {
-                if_else + bit * (self - if_else)
-            } else {
-                self + (Num::one() - bit) * (if_else - self)
-            }
-        }
-    }
-}
 
 
 impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
@@ -320,7 +295,7 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> {
                     None => None
                 };
                 
-                let inv_signal = self.derive_alloc(inv_value);
+                let inv_signal = self.derive_alloc::<Signal<_>>(inv_value);
                 inv_signal.assert_nonzero();
 
                 let res_signal = inv_signal * self;
@@ -400,7 +375,7 @@ impl<'l, 'a, CS:ConstraintSystem> AddAssign<&'l Signal<'a, CS>> for Signal<'a, C
 impl<'l, 'a, CS:ConstraintSystem> AddAssign<&'l Num<CS::F>> for Signal<'a, CS> {
     #[inline]
     fn add_assign(&mut self, other: &'l Num<CS::F>)  {
-        *self += self.derive_const(*other)
+        *self += self.derive_const::<Self>(*other)
     }
 }
 
@@ -433,7 +408,7 @@ impl<'l, 'a, CS:ConstraintSystem> SubAssign<&'l Signal<'a, CS>> for Signal<'a, C
 impl<'l, 'a, CS:ConstraintSystem> SubAssign<&'l Num<CS::F>> for Signal<'a, CS> {
     #[inline]
     fn sub_assign(&mut self, other: &'l Num<CS::F>)  {
-        *self -= self.derive_const(*other)
+        *self -= self.derive_const::<Self>(*other)
     }
 }
 

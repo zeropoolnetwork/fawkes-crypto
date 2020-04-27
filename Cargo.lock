@@ -77,6 +77,7 @@ dependencies = [
  "num",
  "pairing_ce",
  "rand",
+ "seq-macro",
 ]
 
 [[package]]
@@ -294,6 +295,12 @@ checksum = "678054eb77286b51581ba43620cc911abf02758c91f93f479767aed0f90458b2"
 dependencies = [
  "rand_core 0.3.1",
 ]
+
+[[package]]
+name = "seq-macro"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe8b1572b87a097efaf491e45617f25c8e3e9e530beb3e9b81d5e82f9821e843"
 
 [[package]]
 name = "syn"

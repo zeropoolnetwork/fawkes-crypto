@@ -134,7 +134,8 @@ mod bellman_test {
     use super::*;
     use ff::{PrimeField, SqrtField};
     use bellman::pairing::bn256::{Fr, Bn256};
-    use crate::core::signal::{Signal, AbstractSignal};
+    use crate::core::signal::{Signal};
+    use crate::core::abstractsignal::AbstractSignal;
     use crate::native::poseidon::PoseidonParams;
     use crate::circuit::poseidon::c_poseidon;
     use rand::{Rng, thread_rng};

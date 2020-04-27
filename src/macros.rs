@@ -230,3 +230,55 @@ macro_rules! num {
         $crate::core::num::Num::from($x)
     };
 }
+
+#[macro_export]
+macro_rules! collect_array {
+    ([$t:ty;$size:expr], $iter:expr) => {
+        unsafe {
+            let mut data: [std::mem::MaybeUninit<$t>; $size] = std::mem::MaybeUninit::uninit().assume_init();
+            let mut it = $iter;
+            for i in 0..$size {
+                match it.next() {
+                    Some(v) => {
+                        data[i] = std::mem::MaybeUninit::new(v);
+                    },
+                    _ => panic!("Not enough elements in iterator")
+                }
+            }
+
+            if it.next().is_some() {
+                panic!("Too much elements in iterator");
+            }
+
+            let res = std::ptr::read(data.as_ptr() as *const [$t;$size]);
+            std::mem::forget(data);
+            res
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! collect_opt_array {
+    ([$t:ty;$size:expr], $iter:expr) => {
+        unsafe {
+            let mut data: [std::mem::MaybeUninit<$t>; $size] = std::mem::MaybeUninit::uninit().assume_init();
+            let mut it = $iter;
+            for i in 0..$size {
+                match it.next() {
+                    Some(v) => {
+                        data[i] = std::mem::MaybeUninit::new(v?);
+                    },
+                    _ => panic!("Not enough elements in iterator")
+                }
+            }
+
+            if it.next().is_some() {
+                panic!("Too much elements in iterator");
+            }
+
+            let res = std::ptr::read(data.as_ptr() as *const [$t;$size]);
+            std::mem::forget(data);
+            Some(res)
+        }
+    };
+}

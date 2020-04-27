@@ -1,6 +1,7 @@
 use ff::{PrimeField};
 
-use crate::core::signal::{Signal, AbstractSignal};
+use crate::core::signal::{Signal};
+use crate::core::abstractsignal::AbstractSignal;
 use crate::core::cs::ConstraintSystem;
 use crate::native::ecc::{JubJubParams};
 use crate::native::poseidon::{PoseidonParams};
@@ -44,7 +45,7 @@ mod eddsaposeidon_test {
     use rand::{Rng, thread_rng};
     use crate::core::cs::TestCS;
     use crate::core::num::Num;
-    use crate::core::signal::AbstractSignal;
+    use crate::core::abstractsignal::AbstractSignal;
     use crate::native::ecc::{JubJubBN256};
     use crate::native::eddsaposeidon::eddsaposeidon_sign;
 

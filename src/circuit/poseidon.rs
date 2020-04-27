@@ -1,6 +1,7 @@
 
 
-use crate::core::signal::{Signal, AbstractSignal, AbstractSignalSwitch};
+use crate::core::signal::{Signal};
+use crate::core::abstractsignal::AbstractSignal;
 use crate::core::num::Num;
 use crate::core::cs::ConstraintSystem;
 use crate::native::poseidon::{PoseidonParams, MerkleProof};
@@ -17,6 +18,10 @@ impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CMerkleProof<'a, CS> {
     #[inline]
     fn get_cs(&self) -> &'a CS {
         self.sibling[0].get_cs()
+    }
+
+    fn switch(&self, _: &Signal<'a, CS>, _: &Self) -> Self {
+        std::unimplemented!()
     }
 
     fn from_const(cs:&'a CS, value: Self::Value) -> Self {
@@ -143,7 +148,7 @@ mod poseidon_test {
     use super::*;
     use crate::core::cs::TestCS;
     use crate::native::poseidon::{poseidon, poseidon_merkle_proof_root, MerkleProof};
-    use crate::core::signal::AbstractSignal;
+    use crate::core::abstractsignal::AbstractSignal;
     use bellman::pairing::bn256::{Fr};
     use rand::{Rng, thread_rng};
     

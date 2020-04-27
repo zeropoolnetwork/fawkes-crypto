@@ -1,5 +1,6 @@
 
-use crate::core::signal::{Signal, AbstractSignal, AbstractSignalSwitch};
+use crate::core::signal::{Signal};
+use crate::core::abstractsignal::AbstractSignal;
 use crate::core::num::Num;
 use crate::core::cs::ConstraintSystem;
 use crate::circuit::bitify::c_into_bits_le_strict;
@@ -61,9 +62,7 @@ impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CEdwardsPoint<'a, CS> {
             y: Signal::alloc(cs, y)
         }
     }
-}
 
-impl<'a, CS:ConstraintSystem> AbstractSignalSwitch<'a, CS> for CEdwardsPoint<'a, CS> {
     fn switch(&self, bit: &Signal<'a, CS>, if_else: &Self) -> Self {
         Self {
             x: self.x.switch(bit, &if_else.x),
@@ -71,6 +70,7 @@ impl<'a, CS:ConstraintSystem> AbstractSignalSwitch<'a, CS> for CEdwardsPoint<'a,
         }        
     }
 }
+
 
 impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CMontgomeryPoint<'a, CS> {
     type Value = MontgomeryPoint<CS::F>;
@@ -103,9 +103,6 @@ impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CMontgomeryPoint<'a, CS
             y: Signal::alloc(cs, value.map(|v| v.y))
         }
     }
-}
-
-impl<'a, CS:ConstraintSystem> AbstractSignalSwitch<'a, CS> for CMontgomeryPoint<'a, CS> {
     fn switch(&self, bit: &Signal<'a, CS>, if_else: &Self) -> Self {
         Self {
             x: self.x.switch(bit, &if_else.x),
@@ -153,7 +150,7 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
 
     pub fn assert_in_subgroup<J:JubJubParams<CS::F>>(&self, params: &J) {
         let preimage_value = self.get_value().map(|p| p.mul(num!(8).inverse(), params));
-        let preimage = self.derive_alloc(preimage_value); 
+        let preimage = self.derive_alloc::<Self>(preimage_value); 
         preimage.assert_in_curve(params);
         let preimage8 = preimage.mul_by_cofactor(params);
 
