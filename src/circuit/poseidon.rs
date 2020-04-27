@@ -1,18 +1,18 @@
 
 
-use crate::core::signal::{Signal};
-use crate::core::abstractsignal::AbstractSignal;
+use crate::core::signal::{CNum};
+use crate::core::abstractsignal::Signal;
 use crate::core::num::Num;
 use crate::core::cs::ConstraintSystem;
 use crate::native::poseidon::{PoseidonParams, MerkleProof};
 
 
 pub struct CMerkleProof<'a, CS:ConstraintSystem> {
-    pub sibling: Vec<Signal<'a, CS>>,
-    pub path: Vec<Signal<'a, CS>>
+    pub sibling: Vec<CNum<'a, CS>>,
+    pub path: Vec<CNum<'a, CS>>
 }
 
-impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CMerkleProof<'a, CS> {
+impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CMerkleProof<'a, CS> {
     type Value = MerkleProof<CS::F>;
 
     #[inline]
@@ -20,14 +20,14 @@ impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CMerkleProof<'a, CS> {
         self.sibling[0].get_cs()
     }
 
-    fn switch(&self, _: &Signal<'a, CS>, _: &Self) -> Self {
+    fn switch(&self, _: &CNum<'a, CS>, _: &Self) -> Self {
         std::unimplemented!()
     }
 
     fn from_const(cs:&'a CS, value: Self::Value) -> Self {
         Self {
-            sibling: value.sibling.iter().map(|e| Signal::from_const(cs, *e)).collect(),
-            path: value.path.iter().map(|e| Signal::from_const(cs, Num::from(*e))).collect()
+            sibling: value.sibling.iter().map(|e| CNum::from_const(cs, *e)).collect(),
+            path: value.path.iter().map(|e| CNum::from_const(cs, Num::from(*e))).collect()
         }
     }
     
@@ -55,27 +55,27 @@ impl<'a, CS:ConstraintSystem> CMerkleProof<'a, CS> {
         };
 
         Self {
-            sibling:sibling.iter().map(|e| Signal::alloc(cs, *e)).collect::<Vec<_>>(),
-            path:path.iter().map(|e| Signal::alloc(cs, *e)).collect::<Vec<_>>()
+            sibling:sibling.iter().map(|e| CNum::alloc(cs, *e)).collect::<Vec<_>>(),
+            path:path.iter().map(|e| CNum::alloc(cs, *e)).collect::<Vec<_>>()
         }
     }
 }
 
 
-fn ark<'a, CS:ConstraintSystem>(state: &mut[Signal<'a, CS>], c:Num<CS::F>) {
+fn ark<'a, CS:ConstraintSystem>(state: &mut[CNum<'a, CS>], c:Num<CS::F>) {
     state.iter_mut().for_each(|e| *e += c);
 }
 
-fn sigma<'a, CS:ConstraintSystem>(a:&Signal<'a, CS>) -> Signal<'a, CS> {
+fn sigma<'a, CS:ConstraintSystem>(a:&CNum<'a, CS>) -> CNum<'a, CS> {
     let a_sq = a*a;
     let a_quad = &a_sq*&a_sq;
     a_quad*a
 }
 
-fn mix<'a, CS:ConstraintSystem>(state: &mut[Signal<'a, CS>], params:&PoseidonParams<CS::F>) {
+fn mix<'a, CS:ConstraintSystem>(state: &mut[CNum<'a, CS>], params:&PoseidonParams<CS::F>) {
     let statelen = state.len();
     let cs = state[0].cs;
-    let mut new_state = vec![Signal::zero(cs); statelen];
+    let mut new_state = vec![CNum::zero(cs); statelen];
     for i in 0..statelen {
         for j in 0..statelen {
             new_state[i] += params.m[i][j] * &state[j];
@@ -85,12 +85,12 @@ fn mix<'a, CS:ConstraintSystem>(state: &mut[Signal<'a, CS>], params:&PoseidonPar
 }
 
 
-pub fn c_poseidon<'a, CS:ConstraintSystem>(inputs:&[Signal<'a, CS>], params:&PoseidonParams<CS::F>) -> Signal<'a, CS> {
+pub fn c_poseidon<'a, CS:ConstraintSystem>(inputs:&[CNum<'a, CS>], params:&PoseidonParams<CS::F>) -> CNum<'a, CS> {
     let n_inputs = inputs.len();
     assert!(n_inputs <= params.t, "number of inputs should be less or equal than t");
     assert!(n_inputs > 0, "number of inputs should be positive nonzero");
     let cs = inputs[0].cs;
-    let mut state = vec![Signal::zero(cs); params.t];
+    let mut state = vec![CNum::zero(cs); params.t];
     (&mut state[0..n_inputs]).clone_from_slice(inputs);
 
     let half_f = params.f>>1;
@@ -111,10 +111,10 @@ pub fn c_poseidon<'a, CS:ConstraintSystem>(inputs:&[Signal<'a, CS>], params:&Pos
 
 
 pub fn c_poseidon_merkle_proof_root<'a, CS:ConstraintSystem>(
-    leaf:&Signal<'a, CS>, 
+    leaf:&CNum<'a, CS>, 
     proof:&CMerkleProof<'a, CS>,
     params:&PoseidonParams<CS::F>
-) -> Signal<'a, CS> {
+) -> CNum<'a, CS> {
     assert!(proof.sibling.len() == proof.path.len(), "merkle proof length should be the same");
     let mut root = leaf.clone();
     for (p, s) in proof.path.iter().zip(proof.sibling.iter()) {
@@ -125,14 +125,14 @@ pub fn c_poseidon_merkle_proof_root<'a, CS:ConstraintSystem>(
     root
 }
 
-pub fn c_poseidon_merkle_tree_root<'a, CS:ConstraintSystem>(leaf: &[Signal<'a, CS>], params: &PoseidonParams<CS::F>) -> Signal<'a, CS> {
+pub fn c_poseidon_merkle_tree_root<'a, CS:ConstraintSystem>(leaf: &[CNum<'a, CS>], params: &PoseidonParams<CS::F>) -> CNum<'a, CS> {
     let leaf_sz = leaf.len();
     assert!(leaf_sz>0, "should be at least one leaf in the tree");
     let cs = leaf[0].cs;
     let proof_sz = std::mem::size_of::<usize>() * 8 - (leaf_sz-1).leading_zeros() as usize;
     let total_leaf_sz = 1usize << proof_sz;
     let mut state = leaf.to_vec();
-    state.extend_from_slice(&vec![Signal::zero(cs); total_leaf_sz-leaf_sz]);
+    state.extend_from_slice(&vec![CNum::zero(cs); total_leaf_sz-leaf_sz]);
     for j in 0..proof_sz {
         for i in 0..total_leaf_sz>>(j + 1) {
             state[i] = c_poseidon(&[state[2*i].clone(), state[2*i+1].clone()], params);
@@ -148,7 +148,7 @@ mod poseidon_test {
     use super::*;
     use crate::core::cs::TestCS;
     use crate::native::poseidon::{poseidon, poseidon_merkle_proof_root, MerkleProof};
-    use crate::core::abstractsignal::AbstractSignal;
+    use crate::core::abstractsignal::Signal;
     use bellman::pairing::bn256::{Fr};
     use rand::{Rng, thread_rng};
     
@@ -162,7 +162,7 @@ mod poseidon_test {
     
         let ref mut cs = TestCS::<Fr>::new();
         let data = (0..N_INPUTS).map(|_| rng.gen()).collect::<Vec<_>>();
-        let inputs = (0..N_INPUTS).map(|i| Signal::alloc(cs, Some(data[i]))).collect::<Vec<_>>();
+        let inputs = (0..N_INPUTS).map(|i| CNum::alloc(cs, Some(data[i]))).collect::<Vec<_>>();
         
         let mut n_constraints = cs.num_constraints();
         let res = c_poseidon(&inputs, &poseidon_params);
@@ -192,9 +192,9 @@ mod poseidon_test {
         let sibling = (0..PROOF_LENGTH).map(|_| rng.gen()).collect::<Vec<_>>();
         let path = (0..PROOF_LENGTH).map(|_| rng.gen()).collect::<Vec<bool>>();
 
-        let signal_leaf = Signal::alloc(cs, Some(leaf));
-        let signal_sibling = (0..PROOF_LENGTH).map(|i| Signal::alloc(cs, Some(sibling[i]))).collect::<Vec<_>>();
-        let signal_path = (0..PROOF_LENGTH).map(|i| Signal::alloc(cs, Some(Num::from(path[i])))).collect::<Vec<_>>();
+        let signal_leaf = CNum::alloc(cs, Some(leaf));
+        let signal_sibling = (0..PROOF_LENGTH).map(|i| CNum::alloc(cs, Some(sibling[i]))).collect::<Vec<_>>();
+        let signal_path = (0..PROOF_LENGTH).map(|i| CNum::alloc(cs, Some(Num::from(path[i])))).collect::<Vec<_>>();
     
         
         

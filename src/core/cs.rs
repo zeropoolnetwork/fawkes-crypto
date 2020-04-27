@@ -1,16 +1,16 @@
-use crate::core::num::{Num};
+use crate::native::num::{Num};
 use ff::{PrimeField, SqrtField};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use crate::core::signal::{Signal, Index};
+use crate::circuit::num::{CNum, Index};
 
 pub trait ConstraintSystem: Sized+Clone {
     type F: PrimeField+SqrtField;
 
     fn alloc(&self, value: Option<Num<Self::F>>) -> Index;
     fn alloc_input(&self, value: Option<Num<Self::F>>) -> Index;
-    fn enforce(&self, a:&Signal<Self>, b:&Signal<Self>, c:&Signal<Self>);
+    fn enforce(&self, a:&CNum<Self>, b:&CNum<Self>, c:&CNum<Self>);
 }
 
 
@@ -80,7 +80,7 @@ impl<F:PrimeField+SqrtField> ConstraintSystem for TestCS<F> {
         index
     }
 
-    fn enforce(&self, a:&Signal<Self>, b:&Signal<Self>, c:&Signal<Self>) {
+    fn enforce(&self, a:&CNum<Self>, b:&CNum<Self>, c:&CNum<Self>) {
         *self.ncons.borrow_mut() += 1;
         match (a.value, b.value, c.value) {
             (Some(a), Some(b), Some(c)) => {

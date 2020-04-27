@@ -1,6 +1,6 @@
 
-use crate::core::signal::{Signal};
-use crate::core::abstractsignal::AbstractSignal;
+use crate::core::signal::{CNum};
+use crate::core::abstractsignal::Signal;
 use crate::core::num::Num;
 use crate::core::cs::ConstraintSystem;
 use crate::circuit::bitify::c_into_bits_le_strict;
@@ -13,19 +13,19 @@ use ff::{PrimeField};
 
 #[derive(Clone)]
 pub struct CEdwardsPoint<'a, CS: ConstraintSystem> {
-    pub x: Signal<'a, CS>,
-    pub y: Signal<'a, CS>
+    pub x: CNum<'a, CS>,
+    pub y: CNum<'a, CS>
 }
 
 
 #[derive(Clone)]
 pub struct CMontgomeryPoint<'a, CS: ConstraintSystem> {
-    pub x: Signal<'a, CS>,
-    pub y: Signal<'a, CS>
+    pub x: CNum<'a, CS>,
+    pub y: CNum<'a, CS>
 }
 
 
-impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CEdwardsPoint<'a, CS> {
+impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CEdwardsPoint<'a, CS> {
     type Value = EdwardsPoint<CS::F>;
 
     #[inline]
@@ -46,8 +46,8 @@ impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CEdwardsPoint<'a, CS> {
     fn from_const(cs:&'a CS, value: Self::Value) -> Self {
         let (x, y) = value.into_xy();
         Self {
-            x: Signal::from_const(cs, x),
-            y: Signal::from_const(cs, y)
+            x: CNum::from_const(cs, x),
+            y: CNum::from_const(cs, y)
         }
     }
 
@@ -58,12 +58,12 @@ impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CEdwardsPoint<'a, CS> {
         };
 
         Self {
-            x: Signal::alloc(cs, x),
-            y: Signal::alloc(cs, y)
+            x: CNum::alloc(cs, x),
+            y: CNum::alloc(cs, y)
         }
     }
 
-    fn switch(&self, bit: &Signal<'a, CS>, if_else: &Self) -> Self {
+    fn switch(&self, bit: &CNum<'a, CS>, if_else: &Self) -> Self {
         Self {
             x: self.x.switch(bit, &if_else.x),
             y: self.y.switch(bit, &if_else.y)
@@ -72,7 +72,7 @@ impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CEdwardsPoint<'a, CS> {
 }
 
 
-impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CMontgomeryPoint<'a, CS> {
+impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CMontgomeryPoint<'a, CS> {
     type Value = MontgomeryPoint<CS::F>;
 
     #[inline]
@@ -92,18 +92,18 @@ impl<'a, CS:ConstraintSystem> AbstractSignal<'a, CS> for CMontgomeryPoint<'a, CS
     #[inline]
     fn from_const(cs:&'a CS, value: Self::Value) -> Self {
         Self {
-            x: Signal::from_const(cs, value.x),
-            y: Signal::from_const(cs, value.y)
+            x: CNum::from_const(cs, value.x),
+            y: CNum::from_const(cs, value.y)
         }
     }
 
     fn alloc(cs:&'a CS, value:Option<Self::Value>) -> Self {
         Self {
-            x: Signal::alloc(cs, value.map(|v| v.x)),
-            y: Signal::alloc(cs, value.map(|v| v.y))
+            x: CNum::alloc(cs, value.map(|v| v.x)),
+            y: CNum::alloc(cs, value.map(|v| v.y))
         }
     }
-    fn switch(&self, bit: &Signal<'a, CS>, if_else: &Self) -> Self {
+    fn switch(&self, bit: &CNum<'a, CS>, if_else: &Self) -> Self {
         Self {
             x: self.x.switch(bit, &if_else.x),
             y: self.y.switch(bit, &if_else.y)
@@ -158,7 +158,7 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
         (&self.y - &preimage8.y).assert_zero();
     }
 
-    pub fn subgroup_decompress<J:JubJubParams<CS::F>>(x:&Signal<'a, CS>, params: &J) -> Self {
+    pub fn subgroup_decompress<J:JubJubParams<CS::F>>(x:&CNum<'a, CS>, params: &J) -> Self {
         let preimage_value = x.get_value()
             .map(|x| EdwardsPoint::subgroup_decompress(x, params)
             .unwrap_or(params.edwards_g().clone()).mul(num!(8).inverse(), params));
@@ -177,7 +177,7 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
     }
 
     // assume subgroup point, bits
-    pub fn mul<J:JubJubParams<CS::F>>(&self, bits:&[Signal<'a, CS>], params: &J) -> Self {
+    pub fn mul<J:JubJubParams<CS::F>>(&self, bits:&[CNum<'a, CS>], params: &J) -> Self {
         fn gen_table<F:PrimeField, J:JubJubParams<F>>(p: &EdwardsPoint<F>, params: &J) -> Vec<Vec<Num<F>>> {
             let mut x_col = vec![];
             let mut y_col = vec![];
@@ -200,7 +200,7 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
                 } else {
                     let bits_len = bits.len();
                     let zeros_len = (3 - (bits_len % 3))%3;
-                    let zero_bits = vec![Signal::zero(cs); zeros_len];
+                    let zero_bits = vec![CNum::zero(cs); zeros_len];
                     let all_bits = [bits, &zero_bits].concat();
 
                     let all_bits_len = all_bits.len();
@@ -246,7 +246,7 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
                 }
 
         
-                let empty_acc = CMontgomeryPoint {x:Signal::zero(cs), y:Signal::zero(cs)};
+                let empty_acc = CMontgomeryPoint {x:CNum::zero(cs), y:CNum::zero(cs)};
                 let mut acc = empty_acc.clone();
         
                 for i in 0..bits.len() {
@@ -263,13 +263,13 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
     }
 
     // assuming t!=-1
-    pub fn from_scalar<J:JubJubParams<CS::F>>(t:&Signal<'a, CS>, params: &J) -> Self {
+    pub fn from_scalar<J:JubJubParams<CS::F>>(t:&CNum<'a, CS>, params: &J) -> Self {
 
         fn filter_even<F:PrimeField>(x:Num<F>) -> Num<F> {
             if x.is_even() {x} else {-x}
         }
 
-        fn check_and_get_y<'a, CS:ConstraintSystem, J:JubJubParams<CS::F>>(x:&Signal<'a, CS>, params: &J) -> (Signal<'a, CS>, Signal<'a, CS>) {
+        fn check_and_get_y<'a, CS:ConstraintSystem, J:JubJubParams<CS::F>>(x:&CNum<'a, CS>, params: &J) -> (CNum<'a, CS>, CNum<'a, CS>) {
             let g = (x.square()*(x+params.montgomery_a())+x) / params.montgomery_b();
 
             let preimage_value = g.get_value().map(|g| {
@@ -369,7 +369,7 @@ mod ecc_test {
         let t = rng.gen();
 
         let ref mut cs = TestCS::<Fr>::new();
-        let signal_t = Signal::alloc(cs, Some(t));
+        let signal_t = CNum::alloc(cs, Some(t));
 
         let signal_p = CEdwardsPoint::from_scalar(&signal_t, &jubjub_params);
         let (x, y) = EdwardsPoint::from_scalar(t, &jubjub_params).into_xy();
@@ -388,7 +388,7 @@ mod ecc_test {
 
         
         let ref mut cs = TestCS::<Fr>::new();
-        let signal_x = Signal::alloc(cs, Some(x));
+        let signal_x = CNum::alloc(cs, Some(x));
 
         let mut n_constraints = cs.num_constraints();
         let res = CEdwardsPoint::subgroup_decompress(&signal_x, &jubjub_params);
@@ -472,8 +472,8 @@ mod ecc_test {
         let ref mut cs = TestCS::<Fr>::new();
 
         let signal_mp = CMontgomeryPoint {
-            x: Signal::alloc(cs, Some(mp_x)),
-            y: Signal::alloc(cs, Some(mp_y))
+            x: CNum::alloc(cs, Some(mp_x)),
+            y: CNum::alloc(cs, Some(mp_y))
         };
         
         let signal_p = signal_mp.into_edwards();
@@ -542,7 +542,7 @@ mod ecc_test {
         
         let ref mut cs = TestCS::<Fr>::new();
         let signal_p = CEdwardsPoint::alloc(cs, Some(p));
-        let signal_n = Signal::alloc(cs, Some(n));
+        let signal_n = CNum::alloc(cs, Some(n));
 
         let signal_n_bits = c_into_bits_le_strict(&signal_n);
 
@@ -571,7 +571,7 @@ mod ecc_test {
         
         let ref mut cs = TestCS::<Fr>::new();
         let signal_p = CEdwardsPoint::from_const(cs, p.clone()); 
-        let signal_n = Signal::alloc(cs, Some(n));
+        let signal_n = CNum::alloc(cs, Some(n));
 
         let signal_n_bits = c_into_bits_le_strict(&signal_n);
 

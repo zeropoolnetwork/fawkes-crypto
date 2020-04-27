@@ -3,21 +3,21 @@ use ff::{
     PrimeField
 };
 
-use crate::core::signal::{Signal};
-use crate::core::abstractsignal::AbstractSignal;
+use crate::core::signal::{CNum};
+use crate::core::abstractsignal::Signal;
 use crate::core::num::Num;
 use crate::core::cs::ConstraintSystem;
 
 
 
 pub fn c_into_bits_le<'a, CS:ConstraintSystem>(
-    signal:&Signal<'a, CS>,
+    signal:&CNum<'a, CS>,
     limit: usize
-) -> Vec<Signal<'a, CS>>
+) -> Vec<CNum<'a, CS>>
 {
     match signal.as_const() {
         Some(value) => {
-            let mut bits = Vec::<Signal<'a, CS>>::new();
+            let mut bits = Vec::<CNum<'a, CS>>::new();
             let mut k = Num::one();
             let mut remained_value = value.clone();
             let value_bits = value.iterbit_le().collect::<Vec<_>>();
@@ -42,7 +42,7 @@ pub fn c_into_bits_le<'a, CS:ConstraintSystem>(
 
             for i in 1..limit {
                 k=k.double();
-                let s = signal.derive_alloc::<Signal<_>>(value_bits[i]);
+                let s = signal.derive_alloc::<CNum<_>>(value_bits[i]);
                 s.assert_bit();
                 remained_signal -= &s*k;
                 bits[i] = s;    
@@ -57,20 +57,20 @@ pub fn c_into_bits_le<'a, CS:ConstraintSystem>(
 
 // return 1 if signal > ct 
 pub fn c_comp_constant<'a, CS:ConstraintSystem>(
-    signal:&[Signal<'a, CS>],
+    signal:&[CNum<'a, CS>],
     ct: Num<CS::F>
-) -> Signal<'a, CS> {
+) -> CNum<'a, CS> {
     let siglen = signal.len();
     assert!(siglen>0, "should be at least one input signal");
     let cs = signal[0].cs;
     let nsteps = (siglen >> 1) + (siglen & 1);
-    let sig_zero = if siglen & 1 == 1 {vec![Signal::zero(cs)] } else {vec![]};
+    let sig_zero = if siglen & 1 == 1 {vec![CNum::zero(cs)] } else {vec![]};
 
     let mut sig_bits = signal.iter().chain(sig_zero.iter());
     let mut ct_bits = ct.iterbit_le();
 
     let mut k = Num::one();
-    let mut acc = Signal::zero(cs);
+    let mut acc = CNum::zero(cs);
 
     for _ in 0..nsteps {
         let ct_l = ct_bits.next().unwrap();
@@ -99,8 +99,8 @@ pub fn c_comp_constant<'a, CS:ConstraintSystem>(
 
 
 pub fn c_into_bits_le_strict<'a, CS:ConstraintSystem>(
-    signal:&Signal<'a, CS>
-) -> Vec<Signal<'a, CS>>{
+    signal:&CNum<'a, CS>
+) -> Vec<CNum<'a, CS>>{
     let bits = c_into_bits_le(signal, CS::F::NUM_BITS as usize);
     let cmp_res = c_comp_constant( &bits, -Num::one());
     cmp_res.assert_zero();
@@ -108,8 +108,8 @@ pub fn c_into_bits_le_strict<'a, CS:ConstraintSystem>(
 }
 
 pub fn c_from_bits_le<'a, CS:ConstraintSystem>(
-    bits:&[Signal<'a, CS>]
-) -> Signal<'a, CS> {
+    bits:&[CNum<'a, CS>]
+) -> CNum<'a, CS> {
     assert!(bits.len()>0, "should be positive number of bits");
     let mut acc = bits[0].clone();
     let mut k = Num::one();

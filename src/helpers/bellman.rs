@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use crate::core::cs::{ConstraintSystem, Circuit};
-use crate::core::num::Num;
-use crate::core::signal::{Signal, Index};
+use crate::native::num::Num;
+use crate::circuit::num::{CNum, Index};
 use crate::core::osrng::OsRng;
 use ff::Field;
 
@@ -92,8 +92,8 @@ impl<BE:bellman::pairing::Engine, BCS: bellman::ConstraintSystem<BE>> Constraint
         self.bcs.borrow_mut().alloc_input(||format!("i[{}]", ninputs), || value.grab()).map(|e| unsafe{std::mem::transmute(e)}).unwrap()
     }
 
-    fn enforce(&self, a:&Signal<Self>, b:&Signal<Self>, c:&Signal<Self>) {
-        fn into_bellman_lc<BE:bellman::pairing::Engine, CS:ConstraintSystem>(s:&Signal<CS>) -> bellman::LinearCombination<BE> {
+    fn enforce(&self, a:&CNum<Self>, b:&CNum<Self>, c:&CNum<Self>) {
+        fn into_bellman_lc<BE:bellman::pairing::Engine, CS:ConstraintSystem>(s:&CNum<CS>) -> bellman::LinearCombination<BE> {
                 let res = s.lc.iter().map(|(k, v)| (*k, v.into_inner())).collect::<Vec<_>>();
                 unsafe {std::mem::transmute(res)}
         }
@@ -129,53 +129,53 @@ pub fn groth16_proof<BE:bellman::pairing::Engine, C:Circuit<F=BE::Fr>>(c:&C, par
     bellman::groth16::create_random_proof(HelperCircuit(c), params, rng).unwrap()
 }
 
-#[cfg(test)]
-mod bellman_test {
-    use super::*;
-    use ff::{PrimeField, SqrtField};
-    use bellman::pairing::bn256::{Fr, Bn256};
-    use crate::core::signal::{Signal};
-    use crate::core::abstractsignal::AbstractSignal;
-    use crate::native::poseidon::PoseidonParams;
-    use crate::circuit::poseidon::c_poseidon;
-    use rand::{Rng, thread_rng};
+// #[cfg(test)]
+// mod bellman_test {
+//     use super::*;
+//     use ff::{PrimeField, SqrtField};
+//     use bellman::pairing::bn256::{Fr, Bn256};
+//     use crate::circuit::num::{CNum};
+//     use crate::core::signal::Signal;
+//     use crate::native::poseidon::PoseidonParams;
+//     use crate::circuit::poseidon::c_poseidon;
+//     use rand::{Rng, thread_rng};
 
-    #[derive(Default)]
-    struct CheckPreimageKnowledge<F:PrimeField+SqrtField> {
-        image:Option<Num<F>>,
-        preimage:Option<Num<F>>
-    }
+//     #[derive(Default)]
+//     struct CheckPreimageKnowledge<F:PrimeField+SqrtField> {
+//         image:Option<Num<F>>,
+//         preimage:Option<Num<F>>
+//     }
 
-    impl<F:PrimeField+SqrtField> Circuit for CheckPreimageKnowledge<F> {
-        type F = F;
-        fn synthesize<CS: ConstraintSystem<F=F>>(
-            &self,
-            cs: &CS
-        ) {
-            let image = Signal::alloc(cs, self.image);
-            image.inputize();
-            let preimage = Signal::alloc(cs, self.preimage);
-            let ref poseidon_params = PoseidonParams::<F>::new(2, 8, 53);
-            let image_computed = c_poseidon([preimage].as_ref(), poseidon_params);
-            (&image-&image_computed).assert_zero();
-        }
-    }
-
-
-    #[test]
-    fn test_helper() {
-        let mut rng = thread_rng();
-        let params = groth16_generate_keys::<Bn256, CheckPreimageKnowledge<Fr>>();
-        let preimage = rng.gen();
-        let ref poseidon_params = PoseidonParams::<Fr>::new(2, 8, 53);
-        let image = crate::native::poseidon::poseidon([preimage].as_ref(), poseidon_params);
-        let c = CheckPreimageKnowledge {image:Some(image), preimage:Some(preimage)};
-        let proof = groth16_proof(&c, &params);
-
-        let pvk = bellman::groth16::prepare_verifying_key(&params.vk);
-        let res = bellman::groth16::verify_proof(&pvk, &proof, [image.into_inner()].as_ref()).unwrap();
-        assert!(res, "proof should be valid");
-    }
+//     impl<F:PrimeField+SqrtField> Circuit for CheckPreimageKnowledge<F> {
+//         type F = F;
+//         fn synthesize<CS: ConstraintSystem<F=F>>(
+//             &self,
+//             cs: &CS
+//         ) {
+//             let image = CNum::alloc(cs, self.image);
+//             image.inputize();
+//             let preimage = CNum::alloc(cs, self.preimage);
+//             let ref poseidon_params = PoseidonParams::<F>::new(2, 8, 53);
+//             let image_computed = c_poseidon([preimage].as_ref(), poseidon_params);
+//             (&image-&image_computed).assert_zero();
+//         }
+//     }
 
 
-}
+//     #[test]
+//     fn test_helper() {
+//         let mut rng = thread_rng();
+//         let params = groth16_generate_keys::<Bn256, CheckPreimageKnowledge<Fr>>();
+//         let preimage = rng.gen();
+//         let ref poseidon_params = PoseidonParams::<Fr>::new(2, 8, 53);
+//         let image = crate::native::poseidon::poseidon([preimage].as_ref(), poseidon_params);
+//         let c = CheckPreimageKnowledge {image:Some(image), preimage:Some(preimage)};
+//         let proof = groth16_proof(&c, &params);
+
+//         let pvk = bellman::groth16::prepare_verifying_key(&params.vk);
+//         let res = bellman::groth16::verify_proof(&pvk, &proof, [image.into_inner()].as_ref()).unwrap();
+//         assert!(res, "proof should be valid");
+//     }
+
+
+// }

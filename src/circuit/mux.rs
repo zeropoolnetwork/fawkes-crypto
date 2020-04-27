@@ -1,10 +1,10 @@
-use crate::core::signal::Signal;
+use crate::core::signal::CNum;
 use crate::core::num::Num;
 use crate::core::cs::ConstraintSystem;
 
 // this method is described here https://iden3.readthedocs.io/en/latest/iden3_repos/research/publications/zkproof-standards-workshop-2/pedersen-hash/pedersen.html
 
-pub fn c_mux3<'a, CS:ConstraintSystem>(s:&[Signal<'a, CS>], c:&[Vec<Num<CS::F>>]) -> Vec<Signal<'a, CS>> {
+pub fn c_mux3<'a, CS:ConstraintSystem>(s:&[CNum<'a, CS>], c:&[Vec<Num<CS::F>>]) -> Vec<CNum<'a, CS>> {
     assert!(s.len()==3, "should be 3 bits");
     for i in 0..c.len() {
         assert!(c[i].len() == 8, "should be 8 constants");
