@@ -149,14 +149,15 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CNum<'a, CS> {
     }
 
     #[inline]
-    fn from_const(cs:&'a CS, value: Self::Value) -> Self {
+    fn from_const(cs:&'a CS, value: &Self::Value) -> Self {
         let mut lc = LinkedList::new();
-        lc.push_back((Index::Input(0), value));
-        let value = Some(value);
+        lc.push_back((Index::Input(0), value.clone()));
+        let value = Some(value.clone());
         Self {value, lc, cs}
     }
 
-    fn alloc(cs:&'a CS, value:Option<Self::Value>) -> Self {
+    fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self {
+        let value = value.cloned();
         let var = cs.alloc(value);
         Self::from_var(cs, value, var)
     }
@@ -187,12 +188,12 @@ impl<'a, CS:ConstraintSystem> CNum<'a, CS> {
 
     #[inline]
     pub fn zero(cs:&'a CS) -> Self {
-        Self::from_const(cs, Num::zero())
+        Self::from_const(cs, &Num::zero())
     }
 
     #[inline]
     pub fn one(cs:&'a CS) -> Self {
-        Self::from_const(cs, Num::one())
+        Self::from_const(cs, &Num::one())
     }
 
     #[inline]
@@ -217,7 +218,7 @@ impl<'a, CS:ConstraintSystem> CNum<'a, CS> {
                 self.cs.enforce(
                     &self.derive_var(Some(v), input), 
                     &self.derive_one(), 
-                    &self.derive_const(v));
+                    &self.derive_const(&v));
 
             },
             _ => {
@@ -236,7 +237,7 @@ impl<'a, CS:ConstraintSystem> CNum<'a, CS> {
                 assert!(v==c); 
             },
             _ => {
-                self.cs.enforce(self, &self.derive_one(), &self.derive_const(c));
+                self.cs.enforce(self, &self.derive_one(), &self.derive_const(&c));
             }
         }
     }
@@ -259,7 +260,7 @@ impl<'a, CS:ConstraintSystem> CNum<'a, CS> {
                     }
                     None => None
                 };
-                let inv_signal = self.derive_alloc(inv_value);
+                let inv_signal = self.derive_alloc(inv_value.as_ref());
                 self.cs.enforce(self, &inv_signal, &self.derive_one());
             }
         }
@@ -295,7 +296,7 @@ impl<'a, CS:ConstraintSystem> CNum<'a, CS> {
                     None => None
                 };
                 
-                let inv_signal = self.derive_alloc::<CNum<_>>(inv_value);
+                let inv_signal = self.derive_alloc::<CNum<_>>(inv_value.as_ref());
                 inv_signal.assert_nonzero();
 
                 let res_signal = inv_signal * self;
@@ -375,7 +376,7 @@ impl<'l, 'a, CS:ConstraintSystem> AddAssign<&'l CNum<'a, CS>> for CNum<'a, CS> {
 impl<'l, 'a, CS:ConstraintSystem> AddAssign<&'l Num<CS::F>> for CNum<'a, CS> {
     #[inline]
     fn add_assign(&mut self, other: &'l Num<CS::F>)  {
-        *self += self.derive_const::<Self>(*other)
+        *self += self.derive_const::<Self>(other)
     }
 }
 
@@ -408,7 +409,7 @@ impl<'l, 'a, CS:ConstraintSystem> SubAssign<&'l CNum<'a, CS>> for CNum<'a, CS> {
 impl<'l, 'a, CS:ConstraintSystem> SubAssign<&'l Num<CS::F>> for CNum<'a, CS> {
     #[inline]
     fn sub_assign(&mut self, other: &'l Num<CS::F>)  {
-        *self -= self.derive_const::<Self>(*other)
+        *self -= self.derive_const::<Self>(other)
     }
 }
 
@@ -472,7 +473,7 @@ impl<'l, 'a, CS:ConstraintSystem> Add<&'l Num<CS::F>> for CNum<'a, CS> {
 
     #[inline]
     fn add(mut self, other: &'l Num<CS::F>) -> Self::Output  {
-        self += CNum::from_const(self.cs, *other);
+        self += CNum::from_const(self.cs, other);
         self
     }
 }
@@ -483,7 +484,7 @@ impl<'l, 'a, CS:ConstraintSystem> Sub<&'l Num<CS::F>> for CNum<'a, CS> {
 
     #[inline]
     fn sub(mut self, other: &'l Num<CS::F>) -> Self::Output  {
-        self -= CNum::from_const(self.cs, *other);
+        self -= CNum::from_const(self.cs, other);
         self
     }
 }
@@ -493,7 +494,7 @@ impl<'l, 'a, CS:ConstraintSystem> Sub<&'l CNum<'a, CS>> for Num<CS::F> {
 
     #[inline]
     fn sub(self, other: &'l CNum<'a, CS>) -> Self::Output  {
-        CNum::from_const(other.cs, self) - other
+        CNum::from_const(other.cs, &self) - other
     }
 }
 
@@ -542,7 +543,7 @@ impl<'l, 'a, CS:ConstraintSystem> MulAssign<&'l CNum<'a, CS>> for CNum<'a, CS> {
                     _ => None
                 };
 
-                let a_mul_b = self.derive_alloc(value);
+                let a_mul_b = self.derive_alloc(value.as_ref());
                 self.cs.enforce(self, other, &a_mul_b);
                 *self = a_mul_b;
             }
@@ -564,7 +565,7 @@ impl<'l, 'a, CS:ConstraintSystem> DivAssign<&'l CNum<'a, CS>> for CNum<'a, CS> {
                 };
 
 
-                let a_div_b = CNum::alloc(self.cs, value);
+                let a_div_b = CNum::alloc(self.cs, value.as_ref());
                 self.cs.enforce(&a_div_b, other, self);
                 *self = a_div_b;
             }
@@ -611,8 +612,8 @@ mod signal_test {
     fn add() {
         let mut rng = thread_rng();
         let ref cs = crate::core::cs::TestCS::<Fr>::new();
-        let n_a = rng.gen();
-        let n_b = rng.gen();
+        let ref n_a = rng.gen();
+        let ref n_b = rng.gen();
 
         let a = CNum::from_const(cs, n_a);
         let b = CNum::from_const(cs, n_b);
@@ -624,8 +625,8 @@ mod signal_test {
     fn add_mixed() {
         let mut rng = thread_rng();
         let ref cs = crate::core::cs::TestCS::<Fr>::new();
-        let n_a = rng.gen();
-        let n_b: Num<_> = rng.gen();
+        let ref n_a = rng.gen();
+        let ref n_b: Num<_> = rng.gen();
 
         let a = CNum::from_const(cs, n_a);
         let c = a+n_b;
