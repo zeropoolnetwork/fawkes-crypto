@@ -69,6 +69,30 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CNum<'a, CS> {
         }
     }
 
+    fn inputize(&self) {
+        match self.as_const() {
+            Some(v) => {
+                let input = self.cs.alloc_input(Some(v));
+                self.cs.enforce(
+                    &self.derive_var(Some(v), input), 
+                    &self.derive_one(), 
+                    &self.derive_const(&v));
+
+            },
+            _ => {
+                let input = self.cs.alloc_input(self.get_value());
+                self.cs.enforce(
+                    &self.derive_var(self.get_value(), input), 
+                    &self.derive_one(), 
+                    self);
+            },
+        }
+    }
+
+    fn linearize_builder(&self, acc: &mut Vec<CNum<'a, CS>>) {
+        acc.push(self.clone());
+    }
+
     #[inline]
     fn get_cs(&self) -> &'a CS {
         self.cs
@@ -170,27 +194,6 @@ impl<'a, CS:ConstraintSystem> CNum<'a, CS> {
     pub fn square(&self) -> Self {
         self * self
     }
-
-    pub fn inputize(&self) {
-        match self.as_const() {
-            Some(v) => {
-                let input = self.cs.alloc_input(Some(v));
-                self.cs.enforce(
-                    &self.derive_var(Some(v), input), 
-                    &self.derive_one(), 
-                    &self.derive_const(&v));
-
-            },
-            _ => {
-                let input = self.cs.alloc_input(self.get_value());
-                self.cs.enforce(
-                    &self.derive_var(self.get_value(), input), 
-                    &self.derive_one(), 
-                    self);
-            },
-        }
-    }
-
 
     pub fn assert_zero(&self) {
         self.assert_const(&Num::zero());

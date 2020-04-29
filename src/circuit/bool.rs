@@ -13,6 +13,14 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CBool<'a, CS> {
         self.0.get_cs()
     }
 
+    fn inputize(&self) {
+        self.0.inputize();
+    }
+
+    fn linearize_builder(&self, acc: &mut Vec<CNum<'a, CS>>) {
+        self.0.linearize_builder(acc);
+    }
+
     fn from_const(cs:&'a CS, value: &Self::Value) -> Self {
         CBool(CNum::from_const(cs, &Num::from(*value)))
     }
@@ -64,6 +72,7 @@ impl <'a, CS:ConstraintSystem> CBool<'a, CS> {
     pub fn assert_true(&self) {
         self.assert_const(&true);
     }
+    
 
     #[inline]
     pub fn c_true(cs:&'a CS) -> Self {

@@ -26,7 +26,17 @@ pub trait Signal <'a, CS:'a+ConstraintSystem> : Sized+Clone {
 
     fn is_eq(&self, other:&Self) -> CBool<'a, CS>;
 
+    fn inputize(&self);
+
+    fn linearize_builder(&self, acc: &mut Vec<CNum<'a, CS>>);
+
     fn as_const(&self) -> Option<Self::Value>;
+
+    fn linearize(&self) -> Vec<CNum<'a, CS>> {
+        let mut acc = Vec::new();
+        self.linearize_builder(&mut acc);
+        acc
+    }
 
     #[inline]
     fn derive_const<T:Signal<'a, CS>>(&self, value: &T::Value) -> T {
@@ -75,6 +85,10 @@ impl <'a, CS:'a+ConstraintSystem, T:Signal<'a, CS>, L:Unsigned> Signal<'a, CS> f
     fn assert_const(&self, value: &Self::Value) {
         self.iter().zip(value.iter()).for_each(|(s, v)| s.assert_const(v));
     }
+
+    fn inputize(&self) {
+        self.iter().for_each(|s| s.inputize());
+    }
     
     fn assert_eq(&self, other: &Self) {
         self.iter().zip(other.iter()).for_each(|(s, o)| s.assert_eq(o));
@@ -88,6 +102,10 @@ impl <'a, CS:'a+ConstraintSystem, T:Signal<'a, CS>, L:Unsigned> Signal<'a, CS> f
         acc.into_bool()
     }
 
+
+    fn linearize_builder(&self, acc: &mut Vec<CNum<'a, CS>>) {
+        self.iter().for_each(|s| s.linearize_builder(acc));
+    }
 
 }
 

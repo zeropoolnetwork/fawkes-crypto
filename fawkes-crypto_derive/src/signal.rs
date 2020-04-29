@@ -132,6 +132,14 @@ fn tuple_impl(fields: &[&Field]) -> TokenStream {
             #(self. #var_ids .assert_const(&value. #var_ids);)* 
         }
 
+        fn inputize(&self) {
+            #(self. #var_ids .inputize();)* 
+        }
+
+        fn linearize_builder(&self, acc:&mut Vec<CNum<'a, CS>>) {
+            #(self. #var_ids .linearize_builder(acc);)* 
+        }
+        
         fn assert_eq(&self, other: &Self) {
             #(self. #var_ids .assert_eq(&other. #var_ids);)* 
         }
@@ -185,6 +193,14 @@ fn struct_impl(fields: &[&Field]) -> TokenStream {
             #(self. #var_names .assert_const(&value. #var_names);)* 
         }
 
+        fn inputize(&self) {
+            #(self. #var_names .inputize();)* 
+        }
+
+        fn linearize_builder(&self, acc:&mut Vec<CNum<'a, CS>>) {
+            #(self. #var_names .linearize_builder(acc);)* 
+        }
+
         fn assert_eq(&self, other: &Self) {
             #(self. #var_names .assert_eq(&other. #var_names);)* 
         }
@@ -198,6 +214,7 @@ fn struct_impl(fields: &[&Field]) -> TokenStream {
         fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self {
             Self {#(#var_names: #var_typenames::alloc(cs, value.map(|v| &v.#var_names))),*}
         }
+
         
     }
 }
