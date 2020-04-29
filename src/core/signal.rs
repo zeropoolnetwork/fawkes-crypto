@@ -1,10 +1,9 @@
 use std::marker::{Sized, PhantomData};
-use seq_macro::seq;
 use typenum::Unsigned;
 
 
 use crate::core::cs::ConstraintSystem;
-use crate::circuit::num::CNum;
+use crate::circuit::bool::CBool;
 
 use crate::core::sizedvec::SizedVec;
 
@@ -19,7 +18,7 @@ pub trait Signal <'a, CS:'a+ConstraintSystem> : Sized+Clone {
 
     fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self;
 
-    fn switch(&self, bit: &CNum<'a, CS>, if_else: &Self) -> Self;
+    fn switch(&self, bit: &CBool<'a, CS>, if_else: &Self) -> Self;
 
     #[inline]
     fn as_const(&self) -> Option<Self::Value> { None }
@@ -43,7 +42,7 @@ impl <'a, CS:'a+ConstraintSystem, T:Signal<'a, CS>, L:Unsigned> Signal<'a, CS> f
         self.iter().map(|v| v.get_value()).collect()
     }
 
-    fn switch(&self, bit: &CNum<'a, CS>, if_else: &Self) -> Self {
+    fn switch(&self, bit: &CBool<'a, CS>, if_else: &Self) -> Self {
         self.iter().zip(if_else.iter()).map(|(t,f)| t.switch(bit, f)).collect()
     }
 

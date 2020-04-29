@@ -1,66 +1,19 @@
+use typenum::Unsigned;
 
-
-use crate::core::signal::{CNum};
-use crate::core::abstractsignal::Signal;
-use crate::core::num::Num;
+use crate::circuit::num::{CNum};
+use crate::core::signal::Signal;
+use crate::core::sizedvec::SizedVec;
 use crate::core::cs::ConstraintSystem;
 use crate::native::poseidon::{PoseidonParams, MerkleProof};
+use crate::native::num::Num;
 
 
-pub struct CMerkleProof<'a, CS:ConstraintSystem> {
-    pub sibling: Vec<CNum<'a, CS>>,
-    pub path: Vec<CNum<'a, CS>>
+#[derive(Clone, Signal)]
+#[Value="MerkleProof<CS::F, L>"]
+pub struct CMerkleProof<'a, CS:ConstraintSystem, L:Unsigned> {
+    pub sibling: SizedVec<CNum<'a, CS>, L>,
+    pub path: SizedVec<CNum<'a, CS>, L>
 }
-
-impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CMerkleProof<'a, CS> {
-    type Value = MerkleProof<CS::F>;
-
-    #[inline]
-    fn get_cs(&self) -> &'a CS {
-        self.sibling[0].get_cs()
-    }
-
-    fn switch(&self, _: &CNum<'a, CS>, _: &Self) -> Self {
-        std::unimplemented!()
-    }
-
-    fn from_const(cs:&'a CS, value: Self::Value) -> Self {
-        Self {
-            sibling: value.sibling.iter().map(|e| CNum::from_const(cs, *e)).collect(),
-            path: value.path.iter().map(|e| CNum::from_const(cs, Num::from(*e))).collect()
-        }
-    }
-    
-    fn get_value(&self) -> Option<Self::Value> {
-        Some(Self::Value {
-            sibling: self.sibling.iter().map(|e| e.get_value()).collect::<Option<Vec<_>>>()?,
-            path: self.path.iter().map(|e| e.get_value().map(|v| !v.is_zero())).collect::<Option<Vec<_>>>()?
-        })
-    }
-
-    fn alloc(_:&'a CS, _:Option<Self::Value>) -> Self {
-        panic!("not implemented!")
-    }
-}
-
-impl<'a, CS:ConstraintSystem> CMerkleProof<'a, CS> {
-    pub fn alloc(cs:&'a CS, value:Option<MerkleProof<CS::F>>, size:usize) -> Self {
-        let (sibling, path) = match value {
-            Some(value) => {
-                assert!(size == value.sibling.len() && size == value.path.len(), "proof length should be the same");
-                (value.sibling.iter().map(|v| Some(*v)).collect::<Vec<_>>(),
-                value.path.iter().map(|v| Some(Num::<CS::F>::from(*v))).collect::<Vec<_>>())
-            },
-            _ => ((0..size).map(|_| None).collect(), (0..size).map(|_| None).collect())
-        };
-
-        Self {
-            sibling:sibling.iter().map(|e| CNum::alloc(cs, *e)).collect::<Vec<_>>(),
-            path:path.iter().map(|e| CNum::alloc(cs, *e)).collect::<Vec<_>>()
-        }
-    }
-}
-
 
 fn ark<'a, CS:ConstraintSystem>(state: &mut[CNum<'a, CS>], c:Num<CS::F>) {
     state.iter_mut().for_each(|e| *e += c);
@@ -110,12 +63,11 @@ pub fn c_poseidon<'a, CS:ConstraintSystem>(inputs:&[CNum<'a, CS>], params:&Posei
 }
 
 
-pub fn c_poseidon_merkle_proof_root<'a, CS:ConstraintSystem>(
+pub fn c_poseidon_merkle_proof_root<'a, CS:ConstraintSystem, L:Unsigned>(
     leaf:&CNum<'a, CS>, 
-    proof:&CMerkleProof<'a, CS>,
+    proof:&CMerkleProof<'a, CS, L>,
     params:&PoseidonParams<CS::F>
 ) -> CNum<'a, CS> {
-    assert!(proof.sibling.len() == proof.path.len(), "merkle proof length should be the same");
     let mut root = leaf.clone();
     for (p, s) in proof.path.iter().zip(proof.sibling.iter()) {
         let first = s.switch(p, &root); 

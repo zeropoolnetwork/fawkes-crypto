@@ -4,3 +4,4 @@
 // pub mod ecc;
 // pub mod eddsaposeidon;
 pub mod num;
+pub mod bool;

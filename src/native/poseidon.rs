@@ -3,9 +3,12 @@ use ff::{
 };
 
 use rand::Rng;
+use typenum::Unsigned;
 
 use crate::core::seedbox::SeedboxBlake2;
-use crate::core::num::Num;
+use crate::core::sizedvec::SizedVec;
+use crate::native::num::Num;
+
 
 #[derive(Debug)]
 pub struct PoseidonParams<F:PrimeField> {
@@ -76,16 +79,14 @@ pub fn poseidon<F:PrimeField>(inputs:&[Num<F>], params:&PoseidonParams<F>) -> Nu
 
 
 #[derive(Debug, Clone)]
-pub struct MerkleProof<F:PrimeField> {
-    pub sibling: Vec<Num<F>>,
-    pub path: Vec<bool>
+pub struct MerkleProof<F:PrimeField, L:Unsigned> {
+    pub sibling: SizedVec<Num<F>, L>,
+    pub path: SizedVec<bool, L>
 }
 
 
-pub fn poseidon_merkle_proof_root<F:PrimeField>(leaf:Num<F>, proof:&MerkleProof<F>, params:&PoseidonParams<F>) -> Num<F> {
-    assert!(proof.sibling.len() == proof.path.len(), "merkle proof path should be the same");
+pub fn poseidon_merkle_proof_root<F:PrimeField, L:Unsigned>(leaf:Num<F>, proof:&MerkleProof<F, L>, params:&PoseidonParams<F>) -> Num<F> {
     let mut root = leaf.clone();
-    
     for (&p, &s) in proof.path.iter().zip(proof.sibling.iter()) {
         let pair = if p {[s, root]} else {[root, s]};
         root = poseidon(pair.as_ref(), params);
