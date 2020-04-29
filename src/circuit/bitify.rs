@@ -40,13 +40,13 @@ pub fn c_into_bits_le<'a, CS:ConstraintSystem>(
             let mut k = Num::one();
             let mut bits = vec![signal.derive_const(&false); limit];
             let value_bits = match value {
-                Some(v) => v.iterbit_le().map(|x| Some(x).as_ref()).collect::<Vec<_>>(),
+                Some(v) => v.iterbit_le().map(|x| Some(x)).collect::<Vec<_>>(),
                 None => vec![None; CS::F::NUM_BITS as usize]
             };
 
             for i in 1..limit {
                 k=k.double();
-                let s = signal.derive_alloc::<CBool<'a, CS>>(value_bits[i]);
+                let s = signal.derive_alloc::<CBool<'a, CS>>(value_bits[i].as_ref());
                 s.assert();
                 remained_signal -= &s.0*k;
                 bits[i] = s;    
@@ -83,12 +83,12 @@ pub fn c_comp_constant<'a, CS:ConstraintSystem>(
         let sig_l = sig_bits.next().unwrap();
         let sig_u = sig_bits.next().unwrap();
 
-        let sig_lu = sig_l.0*sig_u.0;
+        let sig_lu = &sig_l.0*&sig_u.0;
 
         acc = acc + k * match (ct_l, ct_u) {
-            (false, false) =>  sig_l.0 + sig_u.0 -sig_lu,
-            (true, false) =>  sig_l.0 + sig_u.0 * num!(2) - sig_lu - Num::one(),
-            (false, true) => sig_lu + sig_u.0 - Num::one(),
+            (false, false) =>  &sig_l.0 + &sig_u.0 -sig_lu,
+            (true, false) =>  &sig_l.0 + &sig_u.0 * num!(2) - sig_lu - Num::one(),
+            (false, true) => sig_lu + &sig_u.0 - Num::one(),
             (true, true) => sig_lu - Num::one()
         };
         k=k.double();
@@ -104,10 +104,10 @@ pub fn c_comp_constant<'a, CS:ConstraintSystem>(
 
 pub fn c_into_bits_le_strict<'a, CS:ConstraintSystem>(
     signal:&CNum<'a, CS>
-) -> Vec<CNum<'a, CS>>{
+) -> Vec<CBool<'a, CS>>{
     let bits = c_into_bits_le(signal, CS::F::NUM_BITS as usize);
     let cmp_res = c_comp_constant( &bits, -Num::one());
-    cmp_res.assert_zero();
+    cmp_res.assert_const(&false);
     bits
 }
 
