@@ -20,6 +20,9 @@ pub trait Signal <'a, CS:'a+ConstraintSystem> : Sized+Clone {
 
     fn switch(&self, bit: &CBool<'a, CS>, if_else: &Self) -> Self;
 
+    fn assert_const(&self, value: &Self::Value) ;
+
+
     #[inline]
     fn as_const(&self) -> Option<Self::Value> { None }
 
@@ -61,6 +64,10 @@ impl <'a, CS:'a+ConstraintSystem, T:Signal<'a, CS>, L:Unsigned> Signal<'a, CS> f
             Some(value) => value.iter().map(|v| T::alloc(cs, Some(v))).collect(),
             _ =>  SizedVec(vec![T::alloc(cs, None); L::USIZE], PhantomData) 
         }
+    }
+
+    fn assert_const(&self, value: &Self::Value) {
+        self.iter().zip(value.iter()).for_each(|(s, v)| s.assert_const(v));
     }
 
 }

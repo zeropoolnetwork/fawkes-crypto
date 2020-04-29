@@ -227,7 +227,7 @@ macro_rules! swap_commutative {
 #[macro_export]
 macro_rules! num {
     ($x:expr) => {
-        $crate::core::num::Num::from($x)
+        $crate::native::num::Num::from($x)
     };
 }
 

@@ -14,7 +14,7 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CBool<'a, CS> {
     }
 
     fn from_const(cs:&'a CS, value: &Self::Value) -> Self {
-        CBool(CNum::from_const(cs, &Num::from(value.clone())))
+        CBool(CNum::from_const(cs, &Num::from(*value)))
     }
     
     fn get_value(&self) -> Option<Self::Value> {
@@ -28,11 +28,15 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CBool<'a, CS> {
     }
 
     fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self {
-        CBool(CNum::alloc(cs, value.map(|v| Num::from(v.clone())).as_ref()))
+        CBool(CNum::alloc(cs, value.map(|v| Num::from(*v)).as_ref()))
     }
 
     fn switch(&self, bit: &CBool<'a, CS>, if_else: &Self) -> Self {
         CBool(self.0.switch(bit, &if_else.0))
+    }
+
+    fn assert_const(&self, value: &Self::Value) {
+        self.0.assert_const(&Num::from(*value));
     }
 } 
 
@@ -44,6 +48,7 @@ impl <'a, CS:ConstraintSystem> CBool<'a, CS> {
         self.0.assert_bit();
     }
 
+
     #[inline]
     pub fn c_true(cs:&'a CS) -> Self {
         Self::from_const(cs, &true)
@@ -53,4 +58,5 @@ impl <'a, CS:ConstraintSystem> CBool<'a, CS> {
     pub fn c_false(cs:&'a CS) -> Self {
         Self::from_const(cs, &false)
     }
+
 }

@@ -102,6 +102,17 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CNum<'a, CS> {
         let var = cs.alloc(value);
         Self::from_var(cs, value, var)
     }
+
+    fn assert_const(&self, c:&Self::Value) {
+        match self.as_const() {
+            Some(v) => {
+                assert!(v==*c); 
+            },
+            _ => {
+                self.cs.enforce(self, &self.derive_one(), &self.derive_const(c));
+            }
+        }
+    }
 }
 
 
@@ -172,19 +183,10 @@ impl<'a, CS:ConstraintSystem> CNum<'a, CS> {
         }
     }
 
-    pub fn assert_const(&self, c:Num<CS::F>) {
-        match self.as_const() {
-            Some(v) => {
-                assert!(v==c); 
-            },
-            _ => {
-                self.cs.enforce(self, &self.derive_one(), &self.derive_const(&c));
-            }
-        }
-    }
+
 
     pub fn assert_zero(&self) {
-        self.assert_const(Num::zero());
+        self.assert_const(&Num::zero());
     }
 
     pub fn assert_nonzero(&self) {

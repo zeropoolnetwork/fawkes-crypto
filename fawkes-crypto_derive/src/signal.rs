@@ -138,7 +138,7 @@ fn struct_impl(fields: &[&Field]) -> TokenStream {
     let var_names: &Vec<Ident> =
         &field_idents(fields).iter().map(|f| (**f).clone()).collect();
 
-    let field_name_first = var_names[0].clone();
+    let var_name_first = var_names[0].clone();
     let var_typenames = get_field_types(&fields).iter().map(|&t|get_typename(t)).collect::<Vec<_>>();
     
     
@@ -152,11 +152,15 @@ fn struct_impl(fields: &[&Field]) -> TokenStream {
         }
     
         fn get_cs(&self) -> &'a CS {
-            self.#field_name_first.get_cs()
+            self.#var_name_first.get_cs()
         }
     
         fn from_const(cs:&'a CS, value: &Self::Value) -> Self {
             Self {#(#var_names: #var_typenames::from_const(cs, &value.#var_names)),*}
+        }
+
+        fn assert_const(&self, value: &Self::Value) {
+            #(self. #var_names .assert_const(&value. #var_names);)* 
         }
     
         fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self {

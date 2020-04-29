@@ -3,9 +3,11 @@ use ff::{
     PrimeField
 };
 
-use crate::core::signal::{CNum};
-use crate::core::abstractsignal::Signal;
-use crate::core::num::Num;
+use crate::circuit::num::{CNum};
+use crate::circuit::bool::{CBool};
+
+use crate::core::signal::Signal;
+use crate::native::num::Num;
 use crate::core::cs::ConstraintSystem;
 
 
@@ -13,18 +15,20 @@ use crate::core::cs::ConstraintSystem;
 pub fn c_into_bits_le<'a, CS:ConstraintSystem>(
     signal:&CNum<'a, CS>,
     limit: usize
-) -> Vec<CNum<'a, CS>>
+) -> Vec<CBool<'a, CS>>
 {
     match signal.as_const() {
         Some(value) => {
-            let mut bits = Vec::<CNum<'a, CS>>::new();
+            let mut bits = Vec::<CBool<'a, CS>>::new();
             let mut k = Num::one();
             let mut remained_value = value.clone();
             let value_bits = value.iterbit_le().collect::<Vec<_>>();
             for i in 0..limit {
-                let bit = Num::from(value_bits[i])*k; 
-                remained_value -= bit;
-                bits.push(signal.derive_const(bit));
+                let bit = value_bits[i];
+                if bit {
+                    remained_value -= k;
+                }
+                bits.push(signal.derive_const(&bit) );
                 k=k.double();
             }
             assert!(remained_value.is_zero());
@@ -34,22 +38,22 @@ pub fn c_into_bits_le<'a, CS:ConstraintSystem>(
             let value = signal.get_value();
             let mut remained_signal = signal.clone();
             let mut k = Num::one();
-            let mut bits = vec![signal.derive_zero(); limit];
+            let mut bits = vec![signal.derive_const(&false); limit];
             let value_bits = match value {
-                Some(v) => v.iterbit_le().map(|x| Some(Num::from(x))).collect::<Vec<_>>(),
+                Some(v) => v.iterbit_le().map(|x| Some(x).as_ref()).collect::<Vec<_>>(),
                 None => vec![None; CS::F::NUM_BITS as usize]
             };
 
             for i in 1..limit {
                 k=k.double();
-                let s = signal.derive_alloc::<CNum<_>>(value_bits[i]);
-                s.assert_bit();
-                remained_signal -= &s*k;
+                let s = signal.derive_alloc::<CBool<'a, CS>>(value_bits[i]);
+                s.assert();
+                remained_signal -= &s.0*k;
                 bits[i] = s;    
             }
 
             remained_signal.assert_bit();
-            bits[0]=remained_signal;
+            bits[0]=remained_signal.into_bool();
             bits
         }
     }
@@ -57,14 +61,14 @@ pub fn c_into_bits_le<'a, CS:ConstraintSystem>(
 
 // return 1 if signal > ct 
 pub fn c_comp_constant<'a, CS:ConstraintSystem>(
-    signal:&[CNum<'a, CS>],
+    signal:&[CBool<'a, CS>],
     ct: Num<CS::F>
-) -> CNum<'a, CS> {
+) -> CBool<'a, CS> {
     let siglen = signal.len();
     assert!(siglen>0, "should be at least one input signal");
-    let cs = signal[0].cs;
+    let cs = signal[0].get_cs();
     let nsteps = (siglen >> 1) + (siglen & 1);
-    let sig_zero = if siglen & 1 == 1 {vec![CNum::zero(cs)] } else {vec![]};
+    let sig_zero = if siglen & 1 == 1 {vec![CBool::c_false(cs)] } else {vec![]};
 
     let mut sig_bits = signal.iter().chain(sig_zero.iter());
     let mut ct_bits = ct.iterbit_le();
@@ -79,12 +83,12 @@ pub fn c_comp_constant<'a, CS:ConstraintSystem>(
         let sig_l = sig_bits.next().unwrap();
         let sig_u = sig_bits.next().unwrap();
 
-        let sig_lu = sig_l*sig_u;
+        let sig_lu = sig_l.0*sig_u.0;
 
         acc = acc + k * match (ct_l, ct_u) {
-            (false, false) =>  sig_l + sig_u -sig_lu,
-            (true, false) =>  sig_l + sig_u * num!(2) - sig_lu - Num::one(),
-            (false, true) => sig_lu + sig_u - Num::one(),
+            (false, false) =>  sig_l.0 + sig_u.0 -sig_lu,
+            (true, false) =>  sig_l.0 + sig_u.0 * num!(2) - sig_lu - Num::one(),
+            (false, true) => sig_lu + sig_u.0 - Num::one(),
             (true, true) => sig_lu - Num::one()
         };
         k=k.double();

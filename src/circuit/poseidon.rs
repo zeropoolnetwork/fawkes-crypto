@@ -124,7 +124,7 @@ mod poseidon_test {
         n_constraints=cs.num_constraints()-n_constraints;
         
         let res2 = poseidon(&data.0, &poseidon_params);
-        res.assert_const(res2);
+        res.assert_const(&res2);
 
         
         println!("poseidon(4,8,54) constraints = {}", n_constraints);
@@ -160,7 +160,7 @@ mod poseidon_test {
         
         let proof = MerkleProof {sibling, path};
         let res2 = poseidon_merkle_proof_root(leaf, &proof, &poseidon_params);
-        res.assert_const(res2);
+        res.assert_const(&res2);
 
         println!("merkle root poseidon(3,8,53)x32 constraints = {}", n_constraints);
         assert!(res.get_value().unwrap() == res2);
