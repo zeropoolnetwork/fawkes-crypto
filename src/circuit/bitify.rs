@@ -107,7 +107,7 @@ pub fn c_into_bits_le_strict<'a, CS:ConstraintSystem>(
 ) -> Vec<CBool<'a, CS>>{
     let bits = c_into_bits_le(signal, CS::F::NUM_BITS as usize);
     let cmp_res = c_comp_constant( &bits, -Num::one());
-    cmp_res.assert_const(&false);
+    cmp_res.assert_false();
     bits
 }
 

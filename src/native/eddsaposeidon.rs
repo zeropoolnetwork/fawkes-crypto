@@ -3,7 +3,7 @@ use ff::{
 };
 
 use blake2_rfc::blake2s::Blake2s;
-use crate::core::num::Num;
+use crate::native::num::Num;
 
 
 use crate::native::ecc::{EdwardsPoint, JubJubParams};
@@ -36,8 +36,8 @@ pub fn eddsaposeidon_sign<Fr:PrimeField, J:JubJubParams<Fr>>(
     jubjub_params:&J
 ) -> (Num<J::Fs>, Num<Fr>) {
     let rho = hash_r(sk, m);
-    let (r_x, _) = jubjub_params.edwards_g().mul(rho, jubjub_params).into_xy();
-    let (a_x, _) = jubjub_params.edwards_g().mul(sk, jubjub_params).into_xy();
+    let r_x = jubjub_params.edwards_g().mul(rho, jubjub_params).x;
+    let a_x = jubjub_params.edwards_g().mul(sk, jubjub_params).x;
     let s = rho + hash_ram(r_x, a_x, m, poseidon_params).into_other()*sk;
     (s, r_x)
 }
@@ -86,7 +86,7 @@ mod eddsaposeidon_test {
         let sk = rng.gen();
         let m = rng.gen();
         let (s, r) = eddsaposeidon_sign(sk, m, &poseidon_params, &jubjub_params);
-        let a = jubjub_params.edwards_g().mul(sk, &jubjub_params).into_xy().0;
+        let a = jubjub_params.edwards_g().mul(sk, &jubjub_params).x;
         assert!(eddsaposeidon_verify(s, r, a, m, &poseidon_params, &jubjub_params), "signature should be valid");
     
     }

@@ -20,7 +20,7 @@ linked-list = "0.0.3"
 getrandom = "=0.1"
 seq-macro = "0.1.4"
 typenum = "=1.12.0"
-fawkes-crypto_derive = {path = "./fawkes-crypto_derive"}
+fawkes-crypto_derive = {version="0.1.0", path = "./fawkes-crypto_derive"}
 
 [dependencies.bellman]
 version = "=0.3.1"
