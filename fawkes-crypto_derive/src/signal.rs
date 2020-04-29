@@ -162,6 +162,10 @@ fn struct_impl(fields: &[&Field]) -> TokenStream {
         fn assert_const(&self, value: &Self::Value) {
             #(self. #var_names .assert_const(&value. #var_names);)* 
         }
+
+        fn assert_eq(&self, other: &Self) {
+            #(self. #var_names .assert_eq(&other. #var_names);)* 
+        }
     
         fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self {
             Self {#(#var_names: #var_typenames::alloc(cs, value.map(|v| &v.#var_names))),*}

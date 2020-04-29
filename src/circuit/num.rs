@@ -113,6 +113,10 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CNum<'a, CS> {
             }
         }
     }
+
+    fn assert_eq(&self, other:&Self) {
+        (self-other).assert_zero()
+    }
 }
 
 
@@ -182,7 +186,6 @@ impl<'a, CS:ConstraintSystem> CNum<'a, CS> {
             },
         }
     }
-
 
 
     pub fn assert_zero(&self) {

@@ -20,7 +20,9 @@ pub trait Signal <'a, CS:'a+ConstraintSystem> : Sized+Clone {
 
     fn switch(&self, bit: &CBool<'a, CS>, if_else: &Self) -> Self;
 
-    fn assert_const(&self, value: &Self::Value) ;
+    fn assert_const(&self, value: &Self::Value);
+
+    fn assert_eq(&self, other:&Self);
 
 
     #[inline]
@@ -68,6 +70,10 @@ impl <'a, CS:'a+ConstraintSystem, T:Signal<'a, CS>, L:Unsigned> Signal<'a, CS> f
 
     fn assert_const(&self, value: &Self::Value) {
         self.iter().zip(value.iter()).for_each(|(s, v)| s.assert_const(v));
+    }
+    
+    fn assert_eq(&self, other: &Self) {
+        self.iter().zip(other.iter()).for_each(|(s, o)| s.assert_eq(o));
     }
 
 }

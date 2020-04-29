@@ -38,6 +38,10 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CBool<'a, CS> {
     fn assert_const(&self, value: &Self::Value) {
         self.0.assert_const(&Num::from(*value));
     }
+
+    fn assert_eq(&self, other: &Self) {
+        self.0.assert_eq(&other.0);
+    }
 } 
 
 
