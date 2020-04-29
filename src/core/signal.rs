@@ -26,9 +26,7 @@ pub trait Signal <'a, CS:'a+ConstraintSystem> : Sized+Clone {
 
     fn is_eq(&self, other:&Self) -> CBool<'a, CS>;
 
-
-    #[inline]
-    fn as_const(&self) -> Option<Self::Value> { None }
+    fn as_const(&self) -> Option<Self::Value>;
 
     #[inline]
     fn derive_const<T:Signal<'a, CS>>(&self, value: &T::Value) -> T {
@@ -60,6 +58,10 @@ impl <'a, CS:'a+ConstraintSystem, T:Signal<'a, CS>, L:Unsigned> Signal<'a, CS> f
 
     fn from_const(cs:&'a CS, value: &Self::Value) -> Self {
         value.iter().map(|v| T::from_const(cs, v)).collect()
+    }
+
+    fn as_const(&self) -> Option<Self::Value> {
+        self.iter().map(|v| v.as_const()).collect()
     }
 
 

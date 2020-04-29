@@ -32,6 +32,16 @@ impl<T:Field> Num<T> {
         Num(f)
     }
 
+    pub fn into_bool(self) -> bool {
+        if self.is_zero() {
+            false
+        } else if self == Num::one() {
+            true
+        } else {
+            panic!("Boolean should be true or false")
+        }
+    }
+
     pub fn zero() -> Self {
         Num(T::zero())
     }

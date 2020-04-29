@@ -18,13 +18,11 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CBool<'a, CS> {
     }
     
     fn get_value(&self) -> Option<Self::Value> {
-        self.0.get_value().map(|n| if n.is_zero() {
-            false
-        } else if n==Num::one() {
-            true
-        } else {
-            panic!("Boolean should be true or fasle")
-        })
+        self.0.get_value().map(|n| n.into_bool())
+    }
+
+    fn as_const(&self) -> Option<Self::Value> {
+        self.0.as_const().map(|v| v.into_bool())
     }
 
     fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self {
