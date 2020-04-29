@@ -15,18 +15,24 @@ Here is an example, how Merkle tree implementation is working.
 Also you may check the rollup [here](https://github.com/snjax/fawkes-rollup).
 
 ```rust
-pub fn poseidon_merkle_root<'a, CS:ConstraintSystem>(
-    leaf:&Signal<'a, CS>, 
-    sibling:&[Signal<'a, CS>], 
-    path:&[Signal<'a, CS>], 
+#[derive(Clone, Signal)]
+#[Value="MerkleProof<CS::F, L>"]
+pub struct CMerkleProof<'a, CS:ConstraintSystem, L:Unsigned> {
+    pub sibling: SizedVec<CNum<'a, CS>, L>,
+    pub path: SizedVec<CBool<'a, CS>, L>
+}
+
+
+pub fn c_poseidon_merkle_proof_root<'a, CS:ConstraintSystem, L:Unsigned>(
+    leaf:&CNum<'a, CS>, 
+    proof:&CMerkleProof<'a, CS, L>,
     params:&PoseidonParams<CS::F>
-) -> Signal<'a, CS> {
-    assert!(sibling.len() == path.len(), "merkle proof length should be the same");
+) -> CNum<'a, CS> {
     let mut root = leaf.clone();
-    for (p, s) in path.iter().zip(sibling.iter()) {
+    for (p, s) in proof.path.iter().zip(proof.sibling.iter()) {
         let first = s.switch(p, &root); 
         let second = &root + s - &first;
-        root = poseidon( [first, second].as_ref(), params);
+        root = c_poseidon( [first, second].as_ref(), params);
     }
     root
 }
