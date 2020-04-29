@@ -54,6 +54,16 @@ impl <'a, CS:ConstraintSystem> CBool<'a, CS> {
         self.0.assert_bit();
     }
 
+    #[inline]
+    pub fn assert_false(&self) {
+        self.assert_const(&false);
+    }
+
+
+    #[inline]
+    pub fn assert_true(&self) {
+        self.assert_const(&true);
+    }
 
     #[inline]
     pub fn c_true(cs:&'a CS) -> Self {

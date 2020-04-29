@@ -129,6 +129,23 @@ impl <F: PrimeField> EdwardsPoint<F> {
         *self == Self::zero()
     }
 
+    pub fn mul<J: JubJubParams<F>>(&self, scalar: Num<J::Fs>,params: &J) -> Self {
+        self.into_extended().mul(scalar, params).into_affine()
+    }
+    
+    pub fn add<J: JubJubParams<F>>(&self, other: &Self, params:&J) -> Self {
+        self.into_extended().add(&other.into_extended(), params).into_affine()
+    }
+
+    pub fn double(&self) -> Self {
+        self.into_extended().double().into_affine()
+    }
+
+    pub fn mul_by_cofactor(&self) -> Self {
+        self.into_extended().mul_by_cofactor().into_affine()
+    }
+
+
     pub fn is_in_curve<J: JubJubParams<F>>(&self, params: &J) -> bool
     {
         // check that a point is on curve
@@ -267,9 +284,6 @@ impl <F: PrimeField> EdwardsPointEx<F> {
         
         !self.z.is_zero() && self.z*self.t == self.x*self.y && self.y.square()-self.x.square() == self.z.square() + params.edwards_d()*self.t.square()
     }
-
-
-
 
     /// This guarantees the point is in the prime order subgroup
     pub fn mul_by_cofactor(&self) -> EdwardsPointEx<F>
