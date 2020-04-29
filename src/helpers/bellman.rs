@@ -129,53 +129,53 @@ pub fn groth16_proof<BE:bellman::pairing::Engine, C:Circuit<F=BE::Fr>>(c:&C, par
     bellman::groth16::create_random_proof(HelperCircuit(c), params, rng).unwrap()
 }
 
-// #[cfg(test)]
-// mod bellman_test {
-//     use super::*;
-//     use ff::{PrimeField, SqrtField};
-//     use bellman::pairing::bn256::{Fr, Bn256};
-//     use crate::circuit::num::{CNum};
-//     use crate::core::signal::Signal;
-//     use crate::native::poseidon::PoseidonParams;
-//     use crate::circuit::poseidon::c_poseidon;
-//     use rand::{Rng, thread_rng};
+#[cfg(test)]
+mod bellman_test {
+    use super::*;
+    use ff::{PrimeField, SqrtField};
+    use bellman::pairing::bn256::{Fr, Bn256};
+    use crate::circuit::num::{CNum};
+    use crate::core::signal::Signal;
+    use crate::native::poseidon::PoseidonParams;
+    use crate::circuit::poseidon::c_poseidon;
+    use rand::{Rng, thread_rng};
 
-//     #[derive(Default)]
-//     struct CheckPreimageKnowledge<F:PrimeField+SqrtField> {
-//         image:Option<Num<F>>,
-//         preimage:Option<Num<F>>
-//     }
+    #[derive(Default)]
+    struct CheckPreimageKnowledge<F:PrimeField+SqrtField> {
+        image:Option<Num<F>>,
+        preimage:Option<Num<F>>
+    }
 
-//     impl<F:PrimeField+SqrtField> Circuit for CheckPreimageKnowledge<F> {
-//         type F = F;
-//         fn synthesize<CS: ConstraintSystem<F=F>>(
-//             &self,
-//             cs: &CS
-//         ) {
-//             let image = CNum::alloc(cs, self.image);
-//             image.inputize();
-//             let preimage = CNum::alloc(cs, self.preimage);
-//             let ref poseidon_params = PoseidonParams::<F>::new(2, 8, 53);
-//             let image_computed = c_poseidon([preimage].as_ref(), poseidon_params);
-//             (&image-&image_computed).assert_zero();
-//         }
-//     }
-
-
-//     #[test]
-//     fn test_helper() {
-//         let mut rng = thread_rng();
-//         let params = groth16_generate_keys::<Bn256, CheckPreimageKnowledge<Fr>>();
-//         let preimage = rng.gen();
-//         let ref poseidon_params = PoseidonParams::<Fr>::new(2, 8, 53);
-//         let image = crate::native::poseidon::poseidon([preimage].as_ref(), poseidon_params);
-//         let c = CheckPreimageKnowledge {image:Some(image), preimage:Some(preimage)};
-//         let proof = groth16_proof(&c, &params);
-
-//         let pvk = bellman::groth16::prepare_verifying_key(&params.vk);
-//         let res = bellman::groth16::verify_proof(&pvk, &proof, [image.into_inner()].as_ref()).unwrap();
-//         assert!(res, "proof should be valid");
-//     }
+    impl<F:PrimeField+SqrtField> Circuit for CheckPreimageKnowledge<F> {
+        type F = F;
+        fn synthesize<CS: ConstraintSystem<F=F>>(
+            &self,
+            cs: &CS
+        ) {
+            let image = CNum::alloc(cs, self.image.as_ref());
+            image.inputize();
+            let preimage = CNum::alloc(cs, self.preimage.as_ref());
+            let ref poseidon_params = PoseidonParams::<F>::new(2, 8, 53);
+            let image_computed = c_poseidon([preimage].as_ref(), poseidon_params);
+            (&image-&image_computed).assert_zero();
+        }
+    }
 
 
-// }
+    #[test]
+    fn test_helper() {
+        let mut rng = thread_rng();
+        let params = groth16_generate_keys::<Bn256, CheckPreimageKnowledge<Fr>>();
+        let preimage = rng.gen();
+        let ref poseidon_params = PoseidonParams::<Fr>::new(2, 8, 53);
+        let image = crate::native::poseidon::poseidon([preimage].as_ref(), poseidon_params);
+        let c = CheckPreimageKnowledge {image:Some(image), preimage:Some(preimage)};
+        let proof = groth16_proof(&c, &params);
+
+        let pvk = bellman::groth16::prepare_verifying_key(&params.vk);
+        let res = bellman::groth16::verify_proof(&pvk, &proof, [image.into_inner()].as_ref()).unwrap();
+        assert!(res, "proof should be valid");
+    }
+
+
+}
