@@ -7,8 +7,8 @@ use crate::native::num::Num;
 
 
 use crate::native::ecc::{EdwardsPoint, JubJubParams};
-use crate::native::poseidon::{PoseidonParams, poseidon};
-use crate::constants::PERSONALIZATION;
+use crate::native::poseidon::{PoseidonParams, poseidon_with_salt};
+use crate::constants::{PERSONALIZATION, SEED_EDDSA_POSEIDON};
 
 fn hash_r<Fr:PrimeField, Fs:PrimeField>(
     sk: Num<Fs>,
@@ -26,7 +26,7 @@ fn hash_ram<F: PrimeField>(
     m:Num<F>,
     poseidon_params: &PoseidonParams<F>
 ) -> Num<F> {
-    poseidon(&[r, a, m], poseidon_params)
+    poseidon_with_salt(&[r, a, m], SEED_EDDSA_POSEIDON, poseidon_params)
 }
 
 pub fn eddsaposeidon_sign<Fr:PrimeField, J:JubJubParams<Fr>>(

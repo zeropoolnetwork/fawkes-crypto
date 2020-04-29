@@ -63,6 +63,16 @@ pub fn c_poseidon<'a, CS:ConstraintSystem>(inputs:&[CNum<'a, CS>], params:&Posei
     state[0].clone()
 }
 
+pub fn c_poseidon_with_salt<'a, CS:ConstraintSystem>(inputs:&[CNum<'a, CS>], seed: &[u8], params:&PoseidonParams<CS::F>) -> CNum<'a, CS> {
+    let n_inputs = inputs.len();
+    assert!(n_inputs > 0, "number of inputs should be positive nonzero");
+    assert!(n_inputs < params.t, "number of inputs should be less than t");
+    let cs = inputs[0].cs;
+    let mut inputs = inputs.to_vec();
+    inputs.push(CNum::from_const(cs, &Num::from_seed(seed)));
+    c_poseidon(&inputs, params)
+}
+
 
 pub fn c_poseidon_merkle_proof_root<'a, CS:ConstraintSystem, L:Unsigned>(
     leaf:&CNum<'a, CS>, 

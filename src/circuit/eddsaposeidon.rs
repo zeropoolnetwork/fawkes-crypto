@@ -6,10 +6,10 @@ use crate::core::signal::Signal;
 use crate::core::cs::ConstraintSystem;
 use crate::native::ecc::{JubJubParams};
 use crate::native::poseidon::{PoseidonParams};
-use crate::circuit::poseidon::{c_poseidon};
+use crate::circuit::poseidon::{c_poseidon_with_salt};
 use crate::circuit::ecc::{CEdwardsPoint};
 use crate::circuit::bitify::{c_into_bits_le_strict, c_into_bits_le};
-
+use crate::constants::SEED_EDDSA_POSEIDON;
 
 
 
@@ -26,7 +26,7 @@ pub fn c_eddsaposeidon_verify<'a, CS: ConstraintSystem, J:JubJubParams<CS::F>>(
     
     let p_a = CEdwardsPoint::subgroup_decompress(a, jubjub_params);
     let p_r = CEdwardsPoint::subgroup_decompress(r, jubjub_params);
-    let h = c_poseidon(&[r.clone(), a.clone(), m.clone()], poseidon_params);
+    let h = c_poseidon_with_salt(&[r.clone(), a.clone(), m.clone()], SEED_EDDSA_POSEIDON, poseidon_params);
     let h_bits = c_into_bits_le_strict(&h);
     let ha = p_a.mul(&h_bits, jubjub_params);
 

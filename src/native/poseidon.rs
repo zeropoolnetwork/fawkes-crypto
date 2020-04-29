@@ -9,7 +9,6 @@ use crate::core::seedbox::SeedboxBlake2;
 use crate::core::sizedvec::SizedVec;
 use crate::native::num::Num;
 
-
 #[derive(Debug)]
 pub struct PoseidonParams<F:PrimeField> {
     pub c: Vec<Num<F>>, 
@@ -75,6 +74,16 @@ pub fn poseidon<F:PrimeField>(inputs:&[Num<F>], params:&PoseidonParams<F>) -> Nu
         mix(&mut state, params);
     }
     state[0]
+}
+
+
+pub fn poseidon_with_salt<F:PrimeField>(inputs:&[Num<F>], seed: &[u8], params:&PoseidonParams<F>) -> Num<F> {
+    let n_inputs = inputs.len();
+    assert!(n_inputs > 0, "number of inputs should be positive nonzero");
+    assert!(n_inputs < params.t, "number of inputs should be less than t");
+    let mut inputs = inputs.to_vec();
+    inputs.push(Num::from_seed(seed));
+    poseidon(&inputs, params)
 }
 
 
