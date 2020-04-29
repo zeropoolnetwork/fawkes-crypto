@@ -1,6 +1,7 @@
 use typenum::Unsigned;
 
 use crate::circuit::num::{CNum};
+use crate::circuit::bool::{CBool};
 use crate::core::signal::Signal;
 use crate::core::sizedvec::SizedVec;
 use crate::core::cs::ConstraintSystem;
@@ -12,7 +13,7 @@ use crate::native::num::Num;
 #[Value="MerkleProof<CS::F, L>"]
 pub struct CMerkleProof<'a, CS:ConstraintSystem, L:Unsigned> {
     pub sibling: SizedVec<CNum<'a, CS>, L>,
-    pub path: SizedVec<CNum<'a, CS>, L>
+    pub path: SizedVec<CBool<'a, CS>, L>
 }
 
 fn ark<'a, CS:ConstraintSystem>(state: &mut[CNum<'a, CS>], c:Num<CS::F>) {
@@ -100,9 +101,11 @@ mod poseidon_test {
     use super::*;
     use crate::core::cs::TestCS;
     use crate::native::poseidon::{poseidon, poseidon_merkle_proof_root, MerkleProof};
-    use crate::core::abstractsignal::Signal;
+    use crate::core::signal::Signal;
     use bellman::pairing::bn256::{Fr};
     use rand::{Rng, thread_rng};
+    use typenum::{U3, U32};
+    
     
 
     #[test]
@@ -113,14 +116,14 @@ mod poseidon_test {
 
     
         let ref mut cs = TestCS::<Fr>::new();
-        let data = (0..N_INPUTS).map(|_| rng.gen()).collect::<Vec<_>>();
-        let inputs = (0..N_INPUTS).map(|i| CNum::alloc(cs, Some(data[i]))).collect::<Vec<_>>();
+        let data = (0..N_INPUTS).map(|_| rng.gen()).collect::<SizedVec<_, U3>>();
+        let inputs = SizedVec::alloc(cs, Some(&data));
         
         let mut n_constraints = cs.num_constraints();
-        let res = c_poseidon(&inputs, &poseidon_params);
+        let res = c_poseidon(&inputs.0, &poseidon_params);
         n_constraints=cs.num_constraints()-n_constraints;
         
-        let res2 = poseidon(&data, &poseidon_params);
+        let res2 = poseidon(&data.0, &poseidon_params);
         res.assert_const(res2);
 
         
@@ -141,12 +144,12 @@ mod poseidon_test {
 
 
         let leaf = rng.gen();
-        let sibling = (0..PROOF_LENGTH).map(|_| rng.gen()).collect::<Vec<_>>();
-        let path = (0..PROOF_LENGTH).map(|_| rng.gen()).collect::<Vec<bool>>();
+        let sibling = (0..PROOF_LENGTH).map(|_| rng.gen()).collect::<SizedVec<_, U32>>();
+        let path = (0..PROOF_LENGTH).map(|_| rng.gen()).collect::<SizedVec<bool, U32>>();
 
-        let signal_leaf = CNum::alloc(cs, Some(leaf));
-        let signal_sibling = (0..PROOF_LENGTH).map(|i| CNum::alloc(cs, Some(sibling[i]))).collect::<Vec<_>>();
-        let signal_path = (0..PROOF_LENGTH).map(|i| CNum::alloc(cs, Some(Num::from(path[i])))).collect::<Vec<_>>();
+        let signal_leaf = CNum::alloc(cs, Some(&leaf));
+        let signal_sibling = SizedVec::alloc(cs, Some(&sibling));
+        let signal_path = SizedVec::alloc(cs, Some(&path));
     
         
         

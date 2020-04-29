@@ -112,7 +112,7 @@ fn tuple_impl(fields: &[&Field]) -> TokenStream {
             Some(Self::Value{#(#var_ids:self.#var_ids.get_value()?),*})
         }
     
-        fn switch(&self, bit: &CNum<'a, CS>, if_else: &Self) -> Self {
+        fn switch(&self, bit: &CBool<'a, CS>, if_else: &Self) -> Self {
             Self( #(self. #var_ids .switch(bit, &if_else. #var_ids)),* )
         }
     
@@ -147,7 +147,7 @@ fn struct_impl(fields: &[&Field]) -> TokenStream {
             Some(Self::Value {#(#var_names: self.#var_names.get_value()?),*})
         }
     
-        fn switch(&self, bit: &CNum<'a, CS>, if_else: &Self) -> Self {
+        fn switch(&self, bit: &CBool<'a, CS>, if_else: &Self) -> Self {
             Self {#(#var_names: self.#var_names.switch(bit, &if_else.#var_names)),*}
         }
     
