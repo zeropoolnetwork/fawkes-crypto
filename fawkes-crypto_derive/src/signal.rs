@@ -123,6 +123,20 @@ fn tuple_impl(fields: &[&Field]) -> TokenStream {
         fn from_const(cs:&'a CS, value: &Self::Value) -> Self {
             Self(#(#var_typenames::from_const(cs, &value.#var_ids)),*)
         }
+
+        fn assert_const(&self, value: &Self::Value) {
+            #(self. #var_ids .assert_const(&value. #var_ids);)* 
+        }
+
+        fn assert_eq(&self, other: &Self) {
+            #(self. #var_ids .assert_eq(&other. #var_ids);)* 
+        }
+
+        fn is_eq(&self, other: &Self) -> CBool<'a, CS> {
+            let mut acc = CNum::one(self.get_cs());
+            #(acc *= self. #var_ids .is_eq(&other. #var_ids).0;)*
+            acc.into_bool()
+        }
     
         fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self {
             Self(#(#var_typenames::alloc(cs, value.map(|v| &v.#var_ids))),*)
@@ -165,6 +179,12 @@ fn struct_impl(fields: &[&Field]) -> TokenStream {
 
         fn assert_eq(&self, other: &Self) {
             #(self. #var_names .assert_eq(&other. #var_names);)* 
+        }
+
+        fn is_eq(&self, other: &Self) -> CBool<'a, CS> {
+            let mut acc = CNum::one(self.get_cs());
+            #(acc *= self. #var_names .is_eq(&other. #var_names).0;)*
+            acc.into_bool()
         }
     
         fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self {

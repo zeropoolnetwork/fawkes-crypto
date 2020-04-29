@@ -4,7 +4,7 @@ use typenum::Unsigned;
 
 use crate::core::cs::ConstraintSystem;
 use crate::circuit::bool::CBool;
-
+use crate::circuit::num::CNum;
 use crate::core::sizedvec::SizedVec;
 
 pub trait Signal <'a, CS:'a+ConstraintSystem> : Sized+Clone {
@@ -23,6 +23,8 @@ pub trait Signal <'a, CS:'a+ConstraintSystem> : Sized+Clone {
     fn assert_const(&self, value: &Self::Value);
 
     fn assert_eq(&self, other:&Self);
+
+    fn is_eq(&self, other:&Self) -> CBool<'a, CS>;
 
 
     #[inline]
@@ -75,6 +77,15 @@ impl <'a, CS:'a+ConstraintSystem, T:Signal<'a, CS>, L:Unsigned> Signal<'a, CS> f
     fn assert_eq(&self, other: &Self) {
         self.iter().zip(other.iter()).for_each(|(s, o)| s.assert_eq(o));
     }
+
+    fn is_eq(&self, other:&Self) -> CBool<'a, CS> {
+        let mut acc = CNum::one(self.get_cs());
+        for i in 0..L::USIZE {
+            acc *= self[i].is_eq(&other[i]).0;
+        }
+        acc.into_bool()
+    }
+
 
 }
 

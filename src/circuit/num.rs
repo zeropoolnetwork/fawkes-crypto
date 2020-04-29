@@ -117,6 +117,10 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CNum<'a, CS> {
     fn assert_eq(&self, other:&Self) {
         (self-other).assert_zero()
     }
+
+    fn is_eq(&self, other:&Self) -> CBool<'a, CS>{
+        (self-other).is_zero()
+    }
 }
 
 
@@ -227,15 +231,9 @@ impl<'a, CS:ConstraintSystem> CNum<'a, CS> {
         }
     }
 
-    pub fn is_zero(&self) -> Self {
+    pub fn is_zero(&self) -> CBool<'a, CS> {
         match self.as_const() {
-            Some(c) => {
-                if c.is_zero() {
-                    self.derive_one()
-                } else {
-                    self.derive_zero()
-                }
-            },
+            Some(c) => self.derive_const(&c.is_zero()),
             _ => {
                 let inv_value = match self.get_value() {
                     Some(t) => if t.is_zero() {
@@ -251,7 +249,7 @@ impl<'a, CS:ConstraintSystem> CNum<'a, CS> {
 
                 let res_signal = inv_signal * self;
                 res_signal.assert_bit();
-                self.derive_one() - res_signal
+                (self.derive_one() - res_signal).into_bool()
             }
         }
     }

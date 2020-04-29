@@ -42,6 +42,10 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CBool<'a, CS> {
     fn assert_eq(&self, other: &Self) {
         self.0.assert_eq(&other.0);
     }
+
+    fn is_eq(&self, other:&Self) -> CBool<'a, CS> {
+        self.0.is_eq(&other.0)
+    }
 } 
 
 
