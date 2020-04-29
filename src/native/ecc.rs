@@ -2,7 +2,7 @@ use ff::{Field, PrimeField, SqrtField, PrimeFieldRepr};
 use bellman::pairing::BitIterator;
 use rand::{Rng};
 use bellman::pairing::bn256::{Fr};
-use crate::core::num::Num;
+use crate::native::num::Num;
 use crate::constants::SEED_EDWARDS_G;
 
 #[derive(PrimeField)]
@@ -11,18 +11,22 @@ use crate::constants::SEED_EDWARDS_G;
 pub struct Fs(FsRepr);
 
 
+
 #[derive(Clone, Copy, Debug)]
-pub struct EdwardsPoint<F:PrimeField> {
+pub struct EdwardsPointEx<F:PrimeField> {
     pub x: Num<F>,
     pub y: Num<F>,
     pub t: Num<F>,
     pub z: Num<F>
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EdwardsPoint<F:PrimeField> {
+    pub x: Num<F>,
+    pub y: Num<F>
+}
 
-
-
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MontgomeryPoint<F:PrimeField> {
     pub x: Num<F>,
     pub y: Num<F>
@@ -107,9 +111,70 @@ impl JubJubParams<Fr> for JubJubBN256 {
 
 
 
-impl<F: PrimeField> PartialEq for EdwardsPoint<F> {
+impl<F: PrimeField> PartialEq for EdwardsPointEx<F> {
     fn eq(&self, other: &Self) -> bool {
         self.x * other.z == other.x * self.z && self.y * other.z == other.y * self.z
+    }
+}
+
+impl <F: PrimeField> EdwardsPoint<F> {
+    pub fn zero() -> Self {
+        Self {
+            x: Num::zero(),
+            y: Num::one()
+        }
+    }
+
+    pub fn is_zero(&self) -> bool {
+        *self == Self::zero()
+    }
+
+    pub fn is_in_curve<J: JubJubParams<F>>(&self, params: &J) -> bool
+    {
+        // check that a point is on curve
+        // y^2 - x^2 = 1 + d * x^2 * y^2
+        
+        let x2 = self.x.square();
+        let y2 = self.y.square();
+        y2 - x2 == Num::one() + params.edwards_d() * x2 * y2 
+    }
+
+    pub fn into_montgomery(&self) -> Option<MontgomeryPoint<F>> {
+        if self.x.is_zero() {
+            if self.y == Num::one() {
+                None
+            } else {
+                Some(MontgomeryPoint{x:Num::zero(), y:Num::zero()})
+            }
+        } else {
+            let m_x = (Num::one()+self.y)/(Num::one()-self.y);
+            let m_y = m_x / self.x;
+            Some(MontgomeryPoint{x:m_x, y:m_y})
+        }
+    }
+
+    pub fn into_extended(&self) -> EdwardsPointEx<F>
+    {
+        let t = self.x*self.y;
+        let z = Num::one();
+
+        EdwardsPointEx { x:self.x, y:self.y, t, z}
+    }
+}
+
+impl <F: PrimeField> MontgomeryPoint<F> {
+    pub fn into_affine(&self) -> EdwardsPoint<F> {
+        if self.x.is_zero() {
+            EdwardsPoint {x:Num::zero(), y:-Num::one()}
+        } else {
+            let e_x = self.x/self.y;
+            let e_y = (self.x-Num::one())/(self.x+Num::one());
+            EdwardsPoint {x:e_x, y:e_y}
+        }
+    }
+
+    pub fn into_extended(&self) -> EdwardsPointEx<F> {
+        self.into_affine().into_extended()
     }
 }
 
@@ -120,9 +185,9 @@ impl <F: PrimeField+SqrtField> EdwardsPoint<F> {
         
         ((y2 - Num::one()) / (params.edwards_d()*y2 + Num::one())).sqrt().map(|x| {
             if x.into_inner().into_repr().is_odd() != sign {
-                Self::from_xy_unchecked(-x, y)
+                Self {x:-x, y}
             } else {
-                Self::from_xy_unchecked(x, y)
+                Self {x, y}
             }
         })
     }
@@ -133,12 +198,12 @@ impl <F: PrimeField+SqrtField> EdwardsPoint<F> {
         let t = ((x2 + Num::one()) / (Num::one() - params.edwards_d()*x2 )).sqrt();
         match t {
             Some(y) => {
-                let (lx, ly) = Self::from_xy_unchecked(x, y).mul_raw(J::Fs::char(), params).into_xy();
+                let EdwardsPoint {x:lx, y:ly} = EdwardsPoint{x, y}.into_extended().mul_raw(J::Fs::char(), params).into_affine();
                 if lx.is_zero() {
                     if ly == Num::one() {
-                        Some(Self::from_xy_unchecked(x, y))
+                        Some(Self{x, y})
                     } else {
-                        Some(Self::from_xy_unchecked(x, -y))
+                        Some(Self{x, y:-y})
                     }
                 } else {
                     None
@@ -181,7 +246,7 @@ impl <F: PrimeField+SqrtField> EdwardsPoint<F> {
             }
         };
 
-        Self::from_montgomery_xy_unchecked(mx, my).mul_by_cofactor()
+        MontgomeryPoint{x:mx, y:my}.into_extended().mul_by_cofactor().into_affine()
     }
 
 
@@ -192,92 +257,46 @@ impl <F: PrimeField+SqrtField> EdwardsPoint<F> {
 }
 
 
-impl <F: PrimeField> EdwardsPoint<F> {
-    pub fn from_xy<J: JubJubParams<F>>(x: Num<F>, y: Num<F>, params: &J) -> Option<Self>
+impl <F: PrimeField> EdwardsPointEx<F> {
+    pub fn is_in_curve<J: JubJubParams<F>>(&self, params: &J) -> bool
     {
         // check that a point is on curve
-        // y^2 - x^2 = 1 + d * x^2 * y^2
+        // Y^2 - X^2 = Z^2 + d * T^2
+        // ZT == XY
+        // Z!=0
         
-        let x2 = x.square();
-        let y2 = y.square();
-        if y2 - x2 != Num::one() + params.edwards_d() * x2 * y2 {
-            return None
-        }
-
-        let t = x*y;
-        let z = Num::one();
-
-        Some(EdwardsPoint { x, y, t, z} )
+        !self.z.is_zero() && self.z*self.t == self.x*self.y && self.y.square()-self.x.square() == self.z.square() + params.edwards_d()*self.t.square()
     }
 
-    pub fn from_xy_unchecked(x: Num<F>, y: Num<F>) -> Self
-    {
-        let t = x*y;
-        let z = Num::one();
 
-        EdwardsPoint { x, y, t, z}
-    }
 
-    // compress point into single E::Fr and a sign bit
-    pub fn compress_into_y(&self) -> (Num<F>, bool)
-    {
-        // Given a y on the curve, read the x sign and leave y coordinate only
-        // Important - normalize from extended coordinates
-        let (x, y) = self.into_xy();
-        let sign = x.into_inner().into_repr().is_odd();
-
-        (y, sign)
-    }
 
     /// This guarantees the point is in the prime order subgroup
-    
-    pub fn mul_by_cofactor(&self) -> EdwardsPoint<F>
+    pub fn mul_by_cofactor(&self) -> EdwardsPointEx<F>
     {
         self.double().double().double()
     }
 
 
-
-    
-    pub fn into_xy(&self) -> (Num<F>, Num<F>)
+    pub fn into_affine(&self) -> EdwardsPoint<F>
     {
         let zinv = self.z.inverse();
-        (self.x*zinv, self.y*zinv)
+        EdwardsPoint {x: self.x*zinv, y: self.y*zinv}
     }
 
+    pub fn into_montgomery(&self) -> Option<MontgomeryPoint<F>>
+    {
+        self.into_affine().into_montgomery()
+    }
+
+    //assuming in curve
     pub fn is_zero(&self) -> bool {
-        self.into_xy() == (Num::zero(), Num::one())
-    }
-
-    pub fn into_montgomery_xy(&self) -> Option<(Num<F>, Num<F>)> {
-        let (e_x, e_y) = self.into_xy();
-
-        if e_x.is_zero() {
-            if e_y == Num::one() {
-                None
-            } else {
-                Some((Num::zero(), Num::zero()))
-            }
-        } else {
-            let m_x = (Num::one()+e_y)/(Num::one()-e_y);
-            let m_y = m_x / e_x;
-            Some((m_x, m_y))
-        }
-    }
-
-    pub fn from_montgomery_xy_unchecked(x: Num<F>, y: Num<F>) -> Self {
-        if x.is_zero() {
-            Self::from_xy_unchecked(Num::zero(), -Num::one())
-        } else {
-            let e_x = x/y;
-            let e_y = (x-Num::one())/(x+Num::one());
-            Self::from_xy_unchecked(e_x, e_y)
-        }
+        self.x.is_zero() && self.y == self.z
     }
 
 
     pub fn zero() -> Self {
-        EdwardsPoint {
+        EdwardsPointEx {
             x: Num::zero(),
             y: Num::one(),
             t: Num::zero(),
@@ -314,7 +333,7 @@ impl <F: PrimeField> EdwardsPoint<F> {
         let t3 = e*h;
         let z3 = f*g;
 
-        EdwardsPoint {x: x3,y: y3,t: t3, z: z3}
+        EdwardsPointEx {x: x3,y: y3,t: t3, z: z3}
     }
 
     
@@ -337,7 +356,7 @@ impl <F: PrimeField> EdwardsPoint<F> {
         let t3 = e*h;
         let z3 = f*g;
 
-        EdwardsPoint {x: x3, y: y3, t: t3, z: z3}
+        EdwardsPointEx {x: x3, y: y3, t: t3, z: z3}
     }
 
     pub fn is_in_subgroup<J:JubJubParams<F>>(&self, params: &J) -> bool {
@@ -387,13 +406,13 @@ mod ecc_test {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
     
-        assert!(jubjub_params.edwards_g().is_in_subgroup(&jubjub_params), "subgroup generator should be in subgroup");
+        assert!(jubjub_params.edwards_g().into_extended().is_in_subgroup(&jubjub_params), "subgroup generator should be in subgroup");
 
         let s:Num<Fs> = rng.gen();
-        let p = jubjub_params.edwards_g().mul(s, &jubjub_params);
+        let p = jubjub_params.edwards_g().into_extended().mul(s, &jubjub_params);
         assert!(p.is_in_subgroup(&jubjub_params), "point should be in subgroup");
 
-        let q = EdwardsPoint::rand(&mut rng, &jubjub_params);
+        let q = EdwardsPoint::rand(&mut rng, &jubjub_params).into_extended();
         assert!(q.add(&q, &jubjub_params) == q.double());
 
         
@@ -404,15 +423,15 @@ mod ecc_test {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
         let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
-        let (mx, my) = p.into_montgomery_xy().unwrap();
-        assert!(EdwardsPoint::from_montgomery_xy_unchecked(mx, my) == p, "point should be the same");
+        let mp = p.into_montgomery().unwrap();
+        assert!(mp.into_affine() == p, "point should be the same");
     }
 
     #[test]
     fn mul_by_cofactor_test() {
         let mut rng = thread_rng();
         let jubjub_params = JubJubBN256::new();
-        let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
+        let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params).into_extended();
 
         let p8_1 = p.mul_by_cofactor();
         let p8_2 = p.mul(num!(8), &jubjub_params);
