@@ -9,7 +9,7 @@ use crate::core::seedbox::SeedboxBlake2;
 use crate::core::sizedvec::SizedVec;
 use crate::native::num::Num;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PoseidonParams<F:PrimeField> {
     pub c: Vec<Num<F>>, 
     pub m: Vec<Vec<Num<F>>>, 
@@ -87,7 +87,8 @@ pub fn poseidon_with_salt<F:PrimeField>(inputs:&[Num<F>], seed: &[u8], params:&P
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(bound(serialize="", deserialize=""))]
 pub struct MerkleProof<F:PrimeField, L:Unsigned> {
     pub sibling: SizedVec<Num<F>, L>,
     pub path: SizedVec<bool, L>

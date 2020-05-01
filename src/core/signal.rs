@@ -1,4 +1,4 @@
-use std::marker::{Sized, PhantomData};
+use std::marker::{Sized};
 use typenum::Unsigned;
 
 
@@ -78,7 +78,7 @@ impl <'a, CS:'a+ConstraintSystem, T:Signal<'a, CS>, L:Unsigned> Signal<'a, CS> f
     fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self {
         match value {
             Some(value) => value.iter().map(|v| T::alloc(cs, Some(v))).collect(),
-            _ =>  SizedVec(vec![T::alloc(cs, None); L::USIZE], PhantomData) 
+            _ =>  (0..L::USIZE).map(|_| T::alloc(cs, None)).collect()
         }
     }
 
@@ -109,37 +109,3 @@ impl <'a, CS:'a+ConstraintSystem, T:Signal<'a, CS>, L:Unsigned> Signal<'a, CS> f
 
 }
 
-
-
-
-// seq!(N in 1..=1 {
-//     impl <'a, CS:'a+ConstraintSystem, T:Signal<'a, CS>> Signal<'a, CS> for [T;N]{
-//         type Value = [T::Value;N];
-
-//         fn get_value(&self) -> Option<Self::Value> {
-//             collect_opt_array!([T::Value; N], self.iter().map(|v| v.get_value()))
-//         }
-
-//         fn switch(&self, bit: &CNum<'a, CS>, if_else: &Self) -> Self {
-//             collect_array!([T;N], self.iter().zip(if_else.iter()).map(|(t,f)| t.switch(bit, f)))
-//         }
-
-
-//         fn get_cs(&self) -> &'a CS {
-//             self[0].get_cs()
-//         }
-
-//         fn from_const(cs:&'a CS, value: &Self::Value) -> Self {
-//             collect_array!([T;N], value.iter().map(|v| T::from_const(cs, v)))
-//         }
-
-
-//         fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self {
-//             match value {
-//                 Some(value) => collect_array!([T;N], value.iter().map(|v| T::alloc(cs, Some(v)))),
-//                 _ => collect_array!([T;N], (0..N).map(|_| T::alloc(cs, None)))
-//             }
-//         }
-
-//     }
-// });

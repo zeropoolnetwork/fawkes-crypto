@@ -5,10 +5,38 @@ use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssi
 use std::fmt;
 use rand::{Rand, Rng};
 use blake2_rfc::blake2s::Blake2s;
+
+use serde::ser::{Serialize, Serializer};
+use serde::de::{self, Deserialize, Deserializer};
+use core::str::FromStr;
+
+
 use crate::constants::PERSONALIZATION;
+
+
 
 #[derive(Clone, Copy, Debug)]
 pub struct Num<T:Field>(pub T);
+
+impl<T:PrimeField> Serialize for Num<T> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>{
+        Into::<BigUint>::into(*self).to_string().serialize(serializer)
+    }
+}
+
+impl<'de, T:PrimeField> Deserialize<'de> for Num<T> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Num<T>, D::Error> {
+        let bn = BigUint::from_str(&String::deserialize(deserializer)?).map_err(|_| de::Error::custom("Wrong number format"))?;
+        
+        if bn > Into::<BigUint>::into(Num::<T>::from(-1)) {
+            Err(de::Error::custom("Field overflow"))
+        } else {
+            Ok(num!(bn))
+        }
+        
+    }
+}
+
 
 
 impl<T:Field> fmt::Display for Num<T> {

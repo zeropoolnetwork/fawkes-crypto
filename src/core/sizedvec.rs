@@ -5,7 +5,8 @@ use std::slice::{Iter, IterMut};
 
 use core::slice::SliceIndex;
 use std::ops::{Index, IndexMut};
-
+use serde::ser::{Serialize, Serializer};
+use serde::de::{Deserialize, Deserializer};
 
 #[derive(Debug, Clone)]
 pub struct SizedVec<T:Sized, L:Unsigned>(pub Vec<T>, pub PhantomData<L>);
@@ -19,6 +20,18 @@ impl<T, L:Unsigned> SizedVec<T,L> {
         self.0.iter_mut()
     }
 
+}
+
+impl<T:Serialize, L:Unsigned> Serialize for SizedVec<T,L> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>{
+        self.0.serialize(serializer)
+    }
+}
+
+impl<'de, T:Deserialize<'de>, L:Unsigned> Deserialize<'de> for SizedVec<T, L> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<SizedVec<T,L>, D::Error> {
+        Vec::<T>::deserialize(deserializer).map(|v| SizedVec::<T,L>(v,PhantomData))
+    }
 }
 
 impl<T, L:Unsigned> FromIterator<T> for SizedVec<T, L> {

@@ -20,20 +20,22 @@ pub struct EdwardsPointEx<F:PrimeField> {
     pub z: Num<F>
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(bound(serialize="", deserialize=""))]
 pub struct EdwardsPoint<F:PrimeField> {
     pub x: Num<F>,
     pub y: Num<F>
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(bound(serialize="", deserialize=""))]
 pub struct MontgomeryPoint<F:PrimeField> {
     pub x: Num<F>,
     pub y: Num<F>
 }
 
 
-pub trait JubJubParams<Fr:PrimeField>: Sized {
+pub trait JubJubParams<Fr:PrimeField>: Sized+Clone {
     type Fs: PrimeField;
 
     fn edwards_g(&self) -> &EdwardsPoint<Fr>;
@@ -47,6 +49,7 @@ pub trait JubJubParams<Fr:PrimeField>: Sized {
     fn montgomery_u(&self) -> Num<Fr>;
 }
 
+#[derive(Clone)]
 pub struct JubJubBN256 {
     edwards_g: EdwardsPoint<Fr>,
     edwards_d: Num<Fr>,
