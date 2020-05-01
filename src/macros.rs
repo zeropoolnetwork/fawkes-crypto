@@ -231,3 +231,37 @@ macro_rules! num {
     };
 }
 
+#[macro_export]
+macro_rules! circuit {
+    (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $cir_type:ty, $public:tt, $secret:tt, $params:tt, $func:ident ) => {
+        impl<$($imp_l, )*$($imp_i : $imp_p),+> $crate::core::cs::Circuit for $cir_type {
+            type F = Fr;
+            fn synthesize<CS: $crate::core::cs::ConstraintSystem<F=pairing::bn256::Fr>>(
+                &self,
+                cs: &CS
+            ) {
+                let p = $public::alloc(cs, self.p.as_ref());
+                let s = $secret::alloc(cs, self.s.as_ref());
+                $func(&p, &s, &self.params);
+                p.inputize();
+            }
+        
+            fn get_inputs(&self) -> Option<Vec<Num<Self::F>>> {
+                let ref cs = TestCS::new();
+                let p = $public::alloc(cs, self.p.as_ref());
+                p.linearize().iter().map(|e|e.get_value()).collect()
+            }
+        }
+        
+        impl<$($imp_l, )*$($imp_i: $imp_p),+> Default for $cir_type {
+            fn default() -> Self {
+                Self {
+                    p: None,
+                    s: None,
+                    params: $params::default()
+                }
+            }
+        }
+        
+    }
+}
