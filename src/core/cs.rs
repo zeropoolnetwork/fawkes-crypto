@@ -21,6 +21,8 @@ pub trait Circuit {
         &self,
         cs: &CS
     );
+
+    fn get_inputs(&self) -> Option<Vec<Num<Self::F>>>;
 }
 
 

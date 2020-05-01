@@ -1,9 +1,6 @@
-use std::cell::RefCell;
-use crate::core::cs::{ConstraintSystem, Circuit};
-use crate::native::num::Num;
-use crate::circuit::num::{CNum, Index};
+use crate::core::cs::{Circuit};
 use crate::core::osrng::OsRng;
-use ff::Field;
+
 
 use bellman::{self, SynthesisError};
 
@@ -38,8 +35,9 @@ mod bellman_test {
     use bellman::pairing::bn256::{Fr, Bn256};
     use crate::circuit::num::{CNum};
     use crate::core::signal::Signal;
-    use crate::core::cs::{TestCS};
+    use crate::core::cs::{TestCS, ConstraintSystem};
     use crate::native::poseidon::PoseidonParams;
+    use crate::native::num::Num;
     use crate::circuit::poseidon::c_poseidon;
     use rand::{Rng, thread_rng};
 

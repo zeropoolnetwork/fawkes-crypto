@@ -158,6 +158,6 @@ pub fn verify_proof<'a, E: Engine>(
             (&tvk.alpha_g1.prepare(), &tvk.beta_g2.prepare()),
             (&acc.into_affine().prepare(), &tvk.gamma_g2.prepare()),
             (&proof.c.prepare(), &tvk.delta_g2.prepare())
-        ].into_iter())
+        ].iter())
     ).unwrap() == E::Fqk::one())
 }
