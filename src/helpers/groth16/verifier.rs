@@ -8,7 +8,6 @@ use pairing::{
 use ff::{PrimeField, Field};
 
 use bellman::groth16::{
-    Proof,
     VerifyingKey
 };
 
@@ -16,6 +15,25 @@ use bellman::SynthesisError;
 
 use std::io::{Read, Write};
 use std::io;
+
+
+
+
+use pairing::bn256::{Fq, Bn256, G1Affine, G2Affine};
+use super::{G1PointData, G2PointData};
+use super::prover::Proof;
+
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(bound(serialize="", deserialize=""))]
+pub struct TruncatedVerifyingKeyData<F:PrimeField> {
+    pub alpha_g1: G1PointData<F>,
+    pub beta_g2: G2PointData<F>,
+    pub gamma_g2: G2PointData<F>,
+    pub delta_g2: G2PointData<F>,
+    pub ic: Vec<G1PointData<F>>
+}
+
 
 
 #[derive(Clone)]
@@ -27,6 +45,28 @@ pub struct TruncatedVerifyingKey<E: Engine> {
     pub ic: Vec<E::G1Affine>
 }
 
+
+impl TruncatedVerifyingKey<Bn256> {
+    pub fn into_data(&self) -> TruncatedVerifyingKeyData<Fq> {
+        TruncatedVerifyingKeyData {
+            alpha_g1: G1PointData::from(self.alpha_g1),
+            beta_g2: G2PointData::from(self.beta_g2),
+            gamma_g2: G2PointData::from(self.gamma_g2),
+            delta_g2: G2PointData::from(self.delta_g2),
+            ic: self.ic.iter().map(|e| G1PointData::from(*e)).collect()
+        }
+    }
+
+    pub fn from_data(vk:&TruncatedVerifyingKeyData<Fq>) -> Self {
+        Self {
+            alpha_g1: Into::<G1Affine>::into(vk.alpha_g1),
+            beta_g2: Into::<G2Affine>::into(vk.beta_g2),
+            gamma_g2: Into::<G2Affine>::into(vk.gamma_g2),
+            delta_g2: Into::<G2Affine>::into(vk.delta_g2),
+            ic: vk.ic.iter().map(|p| Into::<G1Affine>::into(*p)).collect()
+        }
+    }
+}
 
 impl<E: Engine> TruncatedVerifyingKey<E> {
     pub fn write<W: Write>(
@@ -128,7 +168,7 @@ pub fn truncate_verifying_key<E: Engine>(
     }
 }
 
-pub fn verify_proof<'a, E: Engine>(
+pub fn verify<'a, E: Engine>(
     tvk: &'a TruncatedVerifyingKey<E>,
     proof: &Proof<E>,
     public_inputs: &[E::Fr]
@@ -149,15 +189,15 @@ pub fn verify_proof<'a, E: Engine>(
     // ... however, we rearrange it so that it is:
     // (-A) * B + alpha * beta + inputs * gamma + C * delta == 1
 
-    let mut neg_a = proof.a.clone();
+    let mut neg_a = proof.0.a.clone();
     neg_a.negate();
 
     Ok(E::final_exponentiation(
         &E::miller_loop([
-            (&neg_a.prepare(), &proof.b.prepare()),
+            (&neg_a.prepare(), &proof.0.b.prepare()),
             (&tvk.alpha_g1.prepare(), &tvk.beta_g2.prepare()),
             (&acc.into_affine().prepare(), &tvk.gamma_g2.prepare()),
-            (&proof.c.prepare(), &tvk.delta_g2.prepare())
+            (&proof.0.c.prepare(), &tvk.delta_g2.prepare())
         ].iter())
     ).unwrap() == E::Fqk::one())
 }

@@ -2,7 +2,7 @@ use ff::{Field, SqrtField, PrimeField, PrimeFieldRepr, BitIterator};
 use num::bigint::{BigUint, BigInt, ToBigInt};
 use num::traits::Signed;
 use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssign};
-use std::fmt;
+use std::string::ToString;
 use rand::{Rand, Rng};
 use blake2_rfc::blake2s::Blake2s;
 
@@ -20,7 +20,13 @@ pub struct Num<T:Field>(pub T);
 
 impl<T:PrimeField> Serialize for Num<T> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>{
-        Into::<BigUint>::into(*self).to_string().serialize(serializer)
+        self.to_string().serialize(serializer)
+    }
+}
+
+impl<T:PrimeField> ToString for Num<T> {
+    fn to_string(&self) -> String {
+        Into::<BigUint>::into(*self).to_string()
     }
 }
 
@@ -38,12 +44,6 @@ impl<'de, T:PrimeField> Deserialize<'de> for Num<T> {
 }
 
 
-
-impl<T:Field> fmt::Display for Num<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
 
 
 impl<T:Field> Rand for Num<T> {
@@ -222,6 +222,7 @@ impl<T:PrimeField> Into<BigUint> for Num<T> {
         BigUint::from_bytes_be(&bytes[..])
     }
 }
+
 
 impl<T:PrimeField> From<u64> for Num<T> {
     fn from(n: u64) -> Self {

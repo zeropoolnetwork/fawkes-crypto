@@ -2,9 +2,48 @@ use crate::core::cs::{Circuit};
 use crate::core::osrng::OsRng;
 
 
+
 use bellman::{self, SynthesisError};
+use ff::PrimeField;
+use pairing::bn256::{Fq, Bn256, G1Affine, G2Affine};
+
+use pairing::{
+    Engine
+};
+
 
 use crate::helpers::groth16::Groth16CS;
+use super::{G1PointData, G2PointData};
+
+pub use bellman::groth16::Parameters;
+
+pub struct Proof<E:Engine>(pub bellman::groth16::Proof<E>);
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(bound(serialize="", deserialize=""))]
+pub struct ProofData<F:PrimeField> {
+    pub a: G1PointData<F>,
+    pub b: G2PointData<F>,
+    pub c: G1PointData<F>
+}
+
+impl Proof<Bn256> {
+    pub fn into_data(&self) -> ProofData<Fq> {
+        ProofData {
+            a: G1PointData::from(self.0.a),
+            b: G2PointData::from(self.0.b),
+            c: G1PointData::from(self.0.c)
+        }
+    }
+
+    pub fn from_data(p:&ProofData<Fq>) -> Self {
+        Self(bellman::groth16::Proof{
+            a: Into::<G1Affine>::into(p.a),
+            b: Into::<G2Affine>::into(p.b),
+            c: Into::<G1Affine>::into(p.c)
+        })
+    }
+}
 
 
 struct HelperCircuit<'a, C:Circuit>(pub &'a C);
@@ -23,9 +62,9 @@ pub fn generate_keys<BE:bellman::pairing::Engine, C:Circuit<F=BE::Fr>+Default>()
     bellman::groth16::generate_random_parameters(HelperCircuit(&c), rng).unwrap()
 }
 
-pub fn proof<BE:bellman::pairing::Engine, C:Circuit<F=BE::Fr>>(c:&C, params:&bellman::groth16::Parameters<BE>) -> bellman::groth16::Proof<BE>{
+pub fn prove<BE:bellman::pairing::Engine, C:Circuit<F=BE::Fr>>(c:&C, params:&bellman::groth16::Parameters<BE>) -> Proof<BE>{
     let ref mut rng = OsRng::new();
-    bellman::groth16::create_random_proof(HelperCircuit(c), params, rng).unwrap()
+    Proof(bellman::groth16::create_random_proof(HelperCircuit(c), params, rng).unwrap())
 }
 
 #[cfg(test)]
@@ -39,6 +78,7 @@ mod bellman_test {
     use crate::native::poseidon::PoseidonParams;
     use crate::native::num::Num;
     use crate::circuit::poseidon::c_poseidon;
+    use crate::helpers::groth16::verifier::{truncate_verifying_key, verify};
     use rand::{Rng, thread_rng};
 
     #[derive(Default)]
@@ -77,10 +117,10 @@ mod bellman_test {
         let ref poseidon_params = PoseidonParams::<Fr>::new(2, 8, 53);
         let image = crate::native::poseidon::poseidon([preimage].as_ref(), poseidon_params);
         let c = CheckPreimageKnowledge {image:Some(image), preimage:Some(preimage)};
-        let proof = proof(&c, &params);
+        let proof = prove(&c, &params);
 
-        let pvk = bellman::groth16::prepare_verifying_key(&params.vk);
-        let res = bellman::groth16::verify_proof(&pvk, &proof, [image.into_inner()].as_ref()).unwrap();
+        let pvk = truncate_verifying_key(&params.vk);
+        let res = verify(&pvk, &proof, [image.into_inner()].as_ref()).unwrap();
         assert!(res, "proof should be valid");
     }
 
