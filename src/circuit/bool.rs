@@ -56,6 +56,11 @@ impl<'a, CS:ConstraintSystem> Signal<'a, CS> for CBool<'a, CS> {
 
 
 impl <'a, CS:ConstraintSystem> CBool<'a, CS> {
+
+    #[inline]
+    pub fn if_else<T:Signal<'a, CS>>(&self, if_true:&T, if_false:&T) -> T{
+        if_true.switch(self, if_false)
+    }
     
     #[inline]
     pub fn assert(&self) {
