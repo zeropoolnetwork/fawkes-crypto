@@ -232,36 +232,208 @@ macro_rules! num {
 }
 
 #[macro_export]
-macro_rules! circuit {
-    (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $cir_type:ty, $public:tt, $secret:tt, $params:tt, $func:ident ) => {
-        impl<$($imp_l, )*$($imp_i : $imp_p),+> $crate::core::cs::Circuit for $cir_type {
-            type F = Fr;
-            fn synthesize<CS: $crate::core::cs::ConstraintSystem<F=pairing::bn256::Fr>>(
-                &self,
-                cs: &CS
-            ) {
-                let p = $public::alloc(cs, self.p.as_ref());
-                let s = $secret::alloc(cs, self.s.as_ref());
-                $func(&p, &s, &self.params);
-                p.inputize();
+macro_rules! groth16_circuit_bindings {
+    ($modname:ident, $cir_pub:ty, $ccir_pub:ident, $cir_sec:ty, $ccir_sec:ident, $cir_params:ident, $cir_main:ident, $test_data:ident) => {
+
+        mod $modname {
+            use super::*;
+            use clap::Clap;
+            use std::{fs::File, io::Write};
+
+            use pairing::bn256::{Fr, Bn256, Fq};
+            use $crate::{
+                native::num::Num,
+                core::{signal::Signal, cs::{Circuit, TestCS}},
+                helpers::groth16::{
+                    prover::{generate_keys, prove, Proof, Parameters},
+                    verifier::{truncate_verifying_key, verify, TruncatedVerifyingKeyData, TruncatedVerifyingKey},
+                    ethereum::generate_sol_data
+                }
+            };
+
+            #[derive(Clap)]
+            struct Opts {
+                #[clap(subcommand)]
+                command: SubCommand,
             }
-        
-            fn get_inputs(&self) -> Option<Vec<Num<Self::F>>> {
-                let ref cs = TestCS::new();
-                let p = $public::alloc(cs, self.p.as_ref());
-                p.linearize().iter().map(|e|e.get_value()).collect()
+
+            #[derive(Clap)]
+            enum SubCommand {
+                /// Generate a SNARK proof
+                Prove(ProveOpts),
+                /// Verify a SNARK proof
+                Verify(VerifyOpts),
+                /// Generate trusted setup parameters
+                Setup(SetupOpts),
+                /// Generate verifier smart contract
+                GenerateVerifier(GenerateVerifierOpts),
+                /// Generate test object
+                GenerateTestData(GenerateTestDataOpts)
             }
-        }
-        
-        impl<$($imp_l, )*$($imp_i: $imp_p),+> Default for $cir_type {
-            fn default() -> Self {
-                Self {
-                    p: None,
-                    s: None,
-                    params: $params::default()
+
+            /// A subcommand for generating a SNARK proof
+            #[derive(Clap)]
+            struct ProveOpts {
+                /// Snark trusted setup parameters file
+                #[clap(short = "p", long = "params", default_value = "params.bin")]
+                params: String,
+                /// Input object JSON file
+                #[clap(short = "o", long = "object", default_value = "object.json")]
+                object: String,
+                /// Output file for proof JSON
+                #[clap(short = "r", long = "proof", default_value = "proof.json")]
+                proof: String,
+                /// Output file for public inputs JSON
+                #[clap(short = "i", long = "inputs", default_value = "inputs.json")]
+                inputs: String,
+            }
+
+            /// A subcommand for verifying a SNARK proof
+            #[derive(Clap)]
+            struct VerifyOpts {
+                /// Snark verification key
+                #[clap(short = "v", long = "vk", default_value = "verification_key.json")]
+                vk: String,
+                /// Proof JSON file
+                #[clap(short = "r", long = "proof", default_value = "proof.json")]
+                proof: String,
+                /// Public inputs JSON file
+                #[clap(short = "i", long = "inputs", default_value = "inputs.json")]
+                inputs: String,
+            }
+
+            /// A subcommand for generating a trusted setup parameters
+            #[derive(Clap)]
+            struct SetupOpts {
+                /// Snark trusted setup parameters file
+                #[clap(short = "p", long = "params", default_value = "params.bin")]
+                params: String,
+                /// Snark verifying key file
+                #[clap(short = "v", long = "vk", default_value = "verification_key.json")]
+                vk: String,
+            }
+
+            /// A subcommand for generating a Solidity verifier smart contract
+            #[derive(Clap)]
+            struct GenerateVerifierOpts {
+                /// Snark verification key
+                #[clap(short = "v", long = "vk", default_value = "verification_key.json")]
+                vk: String,
+                /// Output smart contract name
+                #[clap(short = "s", long = "solidity", default_value = "verifier.sol")]
+                solidity: String,
+            }
+
+            #[derive(Clap)]
+            struct GenerateTestDataOpts {
+                /// Input object JSON file
+                #[clap(short = "o", long = "object", default_value = "object.json")]
+                object: String
+            }
+
+                
+            
+            struct CircuitObject {
+                p:Option<$cir_pub>,
+                s:Option<$cir_sec>
+            }
+
+            impl fawkes_crypto::core::cs::Circuit for CircuitObject  {
+                type F = Fr;
+                fn synthesize<CS: fawkes_crypto::core::cs::ConstraintSystem<F=pairing::bn256::Fr>>(
+                    &self,
+                    cs: &CS
+                ) {
+                    let p = $ccir_pub::alloc(cs, self.p.as_ref());
+                    let s = $ccir_sec::alloc(cs, self.s.as_ref());
+                    $cir_main(&p, &s, &$cir_params);
+                    p.inputize();
+                }
+            
+                fn get_inputs(&self) -> Option<Vec<Num<Self::F>>> {
+                    let ref cs = TestCS::new();
+                    let p = $ccir_pub::alloc(cs, self.p.as_ref());
+                    p.linearize().iter().map(|e|e.get_value()).collect()
                 }
             }
-        }
+
+            impl Default for CircuitObject {
+                fn default() -> Self {
+                    Self {
+                        p: None,
+                        s: None
+                    }
+                }
+            }
+
+
+
+            fn cli_setup(o:SetupOpts) {
+                let params = generate_keys::<Bn256, CircuitObject>();
+                let vk_data_str = serde_json::to_string_pretty(&truncate_verifying_key(&params.vk).into_data()).unwrap();
+                params.write(File::create(o.params).unwrap()).unwrap();
+                std::fs::write(o.vk, &vk_data_str.into_bytes()).unwrap();
+                println!("setup OK");
+            }
         
-    }
+            fn cli_generate_verifier(o: GenerateVerifierOpts) {
+                let vk_str = std::fs::read_to_string(o.vk).unwrap();
+                let vk :TruncatedVerifyingKeyData<Fq> = serde_json::from_str(&vk_str).unwrap();
+                let sol_str = generate_sol_data(&vk);
+                File::create(o.solidity).unwrap().write(&sol_str.into_bytes()).unwrap();
+                println!("solidity verifier generated")
+            }
+        
+            fn cli_verify(o:VerifyOpts) {
+                let vk_str = std::fs::read_to_string(o.vk).unwrap();
+                let proof_str = std::fs::read_to_string(o.proof).unwrap();
+                let public_inputs_str = std::fs::read_to_string(o.inputs).unwrap();
+        
+                let vk = TruncatedVerifyingKey::<Bn256>::from_data(&serde_json::from_str(&vk_str).unwrap());
+                let proof = Proof::<Bn256>::from_data(&serde_json::from_str(&proof_str).unwrap());
+                let public_inputs = serde_json::from_str::<Vec<Num<Fr>>>(&public_inputs_str).unwrap().into_iter().map(|e| e.into_inner()).collect::<Vec<_>>();
+        
+                println!("Verify result is {}.", verify(&vk, &proof, &public_inputs).unwrap_or(false))
+            }
+        
+            fn cli_generate_test_data(o:GenerateTestDataOpts) {
+                let data = $test_data();
+                let data_str = serde_json::to_string_pretty(&data).unwrap();
+                std::fs::write(o.object, &data_str.into_bytes()).unwrap();
+                println!("Test data generated")
+        
+            }
+        
+            fn cli_prove(o:ProveOpts) {
+                let params = Parameters::<Bn256>::read(File::open(o.params).unwrap(), false).unwrap();
+                let object_str = std::fs::read_to_string(o.object).unwrap();
+        
+                let (p, s) = serde_json::from_str::<($cir_pub, $cir_sec)>(&object_str).unwrap();
+                let c = CircuitObject {p:Some(p), s:Some(s)};
+                let proof = prove(&c, &params);
+                let inputs = c.get_inputs().unwrap();
+        
+                let proof_str = serde_json::to_string_pretty(&proof.into_data()).unwrap();
+                let inputs_str = serde_json::to_string_pretty(&inputs).unwrap();
+        
+                std::fs::write(o.proof, &proof_str.into_bytes()).unwrap();
+                std::fs::write(o.inputs, &inputs_str.into_bytes()).unwrap();
+                
+                println!("Proved")
+            }
+        
+        
+            pub fn cli_main() {
+                let opts: Opts = Opts::parse();
+                match opts.command {
+                    SubCommand::Prove(o) => cli_prove(o),
+                    SubCommand::Verify(o) => cli_verify(o),
+                    SubCommand::Setup(o) => cli_setup(o),
+                    SubCommand::GenerateVerifier(o) => cli_generate_verifier(o),
+                    SubCommand::GenerateTestData(o) => cli_generate_test_data(o)
+                }    
+            }
+        }
+    }    
 }
+
