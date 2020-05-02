@@ -1,6 +1,6 @@
 [package]
 name = "fawkes-crypto"
-version = "2.1.0"
+version = "2.1.1"
 authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
 description = "zk-SNARK circuit building framework"
 readme = "README.md"
@@ -19,7 +19,7 @@ num = "0.2.1"
 linked-list = "0.0.3"
 getrandom = "=0.1"
 typenum = "=1.12.0"
-fawkes-crypto_derive = {version="0.1.1", path = "./fawkes-crypto_derive"}
+fawkes-crypto_derive = {version="0.1.2", path = "./fawkes-crypto_derive"}
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 lazy_static = "1.4.0"
