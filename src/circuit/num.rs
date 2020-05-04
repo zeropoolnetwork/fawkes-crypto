@@ -219,8 +219,8 @@ impl<'a, CS:ConstraintSystem> CNum<'a, CS> {
         }
     }
 
-    pub fn into_bool(self) -> CBool<'a, CS> {
-        CBool(self)
+    pub fn into_bool(&self) -> CBool<'a, CS> {
+        CBool(self.clone())
     }
 
     pub fn assert_bit(&self) {

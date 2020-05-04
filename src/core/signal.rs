@@ -109,3 +109,65 @@ impl <'a, CS:'a+ConstraintSystem, T:Signal<'a, CS>, L:Unsigned> Signal<'a, CS> f
 
 }
 
+
+
+
+#[impl_for_tuples(1,17)]
+impl <'a, CS:'a+ConstraintSystem> Signal<'a, CS> for Tuple {
+
+    for_tuples!( type Value = ( #( Tuple::Value ),* ); );
+
+    fn get_value(&self) -> Option<Self::Value> {
+        Some((for_tuples!( #( self.Tuple.get_value()?),* )))
+    }
+
+    fn switch(&self, bit: &CBool<'a, CS>, if_else: &Self) -> Self {
+        (for_tuples!( #(self.Tuple.switch(bit, &if_else.Tuple) ),* ))
+    }
+
+
+    fn get_cs(&self) -> &'a CS {
+        self.0.get_cs()
+    }
+
+    fn from_const(cs:&'a CS, value: &Self::Value) -> Self {
+        (for_tuples!( #( Tuple::from_const(cs, &value.Tuple)),* ))
+    }
+
+    fn as_const(&self) -> Option<Self::Value> {
+        Some((for_tuples!( #( self.Tuple.as_const()?),* )))
+    }
+
+
+    fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self {
+        match value {
+            Some(value) => (for_tuples!( #( Tuple::alloc(cs, Some(&value.Tuple) )),* )),
+            _ =>  (for_tuples!( #( Tuple::alloc(cs, None)),* ))
+        }
+    }
+
+    fn assert_const(&self, value: &Self::Value) {
+        for_tuples!( #(self.Tuple.assert_const(&value.Tuple); )* );
+    }
+
+    fn inputize(&self) {
+        for_tuples!( #(self.Tuple.inputize(); )* );
+    }
+    
+    fn assert_eq(&self, other: &Self) {
+        for_tuples!( #(self.Tuple.assert_eq(&other.Tuple); )* );
+    }
+
+    fn is_eq(&self, other:&Self) -> CBool<'a, CS> {
+        let mut acc = CNum::one(self.get_cs());
+        for_tuples!( #(acc *= self.Tuple.is_eq(&other.Tuple).into_num(); )* );
+        acc.into_bool()
+
+    }
+
+
+    fn linearize_builder(&self, acc: &mut Vec<CNum<'a, CS>>) {
+        for_tuples!( #( self.Tuple.linearize_builder(acc); )* );
+    }
+
+}

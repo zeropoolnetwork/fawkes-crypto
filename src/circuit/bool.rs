@@ -61,6 +61,10 @@ impl <'a, CS:ConstraintSystem> CBool<'a, CS> {
     pub fn if_else<T:Signal<'a, CS>>(&self, if_true:&T, if_false:&T) -> T{
         if_true.switch(self, if_false)
     }
+
+    pub fn into_num(&self) -> CNum<'a, CS> {
+        self.0.clone()
+    }
     
     #[inline]
     pub fn assert(&self) {
