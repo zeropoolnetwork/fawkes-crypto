@@ -31,18 +31,19 @@ pub struct MontgomeryPoint<F:Field> {
 }
 
 
-pub trait JubJubParams<Fr:Field>: Sized+Clone {
+pub trait JubJubParams: Sized+Clone {
+    type Fr: Field;
     type Fs: Field;
 
-    fn edwards_g(&self) -> &EdwardsPoint<Fr>;
+    fn edwards_g(&self) -> &EdwardsPoint<Self::Fr>;
 
-    fn edwards_d(&self) -> Num<Fr>;
+    fn edwards_d(&self) -> Num<Self::Fr>;
 
-    fn montgomery_a(&self) -> Num<Fr>;
+    fn montgomery_a(&self) -> Num<Self::Fr>;
 
-    fn montgomery_b(&self) -> Num<Fr>;
+    fn montgomery_b(&self) -> Num<Self::Fr>;
 
-    fn montgomery_u(&self) -> Num<Fr>;
+    fn montgomery_u(&self) -> Num<Self::Fr>;
 }
 
 #[derive(Clone)]
@@ -82,7 +83,8 @@ impl JubJubBN256 {
 
 
 
-impl JubJubParams<Fr> for JubJubBN256 {
+impl JubJubParams for JubJubBN256 {
+    type Fr = Fr;
     type Fs = Fs;
 
     fn edwards_g(&self) -> &EdwardsPoint<Fr> {
@@ -118,7 +120,7 @@ impl<F: Field> PartialEq for EdwardsPointEx<F> {
 
 impl <F: Field> EdwardsPoint<F> {
 
-    pub fn get_for_y<J: JubJubParams<F>>(y: Num<F>, sign: bool, params: &J) -> Option<Self>
+    pub fn get_for_y<J: JubJubParams<Fr=F>>(y: Num<F>, sign: bool, params: &J) -> Option<Self>
     {
         let y2 = y.square();
         
@@ -131,7 +133,7 @@ impl <F: Field> EdwardsPoint<F> {
         })
     }
 
-    pub fn subgroup_decompress<J: JubJubParams<F>>(x: Num<F>, params: &J) -> Option<Self>
+    pub fn subgroup_decompress<J: JubJubParams<Fr=F>>(x: Num<F>, params: &J) -> Option<Self>
     {
         let x2 = x.square();
         let t = ((x2 + Num::one()) / (Num::one() - params.edwards_d()*x2 )).sqrt();
@@ -152,7 +154,7 @@ impl <F: Field> EdwardsPoint<F> {
         }
     }
 
-    pub fn rand<R: Rng, J: JubJubParams<F>>(rng: &mut R, params: &J) -> Self
+    pub fn rand<R: Rng, J: JubJubParams<Fr=F>>(rng: &mut R, params: &J) -> Self
     {
         loop {
             if let Some(p) = Self::get_for_y(rng.gen(), rng.gen(), params) {
@@ -190,7 +192,7 @@ impl <F: Field> EdwardsPoint<F> {
 
 
     // assume t!= -1
-    pub fn from_scalar<J: JubJubParams<F>>(t:Num<F>, params: &J) -> Self {
+    pub fn from_scalar<J: JubJubParams<Fr=F>>(t:Num<F>, params: &J) -> Self {
         Self::from_scalar_raw(t, params.montgomery_a(), params.montgomery_b(), params.montgomery_u())
     }
 
@@ -205,11 +207,11 @@ impl <F: Field> EdwardsPoint<F> {
         *self == Self::zero()
     }
 
-    pub fn mul<J: JubJubParams<F>>(&self, scalar: Num<J::Fs>,params: &J) -> Self {
+    pub fn mul<J: JubJubParams<Fr=F>>(&self, scalar: Num<J::Fs>,params: &J) -> Self {
         self.into_extended().mul(scalar, params).into_affine()
     }
     
-    pub fn add<J: JubJubParams<F>>(&self, other: &Self, params:&J) -> Self {
+    pub fn add<J: JubJubParams<Fr=F>>(&self, other: &Self, params:&J) -> Self {
         self.into_extended().add(&other.into_extended(), params).into_affine()
     }
 
@@ -222,7 +224,7 @@ impl <F: Field> EdwardsPoint<F> {
     }
 
 
-    pub fn is_in_curve<J: JubJubParams<F>>(&self, params: &J) -> bool
+    pub fn is_in_curve<J: JubJubParams<Fr=F>>(&self, params: &J) -> bool
     {
         // check that a point is on curve
         // y^2 - x^2 = 1 + d * x^2 * y^2
@@ -274,7 +276,7 @@ impl <F: Field> MontgomeryPoint<F> {
 
 
 impl <F: Field> EdwardsPointEx<F> {
-    pub fn is_in_curve<J: JubJubParams<F>>(&self, params: &J) -> bool
+    pub fn is_in_curve<J: JubJubParams<Fr=F>>(&self, params: &J) -> bool
     {
         // check that a point is on curve
         // Y^2 - X^2 = Z^2 + d * T^2
@@ -350,7 +352,7 @@ impl <F: Field> EdwardsPointEx<F> {
     }
 
     
-    pub fn add<J: JubJubParams<F>>(&self, other: &Self, params:&J) -> Self
+    pub fn add<J: JubJubParams<Fr=F>>(&self, other: &Self, params:&J) -> Self
     {
         // See "Twisted Edwards Curves Revisited"
         //     Huseyin Hisil, Kenneth Koon-Ho Wong, Gary Carter, and Ed Dawson
@@ -372,12 +374,12 @@ impl <F: Field> EdwardsPointEx<F> {
         EdwardsPointEx {x: x3, y: y3, t: t3, z: z3}
     }
 
-    pub fn is_in_subgroup<J:JubJubParams<F>>(&self, params: &J) -> bool {
+    pub fn is_in_subgroup<J:JubJubParams<Fr=F>>(&self, params: &J) -> bool {
         self.mul_raw(J::Fs::char(), params).is_zero()
     }
 
 
-    fn mul_raw<S: AsRef<[u64]>, J: JubJubParams<F>>(
+    fn mul_raw<S: AsRef<[u64]>, J: JubJubParams<Fr=F>>(
         &self,
         scalar: S,
         params: &J
@@ -397,7 +399,7 @@ impl <F: Field> EdwardsPointEx<F> {
         res
     }
 
-    pub fn mul<J: JubJubParams<F>>(
+    pub fn mul<J: JubJubParams<Fr=F>>(
         &self,
         scalar: Num<J::Fs>,
         params: &J

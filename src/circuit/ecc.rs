@@ -28,7 +28,7 @@ pub struct CMontgomeryPoint<'a, CS: ConstraintSystem> {
 
 impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
 
-    pub fn double<J:JubJubParams<CS::F>>(&self, params: &J) -> Self{
+    pub fn double<J:JubJubParams<Fr=CS::F>>(&self, params: &J) -> Self{
         let v = &self.x * &self.y;
         let v2 = v.square();
         let u = (&self.x + &self.y).square();
@@ -38,13 +38,13 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
         }
     }
 
-    pub fn mul_by_cofactor<J:JubJubParams<CS::F>>(&self, params: &J) -> Self {
+    pub fn mul_by_cofactor<J:JubJubParams<Fr=CS::F>>(&self, params: &J) -> Self {
         self.double(params).double(params).double(params)
     }
 
 
 
-    pub fn add<J:JubJubParams<CS::F>>(&self, p: &Self, params: &J) -> Self {
+    pub fn add<J:JubJubParams<Fr=CS::F>>(&self, p: &Self, params: &J) -> Self {
         let v1 = &self.x * &p.y;
         let v2 = &p.x * &self.y;
         let v12 = &v1 * &v2;
@@ -55,13 +55,13 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
         }
     }
 
-    pub fn assert_in_curve<J:JubJubParams<CS::F>>(&self, params: &J) {
+    pub fn assert_in_curve<J:JubJubParams<Fr=CS::F>>(&self, params: &J) {
         let x2 = self.x.square();
         let y2 = self.y.square();
         x2.cs.enforce(&(params.edwards_d()*&x2), &y2, &(&y2-&x2-Num::one()));
     }
 
-    pub fn assert_in_subgroup<J:JubJubParams<CS::F>>(&self, params: &J) {
+    pub fn assert_in_subgroup<J:JubJubParams<Fr=CS::F>>(&self, params: &J) {
         let preimage_value = self.get_value().map(|p| p.mul(num!(8).inverse(), params));
         let preimage = self.derive_alloc::<Self>(preimage_value.as_ref()); 
         preimage.assert_in_curve(params);
@@ -71,7 +71,7 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
         (&self.y - &preimage8.y).assert_zero();
     }
 
-    pub fn subgroup_decompress<J:JubJubParams<CS::F>>(x:&CNum<'a, CS>, params: &J) -> Self {
+    pub fn subgroup_decompress<J:JubJubParams<Fr=CS::F>>(x:&CNum<'a, CS>, params: &J) -> Self {
         let preimage_value = x.get_value()
             .map(|x| EdwardsPoint::subgroup_decompress(x, params)
             .unwrap_or(params.edwards_g().clone()).mul(num!(8).inverse(), params));
@@ -90,8 +90,8 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
     }
 
     // assume subgroup point, bits
-    pub fn mul<J:JubJubParams<CS::F>>(&self, bits:&[CBool<'a, CS>], params: &J) -> Self {
-        fn gen_table<F:Field, J:JubJubParams<F>>(p: &EdwardsPointEx<F>, params: &J) -> Vec<Vec<Num<F>>> {
+    pub fn mul<J:JubJubParams<Fr=CS::F>>(&self, bits:&[CBool<'a, CS>], params: &J) -> Self {
+        fn gen_table<F:Field, J:JubJubParams<Fr=F>>(p: &EdwardsPointEx<F>, params: &J) -> Vec<Vec<Num<F>>> {
             let mut x_col = vec![];
             let mut y_col = vec![];
             let mut q = p.clone();
@@ -177,13 +177,13 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
     }
 
     // assuming t!=-1
-    pub fn from_scalar<J:JubJubParams<CS::F>>(t:&CNum<'a, CS>, params: &J) -> Self {
+    pub fn from_scalar<J:JubJubParams<Fr=CS::F>>(t:&CNum<'a, CS>, params: &J) -> Self {
 
         fn filter_even<F:Field>(x:Num<F>) -> Num<F> {
             if x.is_even() {x} else {-x}
         }
 
-        fn check_and_get_y<'a, CS:ConstraintSystem, J:JubJubParams<CS::F>>(x:&CNum<'a, CS>, params: &J) -> (CBool<'a, CS>, CNum<'a, CS>) {
+        fn check_and_get_y<'a, CS:ConstraintSystem, J:JubJubParams<Fr=CS::F>>(x:&CNum<'a, CS>, params: &J) -> (CBool<'a, CS>, CNum<'a, CS>) {
             let g = (x.square()*(x+params.montgomery_a())+x) / params.montgomery_b();
 
             let preimage_value = g.get_value().map(|g| {
@@ -228,7 +228,7 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
 
 impl<'a, CS: ConstraintSystem> CMontgomeryPoint<'a, CS> {
     // assume self != (0, 0)
-    pub fn double<J:JubJubParams<CS::F>>(&self, params: &J) -> Self {
+    pub fn double<J:JubJubParams<Fr=CS::F>>(&self, params: &J) -> Self {
         let x2 = self.x.square();
         let l = (num!(3)*&x2 + num!(2)*params.montgomery_a()*&self.x + Num::one()) / (num!(2)*params.montgomery_b() * &self.y);
         let b_l2 = params.montgomery_b()*&l.square();
@@ -241,7 +241,7 @@ impl<'a, CS: ConstraintSystem> CMontgomeryPoint<'a, CS> {
     }
 
     // assume self != p
-    pub fn add<J:JubJubParams<CS::F>>(&self, p: &Self, params: &J) -> Self {
+    pub fn add<J:JubJubParams<Fr=CS::F>>(&self, p: &Self, params: &J) -> Self {
         let l = (&p.y - &self.y) / (&p.x - &self.x);
         let b_l2 = params.montgomery_b()*&l.square();
         let a = params.montgomery_a();

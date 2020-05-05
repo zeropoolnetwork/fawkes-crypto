@@ -12,7 +12,7 @@ use crate::core::field::{PrimeField};
 
 
 
-pub fn c_eddsaposeidon_verify<'a, CS: ConstraintSystem, J:JubJubParams<CS::F>>(
+pub fn c_eddsaposeidon_verify<'a, CS: ConstraintSystem, J:JubJubParams<Fr=CS::F>>(
     s: &CNum<'a, CS>,
     r: &CNum<'a, CS>,
     a: &CNum<'a, CS>,

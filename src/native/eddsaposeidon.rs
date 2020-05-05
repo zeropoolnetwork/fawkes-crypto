@@ -27,7 +27,7 @@ fn hash_ram<F: Field>(
     poseidon_with_salt(&[r, a, m], SEED_EDDSA_POSEIDON, poseidon_params)
 }
 
-pub fn eddsaposeidon_sign<Fr:Field, J:JubJubParams<Fr>>(
+pub fn eddsaposeidon_sign<Fr:Field, J:JubJubParams<Fr=Fr>>(
     sk: Num<J::Fs>,
     m: Num<Fr>,
     poseidon_params: &PoseidonParams<Fr>,
@@ -41,7 +41,7 @@ pub fn eddsaposeidon_sign<Fr:Field, J:JubJubParams<Fr>>(
 }
 
 
-pub fn eddsaposeidon_verify<Fr:Field, J:JubJubParams<Fr>>(
+pub fn eddsaposeidon_verify<Fr:Field, J:JubJubParams<Fr=Fr>>(
     s: Num<J::Fs>,
     r: Num<Fr>,
     a: Num<Fr>,
