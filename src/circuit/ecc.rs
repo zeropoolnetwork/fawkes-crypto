@@ -7,7 +7,7 @@ use crate::circuit::bool::{CBool};
 use crate::native::ecc::{JubJubParams, EdwardsPoint, EdwardsPointEx, MontgomeryPoint};
 use crate::native::num::Num;
 
-use ff::{PrimeField};
+use crate::core::field::{Field};
 
 
 #[derive(Clone, Signal)]
@@ -91,7 +91,7 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
 
     // assume subgroup point, bits
     pub fn mul<J:JubJubParams<CS::F>>(&self, bits:&[CBool<'a, CS>], params: &J) -> Self {
-        fn gen_table<F:PrimeField, J:JubJubParams<F>>(p: &EdwardsPointEx<F>, params: &J) -> Vec<Vec<Num<F>>> {
+        fn gen_table<F:Field, J:JubJubParams<F>>(p: &EdwardsPointEx<F>, params: &J) -> Vec<Vec<Num<F>>> {
             let mut x_col = vec![];
             let mut y_col = vec![];
             let mut q = p.clone();
@@ -179,7 +179,7 @@ impl<'a, CS: ConstraintSystem> CEdwardsPoint<'a, CS> {
     // assuming t!=-1
     pub fn from_scalar<J:JubJubParams<CS::F>>(t:&CNum<'a, CS>, params: &J) -> Self {
 
-        fn filter_even<F:PrimeField>(x:Num<F>) -> Num<F> {
+        fn filter_even<F:Field>(x:Num<F>) -> Num<F> {
             if x.is_even() {x} else {-x}
         }
 

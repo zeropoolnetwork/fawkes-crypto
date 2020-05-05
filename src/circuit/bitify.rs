@@ -1,7 +1,5 @@
 
-use ff::{
-    PrimeField
-};
+use crate::core::field::{PrimeField};
 
 use crate::circuit::num::{CNum};
 use crate::circuit::bool::{CBool};

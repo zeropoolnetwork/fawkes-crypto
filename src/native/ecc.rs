@@ -1,19 +1,15 @@
-use ff::{Field, PrimeField, SqrtField, PrimeFieldRepr};
+
 use bellman::pairing::BitIterator;
 use rand::{Rng};
 use bellman::pairing::bn256::{Fr};
 use crate::native::num::Num;
 use crate::constants::SEED_EDWARDS_G;
-
-#[derive(PrimeField)]
-#[PrimeFieldModulus = "2736030358979909402780800718157159386076813972158567259200215660948447373041"]
-#[PrimeFieldGenerator = "7"]
-pub struct Fs(FsRepr);
+use crate::core::field::{Field, Fs, PrimeField, PrimeFieldRepr};
 
 
 
 #[derive(Clone, Copy, Debug)]
-pub struct EdwardsPointEx<F:PrimeField> {
+pub struct EdwardsPointEx<F:Field> {
     pub x: Num<F>,
     pub y: Num<F>,
     pub t: Num<F>,
@@ -22,21 +18,21 @@ pub struct EdwardsPointEx<F:PrimeField> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(bound(serialize="", deserialize=""))]
-pub struct EdwardsPoint<F:PrimeField> {
+pub struct EdwardsPoint<F:Field> {
     pub x: Num<F>,
     pub y: Num<F>
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(bound(serialize="", deserialize=""))]
-pub struct MontgomeryPoint<F:PrimeField> {
+pub struct MontgomeryPoint<F:Field> {
     pub x: Num<F>,
     pub y: Num<F>
 }
 
 
-pub trait JubJubParams<Fr:PrimeField>: Sized+Clone {
-    type Fs: PrimeField;
+pub trait JubJubParams<Fr:Field>: Sized+Clone {
+    type Fs: Field;
 
     fn edwards_g(&self) -> &EdwardsPoint<Fr>;
 
@@ -114,13 +110,90 @@ impl JubJubParams<Fr> for JubJubBN256 {
 
 
 
-impl<F: PrimeField> PartialEq for EdwardsPointEx<F> {
+impl<F: Field> PartialEq for EdwardsPointEx<F> {
     fn eq(&self, other: &Self) -> bool {
         self.x * other.z == other.x * self.z && self.y * other.z == other.y * self.z
     }
 }
 
-impl <F: PrimeField> EdwardsPoint<F> {
+impl <F: Field> EdwardsPoint<F> {
+
+    pub fn get_for_y<J: JubJubParams<F>>(y: Num<F>, sign: bool, params: &J) -> Option<Self>
+    {
+        let y2 = y.square();
+        
+        ((y2 - Num::one()) / (params.edwards_d()*y2 + Num::one())).sqrt().map(|x| {
+            if x.into_inner().into_repr().is_odd() != sign {
+                Self {x:-x, y}
+            } else {
+                Self {x, y}
+            }
+        })
+    }
+
+    pub fn subgroup_decompress<J: JubJubParams<F>>(x: Num<F>, params: &J) -> Option<Self>
+    {
+        let x2 = x.square();
+        let t = ((x2 + Num::one()) / (Num::one() - params.edwards_d()*x2 )).sqrt();
+        match t {
+            Some(y) => {
+                let EdwardsPoint {x:lx, y:ly} = EdwardsPoint{x, y}.into_extended().mul_raw(J::Fs::char(), params).into_affine();
+                if lx.is_zero() {
+                    if ly == Num::one() {
+                        Some(Self{x, y})
+                    } else {
+                        Some(Self{x, y:-y})
+                    }
+                } else {
+                    None
+                }
+            },
+            None => None
+        }
+    }
+
+    pub fn rand<R: Rng, J: JubJubParams<F>>(rng: &mut R, params: &J) -> Self
+    {
+        loop {
+            if let Some(p) = Self::get_for_y(rng.gen(), rng.gen(), params) {
+                return p;
+            }
+        }
+    }
+
+    fn from_scalar_raw(t:Num<F>, montgomery_a:Num<F>, montgomery_b:Num<F>, montgomery_u:Num<F>) -> Self {
+        fn g<F:Field>(x:Num<F>, montgomery_a:Num<F>, montgomery_b:Num<F>) -> Num<F> {
+            (x.square()*(x+montgomery_a)+x) / montgomery_b
+        }
+
+        fn filter_even<F:Field>(x:Num<F>) -> Num<F> {
+            if x.is_even() {x} else {-x}
+        }
+
+        let t = t + Num::one();
+        let t2g1 = t.square()*montgomery_u;
+
+        
+        let x2 = - Num::one()/montgomery_a * (Num::one() + t2g1.inverse());
+
+        let (mx, my) = match g(x2, montgomery_a, montgomery_b).sqrt() {
+            Some(y2) => (x2, filter_even(y2)),
+            _ => {
+                let x3 = x2*t2g1;
+                let y3 = g(x3, montgomery_a, montgomery_b).sqrt().unwrap();
+                (x3, filter_even(y3))
+            }
+        };
+
+        MontgomeryPoint{x:mx, y:my}.into_extended().mul_by_cofactor().into_affine()
+    }
+
+
+    // assume t!= -1
+    pub fn from_scalar<J: JubJubParams<F>>(t:Num<F>, params: &J) -> Self {
+        Self::from_scalar_raw(t, params.montgomery_a(), params.montgomery_b(), params.montgomery_u())
+    }
+
     pub fn zero() -> Self {
         Self {
             x: Num::zero(),
@@ -182,7 +255,7 @@ impl <F: PrimeField> EdwardsPoint<F> {
     }
 }
 
-impl <F: PrimeField> MontgomeryPoint<F> {
+impl <F: Field> MontgomeryPoint<F> {
     pub fn into_affine(&self) -> EdwardsPoint<F> {
         if self.x.is_zero() {
             EdwardsPoint {x:Num::zero(), y:-Num::one()}
@@ -198,86 +271,9 @@ impl <F: PrimeField> MontgomeryPoint<F> {
     }
 }
 
-impl <F: PrimeField+SqrtField> EdwardsPoint<F> {
-    pub fn get_for_y<J: JubJubParams<F>>(y: Num<F>, sign: bool, params: &J) -> Option<Self>
-    {
-        let y2 = y.square();
-        
-        ((y2 - Num::one()) / (params.edwards_d()*y2 + Num::one())).sqrt().map(|x| {
-            if x.into_inner().into_repr().is_odd() != sign {
-                Self {x:-x, y}
-            } else {
-                Self {x, y}
-            }
-        })
-    }
-
-    pub fn subgroup_decompress<J: JubJubParams<F>>(x: Num<F>, params: &J) -> Option<Self>
-    {
-        let x2 = x.square();
-        let t = ((x2 + Num::one()) / (Num::one() - params.edwards_d()*x2 )).sqrt();
-        match t {
-            Some(y) => {
-                let EdwardsPoint {x:lx, y:ly} = EdwardsPoint{x, y}.into_extended().mul_raw(J::Fs::char(), params).into_affine();
-                if lx.is_zero() {
-                    if ly == Num::one() {
-                        Some(Self{x, y})
-                    } else {
-                        Some(Self{x, y:-y})
-                    }
-                } else {
-                    None
-                }
-            },
-            None => None
-        }
-    }
-
-    pub fn rand<R: Rng, J: JubJubParams<F>>(rng: &mut R, params: &J) -> Self
-    {
-        loop {
-            if let Some(p) = Self::get_for_y(rng.gen(), rng.gen(), params) {
-                return p;
-            }
-        }
-    }
-
-    fn from_scalar_raw(t:Num<F>, montgomery_a:Num<F>, montgomery_b:Num<F>, montgomery_u:Num<F>) -> Self {
-        fn g<F:PrimeField+SqrtField>(x:Num<F>, montgomery_a:Num<F>, montgomery_b:Num<F>) -> Num<F> {
-            (x.square()*(x+montgomery_a)+x) / montgomery_b
-        }
-
-        fn filter_even<F:PrimeField>(x:Num<F>) -> Num<F> {
-            if x.is_even() {x} else {-x}
-        }
-
-        let t = t + Num::one();
-        let t2g1 = t.square()*montgomery_u;
-
-        
-        let x2 = - Num::one()/montgomery_a * (Num::one() + t2g1.inverse());
-
-        let (mx, my) = match g(x2, montgomery_a, montgomery_b).sqrt() {
-            Some(y2) => (x2, filter_even(y2)),
-            _ => {
-                let x3 = x2*t2g1;
-                let y3 = g(x3, montgomery_a, montgomery_b).sqrt().unwrap();
-                (x3, filter_even(y3))
-            }
-        };
-
-        MontgomeryPoint{x:mx, y:my}.into_extended().mul_by_cofactor().into_affine()
-    }
 
 
-    // assume t!= -1
-    pub fn from_scalar<J: JubJubParams<F>>(t:Num<F>, params: &J) -> Self {
-        Self::from_scalar_raw(t, params.montgomery_a(), params.montgomery_b(), params.montgomery_u())
-    }
-}
-
-
-impl <F: PrimeField> EdwardsPointEx<F> {
+impl <F: Field> EdwardsPointEx<F> {
     pub fn is_in_curve<J: JubJubParams<F>>(&self, params: &J) -> bool
     {
         // check that a point is on curve

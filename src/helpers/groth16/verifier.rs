@@ -5,7 +5,8 @@ use pairing::{
     EncodedPoint
 };
 
-use ff::{PrimeField, Field};
+use crate::core::field::{Field, PrimeField, AbstractField};
+
 
 use bellman::groth16::{
     VerifyingKey
@@ -26,7 +27,7 @@ use super::prover::Proof;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(bound(serialize="", deserialize=""))]
-pub struct TruncatedVerifyingKeyData<F:PrimeField> {
+pub struct TruncatedVerifyingKeyData<F:Field> {
     pub alpha_g1: G1PointData<F>,
     pub beta_g2: G2PointData<F>,
     pub gamma_g2: G2PointData<F>,

@@ -1,6 +1,4 @@
-use ff::{
-    PrimeField, SqrtField
-};
+use crate::core::field::Field;
 
 use blake2_rfc::blake2s::Blake2s;
 use crate::native::num::Num;
@@ -10,7 +8,7 @@ use crate::native::ecc::{EdwardsPoint, JubJubParams};
 use crate::native::poseidon::{PoseidonParams, poseidon_with_salt};
 use crate::constants::{PERSONALIZATION, SEED_EDDSA_POSEIDON};
 
-fn hash_r<Fr:PrimeField, Fs:PrimeField>(
+fn hash_r<Fr:Field, Fs:Field>(
     sk: Num<Fs>,
     m: Num<Fr>,
 ) -> Num<Fs> {
@@ -20,7 +18,7 @@ fn hash_r<Fr:PrimeField, Fs:PrimeField>(
     Num::<Fs>::from_binary_be(h.finalize().as_ref())
 }
 
-fn hash_ram<F: PrimeField>(
+fn hash_ram<F: Field>(
     r:Num<F>,
     a:Num<F>,
     m:Num<F>,
@@ -29,7 +27,7 @@ fn hash_ram<F: PrimeField>(
     poseidon_with_salt(&[r, a, m], SEED_EDDSA_POSEIDON, poseidon_params)
 }
 
-pub fn eddsaposeidon_sign<Fr:PrimeField, J:JubJubParams<Fr>>(
+pub fn eddsaposeidon_sign<Fr:Field, J:JubJubParams<Fr>>(
     sk: Num<J::Fs>,
     m: Num<Fr>,
     poseidon_params: &PoseidonParams<Fr>,
@@ -43,7 +41,7 @@ pub fn eddsaposeidon_sign<Fr:PrimeField, J:JubJubParams<Fr>>(
 }
 
 
-pub fn eddsaposeidon_verify<Fr:PrimeField+SqrtField, J:JubJubParams<Fr>>(
+pub fn eddsaposeidon_verify<Fr:Field, J:JubJubParams<Fr>>(
     s: Num<J::Fs>,
     r: Num<Fr>,
     a: Num<Fr>,

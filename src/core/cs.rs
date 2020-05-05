@@ -1,12 +1,12 @@
 use crate::native::num::{Num};
-use ff::{PrimeField, SqrtField};
+use crate::core::field::Field;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::circuit::num::{CNum, Index};
 
 pub trait ConstraintSystem: Sized+Clone {
-    type F: PrimeField+SqrtField;
+    type F: Field;
 
     fn alloc(&self, value: Option<Num<Self::F>>) -> Index;
     fn alloc_input(&self, value: Option<Num<Self::F>>) -> Index;
@@ -15,7 +15,7 @@ pub trait ConstraintSystem: Sized+Clone {
 
 
 pub trait Circuit {
-    type F: PrimeField+SqrtField;
+    type F: Field;
 
     fn synthesize<CS: ConstraintSystem<F=Self::F>>(
         &self,
@@ -26,7 +26,7 @@ pub trait Circuit {
 }
 
 
-pub struct TestCS<F:PrimeField> {
+pub struct TestCS<F:Field> {
     pub ninputs:RefCell<usize>,
     pub naux:RefCell<usize>,
     pub ncons:RefCell<usize>,
@@ -34,7 +34,7 @@ pub struct TestCS<F:PrimeField> {
     f: std::marker::PhantomData<F>
 }
 
-impl<F:PrimeField> TestCS<F> {
+impl<F:Field> TestCS<F> {
     pub fn new() -> Self {
         Self {
             ninputs: RefCell::new(1),
@@ -50,7 +50,7 @@ impl<F:PrimeField> TestCS<F> {
     }
 }
 
-impl<F:PrimeField+SqrtField> Clone for TestCS<F> {
+impl<F:Field> Clone for TestCS<F> {
     fn clone(&self) -> Self {
         panic!("Clone is not implemented for TestCS")
     }
@@ -58,7 +58,7 @@ impl<F:PrimeField+SqrtField> Clone for TestCS<F> {
 
 
 
-impl<F:PrimeField+SqrtField> ConstraintSystem for TestCS<F> {
+impl<F:Field> ConstraintSystem for TestCS<F> {
     type F = F;
 
     fn alloc(&self, v: Option<Num<Self::F>>) -> Index {

@@ -6,7 +6,8 @@ use std::cell::RefCell;
 use crate::core::cs::{ConstraintSystem};
 use crate::native::num::Num;
 use crate::circuit::num::{CNum, Index};
-use ff::{Field, PrimeField};
+use crate::core::field::{Field, PrimeField, AbstractField};
+
 
 use bellman::{self, SynthesisError};
 use pairing::bn256::{Fq, FqRepr, Fq2, G1Affine, G2Affine};
@@ -42,13 +43,13 @@ lazy_static! {
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(bound(serialize="", deserialize=""))]
-pub struct G1PointData<F:PrimeField>(Num<F>, Num<F>);
+pub struct G1PointData<F:Field>(Num<F>, Num<F>);
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(bound(serialize="", deserialize=""))]
-pub struct G2PointData<F:PrimeField>((Num<F>, Num<F>), (Num<F>, Num<F>));
+pub struct G2PointData<F:Field>((Num<F>, Num<F>), (Num<F>, Num<F>));
 
-fn is_on_curve<F:Field>(x:F, y:F, is_zero:bool, b:&F) -> bool {
+fn is_on_curve<F:AbstractField>(x:F, y:F, is_zero:bool, b:&F) -> bool {
     if is_zero {
         true
     } else {

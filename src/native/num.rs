@@ -1,4 +1,5 @@
-use ff::{Field, SqrtField, PrimeField, PrimeFieldRepr, BitIterator};
+use ff::{BitIterator};
+use crate::core::field::{Field, PrimeField, PrimeFieldRepr};
 use num::bigint::{BigUint, BigInt, ToBigInt};
 use num::traits::Signed;
 use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssign};
@@ -18,19 +19,19 @@ use crate::constants::PERSONALIZATION;
 #[derive(Clone, Copy, Debug)]
 pub struct Num<T:Field>(pub T);
 
-impl<T:PrimeField> Serialize for Num<T> {
+impl<T:Field> Serialize for Num<T> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>{
         self.to_string().serialize(serializer)
     }
 }
 
-impl<T:PrimeField> ToString for Num<T> {
+impl<T:Field> ToString for Num<T> {
     fn to_string(&self) -> String {
         Into::<BigUint>::into(*self).to_string()
     }
 }
 
-impl<'de, T:PrimeField> Deserialize<'de> for Num<T> {
+impl<'de, T:Field> Deserialize<'de> for Num<T> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Num<T>, D::Error> {
         let bn = BigUint::from_str(&String::deserialize(deserializer)?).map_err(|_| de::Error::custom("Wrong number format"))?;
         
@@ -55,6 +56,66 @@ impl<T:Field> Rand for Num<T> {
 
 
 impl<T:Field> Num<T> {
+    #[inline]
+    pub fn sqrt(&self) -> Option<Self> {
+        self.0.sqrt().map(|x| Num(x))
+    }
+
+    fn num_bytes() -> usize {
+        ((T::NUM_BITS >> 3) + if T::NUM_BITS & 7 == 0 { 0 } else { 1 }) as usize
+    }
+
+    #[inline]
+    pub fn is_odd(&self) -> bool {
+        self.0.into_repr().is_odd()
+    }
+
+    #[inline]
+    pub fn is_even(&self) -> bool {
+        self.0.into_repr().is_even()
+    }
+
+    pub fn into_binary_be(&self) -> Vec<u8> {
+        let t_bytes = Self::num_bytes();
+        let mut buff = vec![0u8;t_bytes];
+        self.0.into_repr().write_be(&mut buff[..]).unwrap();
+        buff
+    }
+
+    pub fn from_binary_be(blob: &[u8]) -> Self {
+        let x = BigUint::from_bytes_be(blob); 
+        Num::from(x)       
+    }
+
+    pub fn from_other<G:Field>(n: Num<G>) -> Self {
+        let g_bytes = Num::<G>::num_bytes();
+        let mut buff = vec![0u8;g_bytes];
+        n.0.into_repr().write_be(&mut buff[..]).unwrap();
+        Self::from_binary_be(buff.as_ref())
+    }
+
+    pub fn into_other<G:Field>(&self) -> Num<G> {
+        let self_bytes = Self::num_bytes();
+        let mut buff = vec![0u8;self_bytes];
+        self.0.into_repr().write_be(&mut buff[..]).unwrap();
+        Num::<G>::from_binary_be(buff.as_ref())
+    }
+
+    pub fn from_seed(blob: &[u8]) -> Self {
+        let mut h = Blake2s::with_params(Self::num_bytes(), &[], &[], PERSONALIZATION);
+        h.update(blob);
+        Self::from_binary_be(h.finalize().as_ref())
+    }
+    
+    pub fn iterbit_be(&self) -> BitIterator<<T as PrimeField>::Repr> {
+        BitIterator::new(self.into_inner().into_repr())
+    }
+
+    pub fn iterbit_le(&self) -> BitIteratorLE<<T as PrimeField>::Repr> {
+        BitIteratorLE::new(self.into_inner().into_repr())
+    }
+
+
     #[inline]
     pub fn new(f:T) -> Self {
         Num(f)
@@ -116,13 +177,6 @@ impl<T:Field> Num<T> {
  
 }
 
-impl<T:SqrtField> Num<T> {
-    #[inline]
-    pub fn sqrt(&self) -> Option<Self> {
-        self.0.sqrt().map(|x| Num(x))
-    }
-}
-
 
 #[derive(Debug, Clone)]
 pub struct BitIteratorLE<E> {
@@ -157,66 +211,10 @@ impl<E: AsRef<[u64]>> Iterator for BitIteratorLE<E> {
 
 
 
-impl<T:PrimeField> Num<T> {
-    fn num_bytes() -> usize {
-        ((T::NUM_BITS >> 3) + if T::NUM_BITS & 7 == 0 { 0 } else { 1 }) as usize
-    }
-
-    #[inline]
-    pub fn is_odd(&self) -> bool {
-        self.0.into_repr().is_odd()
-    }
-
-    #[inline]
-    pub fn is_even(&self) -> bool {
-        self.0.into_repr().is_even()
-    }
-
-    pub fn into_binary_be(&self) -> Vec<u8> {
-        let t_bytes = Self::num_bytes();
-        let mut buff = vec![0u8;t_bytes];
-        self.0.into_repr().write_be(&mut buff[..]).unwrap();
-        buff
-    }
-
-    pub fn from_binary_be(blob: &[u8]) -> Self {
-        let x = BigUint::from_bytes_be(blob); 
-        Num::from(x)       
-    }
-
-    pub fn from_other<G:PrimeField>(n: Num<G>) -> Self {
-        let g_bytes = Num::<G>::num_bytes();
-        let mut buff = vec![0u8;g_bytes];
-        n.0.into_repr().write_be(&mut buff[..]).unwrap();
-        Self::from_binary_be(buff.as_ref())
-    }
-
-    pub fn into_other<G:PrimeField>(&self) -> Num<G> {
-        let self_bytes = Self::num_bytes();
-        let mut buff = vec![0u8;self_bytes];
-        self.0.into_repr().write_be(&mut buff[..]).unwrap();
-        Num::<G>::from_binary_be(buff.as_ref())
-    }
-
-    pub fn from_seed(blob: &[u8]) -> Self {
-        let mut h = Blake2s::with_params(Self::num_bytes(), &[], &[], PERSONALIZATION);
-        h.update(blob);
-        Self::from_binary_be(h.finalize().as_ref())
-    }
-    
-    pub fn iterbit_be(&self) -> BitIterator<T::Repr> {
-        BitIterator::new(self.into_inner().into_repr())
-    }
-
-    pub fn iterbit_le(&self) -> BitIteratorLE<T::Repr> {
-        BitIteratorLE::new(self.into_inner().into_repr())
-    }
-
-}
 
 
 
-impl<T:PrimeField> Into<BigUint> for Num<T> {
+impl<T:Field> Into<BigUint> for Num<T> {
     fn into(self) -> BigUint {
         let bytes = self.into_binary_be();
         BigUint::from_bytes_be(&bytes[..])
@@ -224,7 +222,7 @@ impl<T:PrimeField> Into<BigUint> for Num<T> {
 }
 
 
-impl<T:PrimeField> From<u64> for Num<T> {
+impl<T:Field> From<u64> for Num<T> {
     fn from(n: u64) -> Self {
         let mut repr = T::zero().into_raw_repr();
         repr.as_mut()[0] = n;
@@ -232,7 +230,7 @@ impl<T:PrimeField> From<u64> for Num<T> {
     }
 }
 
-impl<T:PrimeField> From<BigUint> for Num<T> {
+impl<T:Field> From<BigUint> for Num<T> {
     fn from(x: BigUint) -> Self {
         let t_bytes = Self::num_bytes();
         let mut order = vec![0u8;t_bytes];
@@ -248,7 +246,7 @@ impl<T:PrimeField> From<BigUint> for Num<T> {
     }
 }
 
-impl<T:PrimeField> From<BigInt> for Num<T> {
+impl<T:Field> From<BigInt> for Num<T> {
     fn from(x: BigInt) -> Self {
         let t_bytes = Self::num_bytes();
         let mut order = vec![0u8;t_bytes];
@@ -269,7 +267,7 @@ impl<T:PrimeField> From<BigInt> for Num<T> {
 }
 
 
-impl<T:PrimeField> From<i64> for Num<T> {
+impl<T:Field> From<i64> for Num<T> {
     fn from(n: i64) -> Self {
         let mut repr = T::zero().into_raw_repr();
         repr.as_mut()[0] = n.abs() as u64;
@@ -282,7 +280,7 @@ impl<T:PrimeField> From<i64> for Num<T> {
 }
 
 
-impl<T:PrimeField> From<u32> for Num<T> {
+impl<T:Field> From<u32> for Num<T> {
     fn from(n: u32) -> Self {
         let mut repr = T::zero().into_raw_repr();
         repr.as_mut()[0] = n as u64;
@@ -291,7 +289,7 @@ impl<T:PrimeField> From<u32> for Num<T> {
 }
 
 
-impl<T:PrimeField> From<i32> for Num<T> {
+impl<T:Field> From<i32> for Num<T> {
     fn from(n: i32) -> Self {
         let mut repr = T::zero().into_raw_repr();
         repr.as_mut()[0] = n.abs() as u64;
@@ -316,7 +314,7 @@ impl<T:Field> From<bool> for Num<T> {
 }
 
 
-impl<T:PrimeField> From<&str> for Num<T> {
+impl<T:Field> From<&str> for Num<T> {
     fn from(s: &str) -> Self {
         Num::new(T::from_str(s).unwrap())
     }

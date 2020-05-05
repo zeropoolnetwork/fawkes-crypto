@@ -1,5 +1,3 @@
-use ff::{PrimeField};
-
 use crate::circuit::num::{CNum};
 use crate::circuit::bool::{CBool};
 use crate::core::signal::Signal;
@@ -10,6 +8,7 @@ use crate::circuit::poseidon::{c_poseidon_with_salt};
 use crate::circuit::ecc::{CEdwardsPoint};
 use crate::circuit::bitify::{c_into_bits_le_strict, c_into_bits_le};
 use crate::constants::SEED_EDDSA_POSEIDON;
+use crate::core::field::{PrimeField};
 
 
 

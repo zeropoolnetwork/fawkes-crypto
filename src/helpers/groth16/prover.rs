@@ -1,10 +1,10 @@
 use crate::core::cs::{Circuit};
 use crate::core::osrng::OsRng;
-
+use crate::core::field::Field;
 
 
 use bellman::{self, SynthesisError};
-use ff::PrimeField;
+
 use pairing::bn256::{Fq, Bn256, G1Affine, G2Affine};
 
 use pairing::{
@@ -21,7 +21,7 @@ pub struct Proof<E:Engine>(pub bellman::groth16::Proof<E>);
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(bound(serialize="", deserialize=""))]
-pub struct ProofData<F:PrimeField> {
+pub struct ProofData<F:Field> {
     pub a: G1PointData<F>,
     pub b: G2PointData<F>,
     pub c: G1PointData<F>
@@ -70,7 +70,7 @@ pub fn prove<BE:bellman::pairing::Engine, C:Circuit<F=BE::Fr>>(c:&C, params:&bel
 #[cfg(test)]
 mod bellman_test {
     use super::*;
-    use ff::{PrimeField, SqrtField};
+    use crate::core::field::Field;
     use bellman::pairing::bn256::{Fr, Bn256};
     use crate::circuit::num::{CNum};
     use crate::core::signal::Signal;
@@ -82,12 +82,12 @@ mod bellman_test {
     use rand::{Rng, thread_rng};
 
     #[derive(Default)]
-    struct CheckPreimageKnowledge<F:PrimeField+SqrtField> {
+    struct CheckPreimageKnowledge<F:Field> {
         image:Option<Num<F>>,
         preimage:Option<Num<F>>
     }
 
-    impl<F:PrimeField+SqrtField> Circuit for CheckPreimageKnowledge<F> {
+    impl<F:Field> Circuit for CheckPreimageKnowledge<F> {
         type F = F;
         fn synthesize<CS: ConstraintSystem<F=F>>(
             &self,

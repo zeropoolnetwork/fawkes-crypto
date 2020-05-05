@@ -1,7 +1,4 @@
-use ff::{
-    PrimeField
-};
-
+use crate::core::field::Field;
 use rand::Rng;
 use typenum::Unsigned;
 
@@ -10,7 +7,7 @@ use crate::core::sizedvec::SizedVec;
 use crate::native::num::Num;
 
 #[derive(Debug, Clone)]
-pub struct PoseidonParams<F:PrimeField> {
+pub struct PoseidonParams<F:Field> {
     pub c: Vec<Num<F>>, 
     pub m: Vec<Vec<Num<F>>>, 
     pub t: usize, 
@@ -18,7 +15,7 @@ pub struct PoseidonParams<F:PrimeField> {
     pub p: usize
 }
 
-impl<F:PrimeField> PoseidonParams<F> {
+impl<F:Field> PoseidonParams<F> {
     pub fn new(t:usize, f:usize, p:usize) -> Self {
         let mut seedbox = SeedboxBlake2::new_with_salt(format!("fawkes_poseidon(t={},f={},p={})", t, f, p).as_bytes()
         );
@@ -33,15 +30,15 @@ impl<F:PrimeField> PoseidonParams<F> {
 
 
 
-fn ark<F:PrimeField>(state: &mut[Num<F>], c:Num<F>) {
+fn ark<F:Field>(state: &mut[Num<F>], c:Num<F>) {
     state.iter_mut().for_each(|e| *e += c)
 }
 
-fn sigma<F:PrimeField>(a: Num<F>) -> Num<F> {
+fn sigma<F:Field>(a: Num<F>) -> Num<F> {
     a.square().square()*a
 }
 
-fn mix<F:PrimeField>(state: &mut[Num<F>], params:&PoseidonParams<F>) {
+fn mix<F:Field>(state: &mut[Num<F>], params:&PoseidonParams<F>) {
     let statelen = state.len();
     let mut new_state = vec![Num::zero(); statelen];
     for i in 0..statelen {
@@ -53,7 +50,7 @@ fn mix<F:PrimeField>(state: &mut[Num<F>], params:&PoseidonParams<F>) {
 }
 
 
-pub fn poseidon<F:PrimeField>(inputs:&[Num<F>], params:&PoseidonParams<F>) -> Num<F> {
+pub fn poseidon<F:Field>(inputs:&[Num<F>], params:&PoseidonParams<F>) -> Num<F> {
     let mut state = vec![Num::zero(); params.t];
     let n_inputs = inputs.len();
     assert!(n_inputs <= params.t, "number of inputs should be less or equal than t");
@@ -77,7 +74,7 @@ pub fn poseidon<F:PrimeField>(inputs:&[Num<F>], params:&PoseidonParams<F>) -> Nu
 }
 
 
-pub fn poseidon_with_salt<F:PrimeField>(inputs:&[Num<F>], seed: &[u8], params:&PoseidonParams<F>) -> Num<F> {
+pub fn poseidon_with_salt<F:Field>(inputs:&[Num<F>], seed: &[u8], params:&PoseidonParams<F>) -> Num<F> {
     let n_inputs = inputs.len();
     assert!(n_inputs > 0, "number of inputs should be positive nonzero");
     assert!(n_inputs < params.t, "number of inputs should be less than t");
@@ -89,13 +86,13 @@ pub fn poseidon_with_salt<F:PrimeField>(inputs:&[Num<F>], seed: &[u8], params:&P
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(bound(serialize="", deserialize=""))]
-pub struct MerkleProof<F:PrimeField, L:Unsigned> {
+pub struct MerkleProof<F:Field, L:Unsigned> {
     pub sibling: SizedVec<Num<F>, L>,
     pub path: SizedVec<bool, L>
 }
 
 
-pub fn poseidon_merkle_proof_root<F:PrimeField, L:Unsigned>(leaf:Num<F>, proof:&MerkleProof<F, L>, params:&PoseidonParams<F>) -> Num<F> {
+pub fn poseidon_merkle_proof_root<F:Field, L:Unsigned>(leaf:Num<F>, proof:&MerkleProof<F, L>, params:&PoseidonParams<F>) -> Num<F> {
     let mut root = leaf.clone();
     for (&p, &s) in proof.path.iter().zip(proof.sibling.iter()) {
         let pair = if p {[s, root]} else {[root, s]};
@@ -104,7 +101,7 @@ pub fn poseidon_merkle_proof_root<F:PrimeField, L:Unsigned>(leaf:Num<F>, proof:&
     root
 }
 
-pub fn poseidon_merkle_tree_root<F:PrimeField>(leaf:&[Num<F>], params: &PoseidonParams<F>) -> Num<F> {
+pub fn poseidon_merkle_tree_root<F:Field>(leaf:&[Num<F>], params: &PoseidonParams<F>) -> Num<F> {
     let leaf_sz = leaf.len();
     assert!(leaf_sz>0, "should be at least one leaf in the tree");
     let proof_sz = std::mem::size_of::<usize>() * 8 - (leaf_sz-1).leading_zeros() as usize;
