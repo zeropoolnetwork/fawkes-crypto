@@ -57,7 +57,7 @@ pub fn c_into_bits_le<'a, CS:ConstraintSystem>(
     }
 }
 
-// return 1 if signal > ct 
+// return true if signal > ct 
 pub fn c_comp_constant<'a, CS:ConstraintSystem>(
     signal:&[CBool<'a, CS>],
     ct: Num<CS::F>
@@ -110,14 +110,14 @@ pub fn c_into_bits_le_strict<'a, CS:ConstraintSystem>(
 }
 
 pub fn c_from_bits_le<'a, CS:ConstraintSystem>(
-    bits:&[CNum<'a, CS>]
+    bits:&[CBool<'a, CS>]
 ) -> CNum<'a, CS> {
     assert!(bits.len()>0, "should be positive number of bits");
-    let mut acc = bits[0].clone();
+    let mut acc = bits[0].0.clone();
     let mut k = Num::one();
     for i in 1..bits.len() {
         k = k.double();
-        acc += k*&bits[i];
+        acc += k*&bits[i].0;
     }
     acc
 }
