@@ -41,10 +41,9 @@ pub fn c_eddsaposeidon_verify<'a, CS: ConstraintSystem, J:JubJubParams<Fr=CS::F>
 #[cfg(test)]
 mod eddsaposeidon_test {
     use super::*;
-    use bellman::pairing::bn256::{Fr};
     use rand::{Rng, thread_rng};
     use crate::core::cs::TestCS;
-    use crate::native::ecc::{JubJubBN256};
+    use crate::native::bn256::{Fr, JubJubBN256};
     use crate::native::eddsaposeidon::eddsaposeidon_sign;
 
     #[test]

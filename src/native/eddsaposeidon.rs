@@ -71,9 +71,7 @@ mod eddsaposeidon_test {
     use super::*;
 
     use rand::{Rng, thread_rng};
-    use bellman::pairing::bn256::{Fr};
-
-    use crate::native::ecc::{JubJubBN256};
+    use crate::native::bn256::{Fr, JubJubBN256};
 
     #[test]
     fn test_eddsaposeidon() {
