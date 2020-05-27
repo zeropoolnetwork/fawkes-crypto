@@ -19,8 +19,7 @@ use std::io;
 
 
 
-
-use pairing::bn256::{Fq, Bn256, G1Affine, G2Affine};
+use pairing::{bls12_381, bn256};
 use super::{G1PointData, G2PointData};
 use super::prover::Proof;
 
@@ -47,8 +46,8 @@ pub struct TruncatedVerifyingKey<E: Engine> {
 }
 
 
-impl TruncatedVerifyingKey<Bn256> {
-    pub fn into_data(&self) -> TruncatedVerifyingKeyData<Fq> {
+impl TruncatedVerifyingKey<bn256::Bn256> {
+    pub fn into_data(&self) -> TruncatedVerifyingKeyData<bn256::Fq> {
         TruncatedVerifyingKeyData {
             alpha_g1: G1PointData::from(self.alpha_g1),
             beta_g2: G2PointData::from(self.beta_g2),
@@ -58,16 +57,39 @@ impl TruncatedVerifyingKey<Bn256> {
         }
     }
 
-    pub fn from_data(vk:&TruncatedVerifyingKeyData<Fq>) -> Self {
+    pub fn from_data(vk:&TruncatedVerifyingKeyData<bn256::Fq>) -> Self {
         Self {
-            alpha_g1: Into::<G1Affine>::into(vk.alpha_g1),
-            beta_g2: Into::<G2Affine>::into(vk.beta_g2),
-            gamma_g2: Into::<G2Affine>::into(vk.gamma_g2),
-            delta_g2: Into::<G2Affine>::into(vk.delta_g2),
-            ic: vk.ic.iter().map(|p| Into::<G1Affine>::into(*p)).collect()
+            alpha_g1: Into::<bn256::G1Affine>::into(vk.alpha_g1),
+            beta_g2: Into::<bn256::G2Affine>::into(vk.beta_g2),
+            gamma_g2: Into::<bn256::G2Affine>::into(vk.gamma_g2),
+            delta_g2: Into::<bn256::G2Affine>::into(vk.delta_g2),
+            ic: vk.ic.iter().map(|p| Into::<bn256::G1Affine>::into(*p)).collect()
         }
     }
 }
+
+impl TruncatedVerifyingKey<bls12_381::Bls12> {
+    pub fn into_data(&self) -> TruncatedVerifyingKeyData<bls12_381::Fq> {
+        TruncatedVerifyingKeyData {
+            alpha_g1: G1PointData::from(self.alpha_g1),
+            beta_g2: G2PointData::from(self.beta_g2),
+            gamma_g2: G2PointData::from(self.gamma_g2),
+            delta_g2: G2PointData::from(self.delta_g2),
+            ic: self.ic.iter().map(|e| G1PointData::from(*e)).collect()
+        }
+    }
+
+    pub fn from_data(vk:&TruncatedVerifyingKeyData<bls12_381::Fq>) -> Self {
+        Self {
+            alpha_g1: Into::<bls12_381::G1Affine>::into(vk.alpha_g1),
+            beta_g2: Into::<bls12_381::G2Affine>::into(vk.beta_g2),
+            gamma_g2: Into::<bls12_381::G2Affine>::into(vk.gamma_g2),
+            delta_g2: Into::<bls12_381::G2Affine>::into(vk.delta_g2),
+            ic: vk.ic.iter().map(|p| Into::<bls12_381::G1Affine>::into(*p)).collect()
+        }
+    }
+}
+
 
 impl<E: Engine> TruncatedVerifyingKey<E> {
     pub fn write<W: Write>(

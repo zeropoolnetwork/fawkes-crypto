@@ -5,11 +5,7 @@ use crate::core::field::Field;
 
 use bellman::{self, SynthesisError};
 
-use pairing::bn256::{Fq, Bn256, G1Affine, G2Affine};
-
-use pairing::{
-    Engine
-};
+use pairing::{bn256, bls12_381, Engine};
 
 
 use crate::helpers::groth16::Groth16CS;
@@ -27,8 +23,8 @@ pub struct ProofData<F:Field> {
     pub c: G1PointData<F>
 }
 
-impl Proof<Bn256> {
-    pub fn into_data(&self) -> ProofData<Fq> {
+impl Proof<bn256::Bn256> {
+    pub fn into_data(&self) -> ProofData<bn256::Fq> {
         ProofData {
             a: G1PointData::from(self.0.a),
             b: G2PointData::from(self.0.b),
@@ -36,11 +32,29 @@ impl Proof<Bn256> {
         }
     }
 
-    pub fn from_data(p:&ProofData<Fq>) -> Self {
+    pub fn from_data(p:&ProofData<bn256::Fq>) -> Self {
         Self(bellman::groth16::Proof{
-            a: Into::<G1Affine>::into(p.a),
-            b: Into::<G2Affine>::into(p.b),
-            c: Into::<G1Affine>::into(p.c)
+            a: Into::<bn256::G1Affine>::into(p.a),
+            b: Into::<bn256::G2Affine>::into(p.b),
+            c: Into::<bn256::G1Affine>::into(p.c)
+        })
+    }
+}
+
+impl Proof<bls12_381::Bls12> {
+    pub fn into_data(&self) -> ProofData<bls12_381::Fq> {
+        ProofData {
+            a: G1PointData::from(self.0.a),
+            b: G2PointData::from(self.0.b),
+            c: G1PointData::from(self.0.c)
+        }
+    }
+
+    pub fn from_data(p:&ProofData<bls12_381::Fq>) -> Self {
+        Self(bellman::groth16::Proof{
+            a: Into::<bls12_381::G1Affine>::into(p.a),
+            b: Into::<bls12_381::G2Affine>::into(p.b),
+            c: Into::<bls12_381::G1Affine>::into(p.c)
         })
     }
 }

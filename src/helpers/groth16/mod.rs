@@ -10,13 +10,13 @@ use crate::core::field::{Field, PrimeField, AbstractField};
 
 
 use bellman::{self, SynthesisError};
-use pairing::bn256::{Fq, FqRepr, Fq2, G1Affine, G2Affine};
+use pairing::{bn256, bls12_381, CurveAffine, CurveProjective};
 
 use std::mem::transmute;
 use lazy_static::lazy_static;
 
 lazy_static! { 
-    static ref B_COEFF: Fq = Fq::from_raw_repr(FqRepr([
+    static ref BN256_B_COEFF: bn256::Fq = bn256::Fq::from_raw_repr(bn256::FqRepr([
         0x7a17caa950ad28d7,
         0x1f6ac17ae15521b9,
         0x334bea4e696bd284,
@@ -25,14 +25,14 @@ lazy_static! {
 }
 
 lazy_static! { 
-    static ref B_COEFF_FQ2: Fq2 = Fq2 {
-        c0: Fq::from_raw_repr(FqRepr([
+    static ref BN256_B_COEFF_FQ2: bn256::Fq2 = bn256::Fq2 {
+        c0: bn256::Fq::from_raw_repr(bn256::FqRepr([
             0x3bf938e377b802a8,
             0x020b1b273633535d,
             0x26b7edf049755260,
             0x2514c6324384a86d,
         ])).unwrap(),
-        c1: Fq::from_raw_repr(FqRepr([
+        c1: bn256::Fq::from_raw_repr(bn256::FqRepr([
             0x38e7ecccd1dcff67,
             0x65f0b37d93ce0d3e,
             0xd749d0dd22ac00aa,
@@ -40,6 +40,39 @@ lazy_static! {
         ])).unwrap(),
     };
 }
+
+lazy_static! { 
+    static ref BLS12_381_B_COEFF: bls12_381::Fq = bls12_381::Fq::from_raw_repr(bls12_381::FqRepr([
+        0xaa270000000cfff3,
+        0x53cc0032fc34000a,
+        0x478fe97a6b0a807f,
+        0xb1d37ebee6ba24d7,
+        0x8ec9733bbf78ab2f,
+        0x9d645513d83de7e,
+    ])).unwrap();
+}
+
+lazy_static! { 
+    static ref BLS12_381_B_COEFF_FQ2: bls12_381::Fq2 = bls12_381::Fq2 {
+        c0: bls12_381::Fq::from_raw_repr(bls12_381::FqRepr([
+            0xaa270000000cfff3,
+            0x53cc0032fc34000a,
+            0x478fe97a6b0a807f,
+            0xb1d37ebee6ba24d7,
+            0x8ec9733bbf78ab2f,
+            0x9d645513d83de7e,
+        ])).unwrap(),
+        c1: bls12_381::Fq::from_raw_repr(bls12_381::FqRepr([
+            0xaa270000000cfff3,
+            0x53cc0032fc34000a,
+            0x478fe97a6b0a807f,
+            0xb1d37ebee6ba24d7,
+            0x8ec9733bbf78ab2f,
+            0x9d645513d83de7e,
+        ])).unwrap(),
+    };
+}
+
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(bound(serialize="", deserialize=""))]
@@ -66,9 +99,9 @@ fn is_on_curve<F:AbstractField>(x:F, y:F, is_zero:bool, b:&F) -> bool {
 }
 
 
-impl From<G2Affine> for G2PointData<Fq> {
-    fn from(p: G2Affine) -> Self {
-        let (x, y, f) = unsafe{ transmute::<_,(Fq2,Fq2,bool)>(p)};
+impl From<bn256::G2Affine> for G2PointData<bn256::Fq> {
+    fn from(p: bn256::G2Affine) -> Self {
+        let (x, y, f) = unsafe{ transmute::<_,(bn256::Fq2,bn256::Fq2,bool)>(p)};
         if f {
             Self((num!(0), num!(0)), (num!(0), num!(0)))
         } else {
@@ -78,20 +111,20 @@ impl From<G2Affine> for G2PointData<Fq> {
     }
 }
 
-impl Into<G2Affine> for G2PointData<Fq> {
-    fn into(self) -> G2Affine {
+impl Into<bn256::G2Affine> for G2PointData<bn256::Fq> {
+    fn into(self) -> bn256::G2Affine {
         //use big endian here
-        let x = Fq2{c0:self.0 .1.into_inner(), c1: self.0 .0.into_inner()};
-        let y = Fq2{c0:self.1 .1.into_inner(), c1: self.1 .0.into_inner()};
+        let x = bn256::Fq2{c0:self.0 .1.into_inner(), c1: self.0 .0.into_inner()};
+        let y = bn256::Fq2{c0:self.1 .1.into_inner(), c1: self.1 .0.into_inner()};
         let is_zero = x.is_zero() && y.is_zero();
-        assert!(is_on_curve(x, y, is_zero, &B_COEFF_FQ2), "point should be in curve");
-        unsafe {transmute::<_,G2Affine>((x,y,is_zero))}
+        assert!(is_on_curve(x, y, is_zero, &BN256_B_COEFF_FQ2), "point should be in curve");
+        unsafe {transmute::<_,bn256::G2Affine>((x,y,is_zero))}
     }
 }
 
-impl From<G1Affine> for G1PointData<Fq> {
-    fn from(p: G1Affine) -> Self {
-        let (x, y, f) = unsafe{ transmute::<_,(Fq,Fq,bool)>(p)};
+impl From<bn256::G1Affine> for G1PointData<bn256::Fq> {
+    fn from(p: bn256::G1Affine) -> Self {
+        let (x, y, f) = unsafe{ transmute::<_,(bn256::Fq,bn256::Fq,bool)>(p)};
         if f {
             Self(num!(0), num!(0))
         } else {
@@ -100,15 +133,70 @@ impl From<G1Affine> for G1PointData<Fq> {
     }
 }
 
-impl Into<G1Affine> for G1PointData<Fq> {
-    fn into(self) -> G1Affine {
+impl Into<bn256::G1Affine> for G1PointData<bn256::Fq> {
+    fn into(self) -> bn256::G1Affine {
         let x = self.0.into_inner();
         let y = self.1.into_inner();
         let is_zero = x.is_zero() && y.is_zero();
-        assert!(is_on_curve(x, y, is_zero, &B_COEFF), "point should be in curve");
-        unsafe {transmute::<_,G1Affine>((x,y,is_zero))}
+        assert!(is_on_curve(x, y, is_zero, &BN256_B_COEFF), "point should be in curve");
+        unsafe {transmute::<_,bn256::G1Affine>((x,y,is_zero))}
     }
 }
+
+
+
+
+
+
+impl From<bls12_381::G2Affine> for G2PointData<bls12_381::Fq> {
+    fn from(p: bls12_381::G2Affine) -> Self {
+        let (x, y, f) = unsafe{ transmute::<_,(bls12_381::Fq2,bls12_381::Fq2,bool)>(p)};
+        if f {
+            Self((num!(0), num!(0)), (num!(0), num!(0)))
+        } else {
+            //use big endian here 
+            Self((Num(x.c1), Num(x.c0)),(Num(y.c1), Num(y.c0)))
+        }
+    }
+}
+
+impl Into<bls12_381::G2Affine> for G2PointData<bls12_381::Fq> {
+    fn into(self) -> bls12_381::G2Affine {
+        //use big endian here
+        let x = bls12_381::Fq2{c0:self.0 .1.into_inner(), c1: self.0 .0.into_inner()};
+        let y = bls12_381::Fq2{c0:self.1 .1.into_inner(), c1: self.1 .0.into_inner()};
+        let is_zero = x.is_zero() && y.is_zero();
+        assert!(is_on_curve(x, y, is_zero, &BLS12_381_B_COEFF_FQ2), "point should be in curve");
+        let res = unsafe {transmute::<_,bls12_381::G2Affine>((x,y,is_zero))};
+        assert!(res.mul(bls12_381::Fr::char()).is_zero(), "point should be in subgroup");
+        res
+
+    }
+}
+
+impl From<bls12_381::G1Affine> for G1PointData<bls12_381::Fq> {
+    fn from(p: bls12_381::G1Affine) -> Self {
+        let (x, y, f) = unsafe{ transmute::<_,(bls12_381::Fq,bls12_381::Fq,bool)>(p)};
+        if f {
+            Self(num!(0), num!(0))
+        } else {
+            Self(Num(x), Num(y))
+        }
+    }
+}
+
+impl Into<bls12_381::G1Affine> for G1PointData<bls12_381::Fq> {
+    fn into(self) -> bls12_381::G1Affine {
+        let x = self.0.into_inner();
+        let y = self.1.into_inner();
+        let is_zero = x.is_zero() && y.is_zero();
+        assert!(is_on_curve(x, y, is_zero, &BLS12_381_B_COEFF), "point should be in curve");
+        let res = unsafe {transmute::<_,bls12_381::G1Affine>((x,y,is_zero))};
+        assert!(res.mul(bls12_381::Fr::char()).is_zero(), "point should be in subgroup");
+        res
+    }
+}
+
 
 pub trait Assignment<T> {
     fn get(&self) -> Result<&T, SynthesisError>;
