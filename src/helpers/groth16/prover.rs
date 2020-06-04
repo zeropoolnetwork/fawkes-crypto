@@ -6,7 +6,7 @@ use crate::core::field::Field;
 use bellman::{self, SynthesisError};
 
 use pairing::{bn256, bls12_381, Engine};
-
+use std::io::{self, Read, Write};
 
 use crate::helpers::groth16::Groth16CS;
 use super::{G1PointData, G2PointData};
@@ -56,6 +56,42 @@ impl Proof<bls12_381::Bls12> {
             b: Into::<bls12_381::G2Affine>::into(p.b),
             c: Into::<bls12_381::G1Affine>::into(p.c)
         })
+    }
+}
+
+
+
+impl Proof<bls12_381::Bls12> {
+    pub fn write<W: Write>(
+        &self,
+        writer: W
+    ) -> io::Result<()>
+    {   
+        self.0.write(writer)
+    }
+
+    pub fn read<R: Read>(
+        reader: R
+    ) -> io::Result<Self>
+    {
+        Ok(Self(bellman::groth16::Proof::read(reader)?))
+    }
+}
+
+impl Proof<bn256::Bn256> {
+    pub fn write<W: Write>(
+        &self,
+        writer: W
+    ) -> io::Result<()>
+    {   
+        self.0.write(writer)
+    }
+
+    pub fn read<R: Read>(
+        reader: R
+    ) -> io::Result<Self>
+    {
+        Ok(Self(bellman::groth16::Proof::read(reader)?))
     }
 }
 

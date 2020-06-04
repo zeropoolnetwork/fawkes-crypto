@@ -221,6 +221,15 @@ impl<T:Field> Into<BigUint> for Num<T> {
     }
 }
 
+impl<T:Field> Into<u64> for Num<T> {
+    fn into(self) -> u64 {
+        let repr = self.0.into_repr();
+        let r = repr.as_ref();
+        assert!((1..r.len()).all(|i| r[i]==0));
+        r[0]
+    }
+}
+
 
 impl<T:Field> From<u64> for Num<T> {
     fn from(n: u64) -> Self {

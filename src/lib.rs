@@ -15,3 +15,5 @@ pub mod circuit;
 pub mod native;
 pub mod helpers;
 pub mod constants;
+
+pub use base64;

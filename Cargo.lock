@@ -16,6 +16,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8aac770f1885fd7e387acedd76065302551364496e46b3dd00860b2f8359b9d"
 
 [[package]]
+name = "base64"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53d1ccbaf7d9ec9537465a97bf19edc1a4e158ecb49fc16178202238c569cc42"
+
+[[package]]
 name = "bellman_ce"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -68,6 +74,7 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 name = "fawkes-crypto"
 version = "2.2.0"
 dependencies = [
+ "base64",
  "bellman_ce",
  "blake2-rfc_bellman_edition",
  "byteorder",
