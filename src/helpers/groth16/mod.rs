@@ -1,6 +1,7 @@
 pub mod prover;
 pub mod verifier;
 pub mod ethereum;
+pub mod near;
 
 use std::cell::RefCell;
 use crate::core::cs::{ConstraintSystem};

@@ -23,6 +23,8 @@ pub struct ProofData<F:Field> {
     pub c: G1PointData<F>
 }
 
+
+
 impl Proof<bn256::Bn256> {
     pub fn into_data(&self) -> ProofData<bn256::Fq> {
         ProofData {

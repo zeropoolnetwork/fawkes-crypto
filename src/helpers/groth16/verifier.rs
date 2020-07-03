@@ -35,7 +35,6 @@ pub struct TruncatedVerifyingKeyData<F:Field> {
 }
 
 
-
 #[derive(Clone)]
 pub struct TruncatedVerifyingKey<E: Engine> {
     pub alpha_g1: E::G1Affine,

@@ -10,7 +10,8 @@ use blake2_rfc::blake2s::Blake2s;
 use serde::ser::{Serialize, Serializer};
 use serde::de::{self, Deserialize, Deserializer};
 use core::str::FromStr;
-
+use borsh::{BorshSerialize, BorshDeserialize};
+use std::io::{self, Write, ErrorKind};
 
 use crate::constants::PERSONALIZATION;
 
@@ -19,9 +20,24 @@ use crate::constants::PERSONALIZATION;
 #[derive(Clone, Copy, Debug)]
 pub struct Num<T:Field>(pub T);
 
+
+impl<T:Field> BorshSerialize for Num<T> {
+    fn serialize<W: Write>(&self, writer: &mut W) -> Result<(), io::Error> {
+        self.0.into_repr().write_le(writer)
+    }
+}
+
+impl<T:Field> BorshDeserialize for Num<T> {
+    fn deserialize(buf: &mut &[u8]) -> Result<Self, io::Error> {
+        let mut repr = T::zero().into_raw_repr();
+        repr.read_le(buf)?;
+        Ok(Num(T::from_repr(repr).map_err(|_| io::Error::new(ErrorKind::InvalidData, "Value should be in field"))?))
+    }
+}
+
 impl<T:Field> Serialize for Num<T> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>{
-        self.to_string().serialize(serializer)
+        Serialize::serialize(&self.to_string(), serializer)
     }
 }
 
@@ -33,7 +49,7 @@ impl<T:Field> ToString for Num<T> {
 
 impl<'de, T:Field> Deserialize<'de> for Num<T> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Num<T>, D::Error> {
-        let bn = BigUint::from_str(&String::deserialize(deserializer)?).map_err(|_| de::Error::custom("Wrong number format"))?;
+        let bn = BigUint::from_str(&<String as Deserialize>::deserialize(deserializer)?).map_err(|_| de::Error::custom("Wrong number format"))?;
         
         if bn > Into::<BigUint>::into(Num::<T>::from(-1)) {
             Err(de::Error::custom("Field overflow"))
