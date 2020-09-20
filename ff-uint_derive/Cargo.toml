@@ -1,0 +1,23 @@
+[package]
+name = "ff-uint_derive"
+version = "0.1.1"
+authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
+description = "Library for building and interfacing with fixed-sized integers and finite fields"
+documentation = "https://docs.rs/ff-uint/"
+homepage = "https://github.com/zeropoolnetwork/ff-uint"
+license = "MIT/Apache-2.0"
+repository = "https://github.com/ebfull/zeropoolnetwork/ff-uint"
+edition = "2018"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+proc-macro = true
+
+[dependencies]
+num-bigint = "0.2"
+num-traits = "0.2"
+num-integer = "0.1"
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "1", features = ["full"] }
+proc-macro-crate = "0.1.5"
