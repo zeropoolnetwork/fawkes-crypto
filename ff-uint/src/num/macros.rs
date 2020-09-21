@@ -4,9 +4,9 @@
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! impl_wrapped_overflowing_binop{
+macro_rules! impl_num_overflowing_binop{
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident for $name: ty, $method:ident, $overflowing_op: ident) => {
-        impl_wrapped_overflowing_binop!(impl <$($imp_l, )*$($imp_i : $imp_p),+> $op<$name> for $name, $method, $overflowing_op);
+        impl_num_overflowing_binop!(impl <$($imp_l, )*$($imp_i : $imp_p),+> $op<$name> for $name, $method, $overflowing_op);
     };
 
 	(impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident<$other:ty> for $name: ty, $method:ident, $overflowing_op: ident) => {
@@ -59,7 +59,7 @@ macro_rules! impl_wrapped_overflowing_binop{
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! impl_wrapped_overflowing_binop_primitive{
+macro_rules! impl_num_overflowing_binop_primitive{
 
 	(impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident<$other:ty> for $name: ty, $method:ident, $overflowing_op: ident) => {
 		impl <$($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for $name {
@@ -111,7 +111,7 @@ macro_rules! impl_wrapped_overflowing_binop_primitive{
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! impl_wrapped_overflowing_unop {
+macro_rules! impl_num_overflowing_unop {
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident for $name: ty, $method:ident, $overflowing_op: ident) => {
         impl <$($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op for $name {
             type Output = $name;
@@ -137,9 +137,9 @@ macro_rules! impl_wrapped_overflowing_unop {
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! impl_wrapped_overflowing_assignop{
+macro_rules! impl_num_overflowing_assignop{
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident for $name: ty, $method:ident, $overflowing_op: ident) => {
-        impl_wrapped_overflowing_assignop!(impl <$($imp_l, )*$($imp_i : $imp_p),+> $op<$name> for $name, $method, $overflowing_op);
+        impl_num_overflowing_assignop!(impl <$($imp_l, )*$($imp_i : $imp_p),+> $op<$name> for $name, $method, $overflowing_op);
     };
 
 	(impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident<$other:ty> for $name: ty, $method:ident, $overflowing_op: ident) => {
@@ -166,9 +166,9 @@ macro_rules! impl_wrapped_overflowing_assignop{
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! impl_wrapped_overflowing_assignop_primitive{
+macro_rules! impl_num_overflowing_assignop_primitive{
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident for $name: ty, $method:ident, $overflowing_op: ident) => {
-        impl_wrapped_overflowing_assignop!(impl <$($imp_l, )*$($imp_i : $imp_p),+> $op<$name> for $name, $method, $overflowing_op);
+        impl_num_overflowing_assignop!(impl <$($imp_l, )*$($imp_i : $imp_p),+> $op<$name> for $name, $method, $overflowing_op);
     };
 
 	(impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident<$other:ty> for $name: ty, $method:ident, $overflowing_op: ident) => {
@@ -195,7 +195,7 @@ macro_rules! impl_wrapped_overflowing_assignop_primitive{
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! impl_wrapped_map_from {
+macro_rules! impl_num_map_from {
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> From<$from:ty> for $to: ty) => {
 		impl<$($imp_l, )*$($imp_i : $imp_p),+> From<$from> for $to {
 			fn from(value: $from) -> $to {
@@ -207,7 +207,7 @@ macro_rules! impl_wrapped_map_from {
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! impl_wrapped_try_from_for_primitive {
+macro_rules! impl_num_try_from_for_primitive {
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> TryFrom<$from:ty> for $to: ty) => {
 		impl<$($imp_l, )*$($imp_i : $imp_p),+> std::convert::TryFrom<$from> for $to {
 			type Error = &'static str;
@@ -228,9 +228,9 @@ macro_rules! impl_wrapped_try_from_for_primitive {
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! impl_wrapped_wrapping_binop{
+macro_rules! impl_num_wrapping_binop{
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident for $name: ty, $method:ident, $wrapping_op: ident) => {
-        impl_wrapped_wrapping_binop!(impl <$($imp_l, )*$($imp_i : $imp_p),+> $op<$name> for $name, $method, $wrapping_op);
+        impl_num_wrapping_binop!(impl <$($imp_l, )*$($imp_i : $imp_p),+> $op<$name> for $name, $method, $wrapping_op);
     };
 
 	(impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident<$other:ty> for $name: ty, $method:ident, $wrapping_op: ident) => {
@@ -276,7 +276,7 @@ macro_rules! impl_wrapped_wrapping_binop{
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! impl_wrapped_wrapping_unop {
+macro_rules! impl_num_wrapping_unop {
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident for $name: ty, $method:ident, $wrapping_op: ident) => {
         impl <$($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op for $name {
             type Output = $name;
@@ -298,9 +298,9 @@ macro_rules! impl_wrapped_wrapping_unop {
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! impl_wrapped_wrapping_assignop{
+macro_rules! impl_num_wrapping_assignop{
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident for $name: ty, $method:ident, $wrapping_op: ident) => {
-        impl_wrapped_wrapping_assignop!(impl <$($imp_l, )*$($imp_i : $imp_p),+> $op<$name> for $name, $method, $wrapping_op);
+        impl_num_wrapping_assignop!(impl <$($imp_l, )*$($imp_i : $imp_p),+> $op<$name> for $name, $method, $wrapping_op);
     };
 
 	(impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident<$other:ty> for $name: ty, $method:ident, $wrapping_op: ident) => {

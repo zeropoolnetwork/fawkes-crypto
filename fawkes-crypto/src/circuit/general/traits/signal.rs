@@ -1,19 +1,25 @@
 pub trait Signal: Sized+Clone {
     type Value: Clone + Sized;
+    type CS: Clone;
 
     fn as_const(&self) -> Option<Self::Value>;
 
     fn get_value(&self) -> Option<Self::Value>;
 
-    // fn get_cs(&self) -> &'a CS;
+    #[inline]
+    fn derive_const<T:Signal<CS=Self::CS>>(&self, value: &T::Value) -> T {
+        T::from_const(self.get_cs(), value)
+    }
 
-    // fn from_const(cs:&'a CS, value: &Self::Value) -> Self;
+    fn from_const(cs:&Self::CS, value: &Self::Value) -> Self;
 
-    // fn alloc(cs:&'a CS, value:Option<&Self::Value>) -> Self;
+    fn get_cs(&self) -> &Self::CS;
 
-    // fn switch(&self, bit: &CBool<'a, CS>, if_else: &Self) -> Self;
+    fn alloc(cs:&Self::CS, value:Option<&Self::Value>) -> Self;
 
-    // fn assert_const(&self, value: &Self::Value);
+    //fn switch(&self, bit: &CBool<'a, CS>, if_else: &Self) -> Self;
+
+    fn assert_const(&self, value: &Self::Value);
 
     // fn assert_eq(&self, other:&Self);
 
@@ -29,13 +35,8 @@ pub trait Signal: Sized+Clone {
     //     acc
     // }
 
-    // #[inline]
-    // fn derive_const<T:Signal<'a, CS>>(&self, value: &T::Value) -> T {
-    //     T::from_const(self.get_cs(), value)
-    // }
-
-    // #[inline]
-    // fn derive_alloc<T:Signal<'a, CS>>(&self, value:Option<&T::Value>) -> T {
-    //     T::alloc(self.get_cs(), value)
-    // }
+    #[inline]
+    fn derive_alloc<T:Signal<CS=Self::CS>>(&self, value:Option<&T::Value>) -> T {
+        T::alloc(self.get_cs(), value)
+    }
 }

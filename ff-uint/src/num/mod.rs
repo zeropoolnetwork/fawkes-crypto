@@ -16,7 +16,7 @@ pub struct NumRepr<U:Uint>(pub U);
 pub struct Num<Fp:PrimeField>(pub Fp);
 
 
-// Wrapped ops for Uint
+// num ops for Uint
 
 impl <U:Uint> NumRepr<U> {
     pub const ONE: Self = NumRepr(U::ONE);
@@ -25,6 +25,10 @@ impl <U:Uint> NumRepr<U> {
 
     pub fn new(n:U) -> Self {
         Self(n)
+    }
+
+    pub fn is_zero(self) -> bool {
+        self == Self::ZERO
     }
 }
 
@@ -54,64 +58,64 @@ impl<'de, U:Uint> Deserialize<'de> for NumRepr<U> {
 }
 
 
-impl_wrapped_overflowing_unop!(impl <U:Uint> Not for NumRepr<U>, not, overflowing_not);
-impl_wrapped_overflowing_unop!(impl <U:Uint> Neg for NumRepr<U>, neg, overflowing_neg);
+impl_num_overflowing_unop!(impl <U:Uint> Not for NumRepr<U>, not, overflowing_not);
+impl_num_overflowing_unop!(impl <U:Uint> Neg for NumRepr<U>, neg, overflowing_neg);
 
 
-impl_wrapped_overflowing_binop!(impl <U:Uint> Add for NumRepr<U>, add, overflowing_add);
-impl_wrapped_overflowing_binop!(impl <U:Uint> Sub for NumRepr<U>, sub, overflowing_sub);
-impl_wrapped_overflowing_binop!(impl <U:Uint> Mul for NumRepr<U>, mul, overflowing_mul);
-impl_wrapped_overflowing_binop_primitive!(impl <U:Uint> Mul<u64> for NumRepr<U>, mul, overflowing_mul_u64);
-impl_wrapped_overflowing_binop!(impl <U:Uint> Div for NumRepr<U>, div, overflowing_div);
-impl_wrapped_overflowing_binop!(impl <U:Uint> Rem for NumRepr<U>, rem, overflowing_rem);
-impl_wrapped_overflowing_binop_primitive!(impl <U:Uint> Shr<u32> for NumRepr<U>, shr, overflowing_shr);
-impl_wrapped_overflowing_binop_primitive!(impl <U:Uint> Shl<u32> for NumRepr<U>, shl, overflowing_shl);
+impl_num_overflowing_binop!(impl <U:Uint> Add for NumRepr<U>, add, overflowing_add);
+impl_num_overflowing_binop!(impl <U:Uint> Sub for NumRepr<U>, sub, overflowing_sub);
+impl_num_overflowing_binop!(impl <U:Uint> Mul for NumRepr<U>, mul, overflowing_mul);
+impl_num_overflowing_binop_primitive!(impl <U:Uint> Mul<u64> for NumRepr<U>, mul, overflowing_mul_u64);
+impl_num_overflowing_binop!(impl <U:Uint> Div for NumRepr<U>, div, overflowing_div);
+impl_num_overflowing_binop!(impl <U:Uint> Rem for NumRepr<U>, rem, overflowing_rem);
+impl_num_overflowing_binop_primitive!(impl <U:Uint> Shr<u32> for NumRepr<U>, shr, overflowing_shr);
+impl_num_overflowing_binop_primitive!(impl <U:Uint> Shl<u32> for NumRepr<U>, shl, overflowing_shl);
 
-impl_wrapped_overflowing_binop!(impl <U:Uint> BitAnd for NumRepr<U>, bitand, overflowing_bitand);
-impl_wrapped_overflowing_binop!(impl <U:Uint> BitOr for NumRepr<U>, bitor, overflowing_bitor);
-impl_wrapped_overflowing_binop!(impl <U:Uint> BitXor for NumRepr<U>, bitxor, overflowing_bitxor);
-
-
-impl_wrapped_overflowing_assignop!(impl <U:Uint> AddAssign for NumRepr<U>, add_assign, overflowing_add);
-impl_wrapped_overflowing_assignop!(impl <U:Uint> SubAssign for NumRepr<U>, sub_assign, overflowing_sub);
-impl_wrapped_overflowing_assignop!(impl <U:Uint> MulAssign for NumRepr<U>, mul_assign, overflowing_mul);
-impl_wrapped_overflowing_assignop_primitive!(impl <U:Uint> MulAssign<u64> for NumRepr<U>, mul_assign, overflowing_mul_u64);
-impl_wrapped_overflowing_assignop!(impl <U:Uint> DivAssign for NumRepr<U>, div_assign, overflowing_div);
-impl_wrapped_overflowing_assignop!(impl <U:Uint> RemAssign for NumRepr<U>, rem_assign, overflowing_rem);
-impl_wrapped_overflowing_assignop_primitive!(impl <U:Uint> ShrAssign<u32> for NumRepr<U>, shr_assign, overflowing_shr);
-impl_wrapped_overflowing_assignop_primitive!(impl <U:Uint> ShlAssign<u32> for NumRepr<U>, shl_assign, overflowing_shl);
-
-impl_wrapped_overflowing_assignop!(impl <U:Uint> BitAndAssign for NumRepr<U>, bitand_assign, overflowing_bitand);
-impl_wrapped_overflowing_assignop!(impl <U:Uint> BitOrAssign for NumRepr<U>, bitor_assign, overflowing_bitor);
-impl_wrapped_overflowing_assignop!(impl <U:Uint> BitXorAssign for NumRepr<U>, bitxor_assign, overflowing_bitxor);
+impl_num_overflowing_binop!(impl <U:Uint> BitAnd for NumRepr<U>, bitand, overflowing_bitand);
+impl_num_overflowing_binop!(impl <U:Uint> BitOr for NumRepr<U>, bitor, overflowing_bitor);
+impl_num_overflowing_binop!(impl <U:Uint> BitXor for NumRepr<U>, bitxor, overflowing_bitxor);
 
 
+impl_num_overflowing_assignop!(impl <U:Uint> AddAssign for NumRepr<U>, add_assign, overflowing_add);
+impl_num_overflowing_assignop!(impl <U:Uint> SubAssign for NumRepr<U>, sub_assign, overflowing_sub);
+impl_num_overflowing_assignop!(impl <U:Uint> MulAssign for NumRepr<U>, mul_assign, overflowing_mul);
+impl_num_overflowing_assignop_primitive!(impl <U:Uint> MulAssign<u64> for NumRepr<U>, mul_assign, overflowing_mul_u64);
+impl_num_overflowing_assignop!(impl <U:Uint> DivAssign for NumRepr<U>, div_assign, overflowing_div);
+impl_num_overflowing_assignop!(impl <U:Uint> RemAssign for NumRepr<U>, rem_assign, overflowing_rem);
+impl_num_overflowing_assignop_primitive!(impl <U:Uint> ShrAssign<u32> for NumRepr<U>, shr_assign, overflowing_shr);
+impl_num_overflowing_assignop_primitive!(impl <U:Uint> ShlAssign<u32> for NumRepr<U>, shl_assign, overflowing_shl);
 
-impl_wrapped_map_from!(impl<U:Uint> From<bool> for NumRepr<U>);
-impl_wrapped_map_from!(impl<U:Uint> From<u8> for NumRepr<U>);
-impl_wrapped_map_from!(impl<U:Uint> From<u16> for NumRepr<U>);
-impl_wrapped_map_from!(impl<U:Uint> From<u32> for NumRepr<U>);
-impl_wrapped_map_from!(impl<U:Uint> From<u64> for NumRepr<U>);
-impl_wrapped_map_from!(impl<U:Uint> From<u128> for NumRepr<U>);
-impl_wrapped_map_from!(impl<U:Uint> From<i8> for NumRepr<U>);
-impl_wrapped_map_from!(impl<U:Uint> From<i16> for NumRepr<U>);
-impl_wrapped_map_from!(impl<U:Uint> From<i32> for NumRepr<U>);
-impl_wrapped_map_from!(impl<U:Uint> From<i64> for NumRepr<U>);
-impl_wrapped_map_from!(impl<U:Uint> From<i128> for NumRepr<U>);
+impl_num_overflowing_assignop!(impl <U:Uint> BitAndAssign for NumRepr<U>, bitand_assign, overflowing_bitand);
+impl_num_overflowing_assignop!(impl <U:Uint> BitOrAssign for NumRepr<U>, bitor_assign, overflowing_bitor);
+impl_num_overflowing_assignop!(impl <U:Uint> BitXorAssign for NumRepr<U>, bitxor_assign, overflowing_bitxor);
 
 
 
-impl_wrapped_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for u8);
-impl_wrapped_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for u16);
-impl_wrapped_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for u32);
-impl_wrapped_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for u64);
-impl_wrapped_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for u128);
+impl_num_map_from!(impl<U:Uint> From<bool> for NumRepr<U>);
+impl_num_map_from!(impl<U:Uint> From<u8> for NumRepr<U>);
+impl_num_map_from!(impl<U:Uint> From<u16> for NumRepr<U>);
+impl_num_map_from!(impl<U:Uint> From<u32> for NumRepr<U>);
+impl_num_map_from!(impl<U:Uint> From<u64> for NumRepr<U>);
+impl_num_map_from!(impl<U:Uint> From<u128> for NumRepr<U>);
+impl_num_map_from!(impl<U:Uint> From<i8> for NumRepr<U>);
+impl_num_map_from!(impl<U:Uint> From<i16> for NumRepr<U>);
+impl_num_map_from!(impl<U:Uint> From<i32> for NumRepr<U>);
+impl_num_map_from!(impl<U:Uint> From<i64> for NumRepr<U>);
+impl_num_map_from!(impl<U:Uint> From<i128> for NumRepr<U>);
 
-impl_wrapped_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i8);
-impl_wrapped_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i16);
-impl_wrapped_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i32);
-impl_wrapped_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i64);
-impl_wrapped_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i128);
+
+
+impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for u8);
+impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for u16);
+impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for u32);
+impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for u64);
+impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for u128);
+
+impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i8);
+impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i16);
+impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i32);
+impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i64);
+impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i128);
 
 
 impl<U:Uint> std::cmp::Ord for NumRepr<U> {
@@ -182,7 +186,7 @@ impl<U:Uint> std::convert::From<&'static str> for NumRepr<U> {
 
 
 
-// Wrapped ops for PrimeField
+// num ops for PrimeField
 
 impl<Fp:PrimeField> BorshSerialize for Num<Fp> {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
@@ -203,6 +207,14 @@ impl <Fp:PrimeField> Num<Fp> {
 
     pub fn new(n:Fp) -> Self {
         Self(n)
+    }
+
+    pub fn checked_inv(&self) -> Option<Self> {
+        Some(Self(self.0.checked_inv()?))
+    }
+
+    pub fn is_zero(self) -> bool {
+        self == Self::ZERO
     }
 
     pub fn from_uint(v:NumRepr<Fp::Inner>) -> Option<Self> {
@@ -250,16 +262,16 @@ impl <Fp:PrimeField> Num<Fp> {
 
 
 
-impl_wrapped_wrapping_unop!(impl <U:PrimeField> Neg for Num<U>, neg, wrapping_neg);
-impl_wrapped_wrapping_binop!(impl <U:PrimeField> Add for Num<U>, add, wrapping_add);
-impl_wrapped_wrapping_binop!(impl <U:PrimeField> Sub for Num<U>, sub, wrapping_sub);
-impl_wrapped_wrapping_binop!(impl <U:PrimeField> Mul for Num<U>, mul, wrapping_mul);
-impl_wrapped_wrapping_binop!(impl <U:PrimeField> Div for Num<U>, div, wrapping_div);
+impl_num_wrapping_unop!(impl <U:PrimeField> Neg for Num<U>, neg, wrapping_neg);
+impl_num_wrapping_binop!(impl <U:PrimeField> Add for Num<U>, add, wrapping_add);
+impl_num_wrapping_binop!(impl <U:PrimeField> Sub for Num<U>, sub, wrapping_sub);
+impl_num_wrapping_binop!(impl <U:PrimeField> Mul for Num<U>, mul, wrapping_mul);
+impl_num_wrapping_binop!(impl <U:PrimeField> Div for Num<U>, div, wrapping_div);
 
-impl_wrapped_wrapping_assignop!(impl <U:PrimeField> AddAssign for Num<U>, add_assign, wrapping_add);
-impl_wrapped_wrapping_assignop!(impl <U:PrimeField> SubAssign for Num<U>, sub_assign, wrapping_sub);
-impl_wrapped_wrapping_assignop!(impl <U:PrimeField> MulAssign for Num<U>, mul_assign, wrapping_mul);
-impl_wrapped_wrapping_assignop!(impl <U:PrimeField> DivAssign for Num<U>, div_assign, wrapping_div);
+impl_num_wrapping_assignop!(impl <U:PrimeField> AddAssign for Num<U>, add_assign, wrapping_add);
+impl_num_wrapping_assignop!(impl <U:PrimeField> SubAssign for Num<U>, sub_assign, wrapping_sub);
+impl_num_wrapping_assignop!(impl <U:PrimeField> MulAssign for Num<U>, mul_assign, wrapping_mul);
+impl_num_wrapping_assignop!(impl <U:PrimeField> DivAssign for Num<U>, div_assign, wrapping_div);
 
 
 
