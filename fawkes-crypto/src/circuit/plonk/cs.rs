@@ -52,4 +52,9 @@ impl<Fr:PrimeField> CS<Fr> {
             Gate::Arith(a.lc.0, a.lc.1, b.lc.0, b.lc.1, -c.lc.0, c.lc.1, Num::ZERO, a.lc.2 + b.lc.2 - c.lc.2)
         ) 
     }
+
+    pub fn enforce_pub(n:&CNum<Fr>) {
+        assert!(n.lc.0 == Num::ONE && n.lc.2 == Num::ZERO, "Wrong pub signal format");
+        n.get_cs().borrow_mut().gates.push(Gate::Pub(n.lc.1));
+    }
 }

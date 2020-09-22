@@ -1,12 +1,12 @@
 use ff_uint::{Num, PrimeField};
-use crate::circuit::general::Variable;
-use crate::circuit::plonk::cs::CS;
-use crate::circuit::general::traits::signal::Signal;
+use crate::circuit::{
+    general::Variable,
+    plonk::{cs::CS, bool::CBool},
+    general::traits::{signal::Signal, num::SignalNum}
+};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-
-use std::cmp::{Ordering};
 use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssign};
 
 
@@ -16,6 +16,10 @@ pub struct CNum<Fr:PrimeField> {
     // a*x + b
     pub lc: (Num<Fr>, Variable, Num<Fr>),
     pub cs: Rc<RefCell<CS<Fr>>>
+}
+
+impl<Fr:PrimeField> SignalNum for CNum<Fr> {
+    type Bool = CBool<Fr>;
 }
 
 impl<Fr:PrimeField> Signal for CNum<Fr> {
@@ -29,6 +33,11 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
         } else {
             None
         }
+    }
+
+    fn inputize(&self) {
+        let var: Self = self.derive_alloc(self.get_value().as_ref());
+        CS::enforce_pub(&var);
     }
 
     fn get_value(&self) -> Option<Self::Value> {
@@ -87,6 +96,22 @@ impl<Fr:PrimeField> CNum<Fr> {
                 CS::enforce_mul(self, &inv_signal, &self.derive_const(&Num::ONE));
             }
         }
+    }
+
+    pub fn assert_bit(&self) {
+        CS::enforce_mul(self, &(self-Num::ONE), &self.derive_const(&Num::ZERO));
+    }
+
+    pub fn to_bool(&self) -> CBool<Fr> {
+        CBool::new(self)
+    }
+
+    pub fn to_bool_unchecked(&self) -> CBool<Fr> {
+        CBool::new_unchecked(self)
+    }
+
+    pub fn from_bool(b:CBool<Fr>) -> Self {
+        b.to_num()
     }
 
     pub fn inv(&self) -> Self {

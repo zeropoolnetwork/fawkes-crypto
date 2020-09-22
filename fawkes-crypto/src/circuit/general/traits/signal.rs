@@ -25,7 +25,7 @@ pub trait Signal: Sized+Clone {
 
     // fn is_eq(&self, other:&Self) -> CBool<'a, CS>;
 
-    // fn inputize(&self);
+    fn inputize(&self);
 
     // fn linearize_builder(&self, acc: &mut Vec<CNum<'a, CS>>);
 
