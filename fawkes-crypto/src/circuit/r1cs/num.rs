@@ -2,7 +2,7 @@ use ff_uint::{Num, PrimeField};
 use crate::circuit::{
     general::Variable,
     r1cs::{cs::{CS, LC}, bool::CBool},
-    general::traits::{signal::Signal, num::SignalNum}
+    general::traits::{signal::Signal, num::SignalNum, bool::SignalBool}
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -20,6 +20,70 @@ pub struct CNum<Fr:PrimeField> {
 
 impl<Fr:PrimeField> SignalNum for CNum<Fr> {
     type Bool = CBool<Fr>;
+
+
+    fn assert_zero(&self) {
+        self.assert_const(&Num::ZERO) 
+    }
+
+
+    fn assert_nonzero(&self) {
+        match self.as_const() {
+            Some(v) => {
+                assert!(v!=Num::ZERO);
+            },
+            _ => {
+                let inv_value = self.get_value().map(|v| v.checked_inv().unwrap_or(Num::ONE));
+                let inv_signal = self.derive_alloc(inv_value.as_ref());
+                CS::enforce(self, &inv_signal, &self.derive_const(&Num::ONE));
+            }
+        }
+    }
+
+    fn is_zero(&self) -> CBool<Fr> {
+        match self.as_const() {
+            Some(c) => self.derive_const(&c.is_zero()),
+            _ => {
+                let inv_value = self.get_value().map(|v| v.checked_inv().unwrap_or(Num::ONE));
+                let inv_signal: CNum<Fr> = self.derive_alloc(inv_value.as_ref());
+                inv_signal.assert_nonzero();
+                let res_signal = inv_signal * self;
+                (Num::ONE - res_signal).to_bool()
+            }
+        }
+    }
+
+
+    fn assert_bit(&self) {
+        CS::enforce(self, &(self-Num::ONE), &self.derive_const(&Num::ZERO));
+    }
+
+    fn to_bool(&self) -> CBool<Fr> {
+        CBool::new(self)
+    }
+
+    fn to_bool_unchecked(&self) -> CBool<Fr> {
+        CBool::new_unchecked(self)
+    }
+
+    fn from_bool(b:CBool<Fr>) -> Self {
+        b.to_num()
+    }
+
+    fn inv(&self) -> Self {
+        match self.as_const() {
+            Some(v) => {
+                self.derive_const(&v.checked_inv().expect("Division by zero"))
+            }
+            _ => {
+                self.assert_nonzero();
+                let inv_value = self.get_value().map(|v| v.checked_inv().expect("Division by zero"));
+                let inv_signal = self.derive_alloc(inv_value.as_ref());
+                CS::enforce(self, &inv_signal, &self.derive_const(&Num::ONE));
+                inv_signal
+            }
+        }
+    }
 }
 
 impl<Fr:PrimeField> Signal for CNum<Fr> {
@@ -95,69 +159,6 @@ impl<Fr:PrimeField> CNum<Fr> {
             0
         } else {
             1
-        }
-    }
-
-    pub fn assert_zero(&self) {
-        self.assert_const(&Num::ZERO) 
-    }
-
-
-    pub fn assert_nonzero(&self) {
-        match self.as_const() {
-            Some(v) => {
-                assert!(v!=Num::ZERO);
-            },
-            _ => {
-                let inv_value = self.get_value().map(|v| v.checked_inv().unwrap_or(Num::ONE));
-                let inv_signal = self.derive_alloc(inv_value.as_ref());
-                CS::enforce(self, &inv_signal, &self.derive_const(&Num::ONE));
-            }
-        }
-    }
-
-    pub fn is_zero(&self) -> CBool<Fr> {
-        match self.as_const() {
-            Some(c) => self.derive_const(&c.is_zero()),
-            _ => {
-                let inv_value = self.get_value().map(|v| v.checked_inv().unwrap_or(Num::ONE));
-                let inv_signal: CNum<Fr> = self.derive_alloc(inv_value.as_ref());
-                inv_signal.assert_nonzero();
-                let res_signal = inv_signal * self;
-                (Num::ONE - res_signal).to_bool()
-            }
-        }
-    }
-
-
-    pub fn assert_bit(&self) {
-        CS::enforce(self, &(self-Num::ONE), &self.derive_const(&Num::ZERO));
-    }
-
-    pub fn to_bool(&self) -> CBool<Fr> {
-        CBool::new(self)
-    }
-
-    pub fn to_bool_unchecked(&self) -> CBool<Fr> {
-        CBool::new_unchecked(self)
-    }
-
-    pub fn from_bool(b:CBool<Fr>) -> Self {
-        b.to_num()
-    }
-
-    pub fn inv(&self) -> Self {
-        match self.as_const() {
-            Some(v) => {
-                self.derive_const(&v.checked_inv().expect("Division by zero"))
-            }
-            _ => {
-                self.assert_nonzero();
-                let inv_value = self.get_value().map(|v| v.checked_inv().expect("Division by zero"));
-                let inv_signal = self.derive_alloc(inv_value.as_ref());
-                CS::enforce(self, &inv_signal, &self.derive_const(&Num::ONE));
-                inv_signal
-            }
         }
     }
 

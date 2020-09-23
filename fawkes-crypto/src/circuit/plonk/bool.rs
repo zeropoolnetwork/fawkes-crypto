@@ -1,6 +1,6 @@
 use ff_uint::{Num, PrimeField};
 use crate::circuit::plonk::{num::CNum, cs::CS};
-use crate::circuit::general::{traits::{signal::Signal, bool::SignalBool}};
+use crate::circuit::general::{traits::{signal::Signal, bool::SignalBool, num::SignalNum}, Variable};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -11,6 +11,19 @@ pub struct CBool<Fr:PrimeField>(CNum<Fr>);
 
 impl<Fr:PrimeField> SignalBool for CBool<Fr> {
     type Num=CNum<Fr>;
+
+    fn new_unchecked(n:&CNum<Fr>) -> Self {
+        CBool(n.clone())
+    }
+
+    fn new(n: &CNum<Fr>) -> Self {
+        n.assert_bit();
+        Self::new_unchecked(n)
+    }
+
+    fn to_num(&self) -> CNum<Fr> {
+        self.0.clone()
+    }
 }
 
 impl<Fr:PrimeField> Signal for CBool<Fr> {
@@ -58,8 +71,11 @@ impl<Fr:PrimeField> Signal for CBool<Fr> {
     }
 
     fn alloc(cs:&Self::CS, value:Option<&Self::Value>) -> Self {
+        let mut rcs = cs.borrow_mut();
         let value = value.map(|&b| Into::<Num<Fr>>::into(b));
-        Self::new_unchecked(&CNum::alloc(cs, value.as_ref()))
+        let v = Variable(rcs.n_vars);
+        rcs.n_vars+=1;
+        Self::new_unchecked(&CNum {value:value, lc:(Num::ONE, v, Num::ZERO), cs:cs.clone()})
     }
 
     fn assert_const(&self, value: &Self::Value) {
@@ -85,19 +101,6 @@ impl<Fr:PrimeField> Signal for CBool<Fr> {
 
 impl<Fr:PrimeField> CBool<Fr> {
     pub fn capacity(&self) -> usize { 0 }
-
-    pub fn new_unchecked(n:&CNum<Fr>) -> Self {
-        CBool(n.clone())
-    }
-
-    pub fn new(n: &CNum<Fr>) -> Self {
-        n.assert_bit();
-        Self::new_unchecked(n)
-    }
-
-    pub fn to_num(&self) -> CNum<Fr> {
-        self.0.clone()
-    }
 }
 
 impl<Fr:PrimeField> Not for CBool<Fr> {
