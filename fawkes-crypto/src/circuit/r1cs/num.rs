@@ -1,20 +1,20 @@
 use ff_uint::{Num, PrimeField};
 use crate::circuit::{
     general::Variable,
-    plonk::{cs::CS, bool::CBool},
+    r1cs::{cs::{CS, LC}, bool::CBool},
     general::traits::{signal::Signal, num::SignalNum}
 };
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use std::ops::{Add, Sub, Mul, Neg, Div, AddAssign, SubAssign, MulAssign, DivAssign};
-
+use linked_list::{LinkedList, Cursor};
 
 #[derive(Clone, Debug)]
 pub struct CNum<Fr:PrimeField> {
     pub value:Option<Num<Fr>>,
     // a*x + b
-    pub lc: (Num<Fr>, Variable, Num<Fr>),
+    pub lc: LC<Fr>,
     pub cs: Rc<RefCell<CS<Fr>>>
 }
 
@@ -28,9 +28,9 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
     type Bool = CBool<Fr>;
 
     fn as_const(&self) -> Option<Self::Value> {
-        let lc = self.lc;
-        if lc.0 == Num::ZERO {
-            Some(lc.2)
+        let lc = &self.lc;
+        if lc.1.len() == 0 {
+            Some(lc.0)
         } else {
             None
         }
@@ -48,7 +48,7 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
         let value = value.clone();
         Self {
             value: Some(value),
-            lc: (Num::ZERO, Variable(0), value),
+            lc: LC(value, LinkedList::new()),
             cs:cs.clone()
         }
     }
@@ -61,11 +61,13 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
         let mut rcs = cs.borrow_mut();
         let v = Variable(rcs.n_vars);
         rcs.n_vars+=1;
-        Self {value:value.cloned(), lc:(Num::ONE, v, Num::ZERO), cs:cs.clone()}
+        let mut ll = LinkedList::new();
+        ll.push_back((Num::ONE, v));
+        Self {value:value.cloned(), lc:LC(Num::ZERO, ll), cs:cs.clone()}
     }
 
     fn assert_const(&self, value: &Self::Value) {
-        CS::enforce_add(self, &self.derive_const(&Num::ZERO), &self.derive_const(value))
+        CS::enforce(self, &self.derive_const(&Num::ONE), &self.derive_const(value))
     }
 
     fn switch(&self, bit: &Self::Bool, if_else: &Self) -> Self {
@@ -77,7 +79,7 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
     }
 
     fn assert_eq(&self, other:&Self) {
-        CS::enforce_add(self, &self.derive_const(&Num::ZERO), other);
+        CS::enforce(self, &self.derive_const(&Num::ONE), other);
     }
 
     fn is_eq(&self, other:&Self) -> Self::Bool {
@@ -109,7 +111,7 @@ impl<Fr:PrimeField> CNum<Fr> {
             _ => {
                 let inv_value = self.get_value().map(|v| v.checked_inv().unwrap_or(Num::ONE));
                 let inv_signal = self.derive_alloc(inv_value.as_ref());
-                CS::enforce_mul(self, &inv_signal, &self.derive_const(&Num::ONE));
+                CS::enforce(self, &inv_signal, &self.derive_const(&Num::ONE));
             }
         }
     }
@@ -129,7 +131,7 @@ impl<Fr:PrimeField> CNum<Fr> {
 
 
     pub fn assert_bit(&self) {
-        CS::enforce_mul(self, &(self-Num::ONE), &self.derive_const(&Num::ZERO));
+        CS::enforce(self, &(self-Num::ONE), &self.derive_const(&Num::ZERO));
     }
 
     pub fn to_bool(&self) -> CBool<Fr> {
@@ -153,7 +155,7 @@ impl<Fr:PrimeField> CNum<Fr> {
                 self.assert_nonzero();
                 let inv_value = self.get_value().map(|v| v.checked_inv().expect("Division by zero"));
                 let inv_signal = self.derive_alloc(inv_value.as_ref());
-                CS::enforce_mul(self, &inv_signal, &self.derive_const(&Num::ONE));
+                CS::enforce(self, &inv_signal, &self.derive_const(&Num::ONE));
                 inv_signal
             }
         }
@@ -167,8 +169,11 @@ impl<Fr:PrimeField> std::ops::Neg for CNum<Fr> {
 
     #[inline]
     fn neg(mut self) -> Self::Output {
+        self.value = self.value.map(|x| -x);
         self.lc.0 = -self.lc.0;
-        self.lc.2 = -self.lc.2;
+        for (v, _) in self.lc.1.iter_mut() {
+            *v = -*v;
+        }
         self
     }
 }
@@ -176,34 +181,52 @@ impl<Fr:PrimeField> std::ops::Neg for CNum<Fr> {
 forward_unop_ex!(impl<Fr:PrimeField> Neg for CNum<Fr>, neg);
 
 
+#[derive(Eq,PartialEq)]
+enum LookupAction {
+    Add,
+    Insert
+}
+
+#[inline]
+fn ll_lookup<V, K:PartialEq+PartialOrd>(cur: &mut Cursor<(V, K)>, n: K) -> LookupAction {
+    loop {
+        match cur.peek_next() {
+            Some((_, k)) => {
+                if  *k == n {
+                    return LookupAction::Add;
+                } else if *k > n {
+                    return  LookupAction::Insert;
+                }
+            },
+            None => {
+                return LookupAction::Insert;
+            }
+        }
+        cur.seek_forward(1);
+    }
+}
 
 
 
 impl<'l, Fr:PrimeField> AddAssign<&'l CNum<Fr>> for CNum<Fr> {
     #[inline]
     fn add_assign(&mut self, other: &'l CNum<Fr>)  {
-        let cs = self.cs.clone();
-        *self = if let Some(c) = self.as_const() {
-            let value = other.value.map(|v| v+c);
-            let mut lc = other.lc;
-            lc.2+=c;
-            Self {value, lc, cs}
-        } else if let Some(c) = other.as_const() {
-            let value = self.value.map(|v| v+c);
-            let mut lc = self.lc;
-            lc.2+=c;
-            Self {value, lc, cs}
-        } else if self.lc.1 == other.lc.1 {
-            Self {
-                value: self.value.map(|a| other.value.map(|b| a+b)).flatten(),
-                lc: (self.lc.0+other.lc.0, self.lc.1, self.lc.2+other.lc.2),
-                cs
+        self.value = self.value.map(|a| other.value.map(|b| a+b)).flatten();
+
+        let mut cur_a_ll = self.lc.1.cursor();
+
+        self.lc.0 += other.lc.0;
+
+        for (v, k) in other.lc.1.iter() {
+            if ll_lookup(&mut cur_a_ll, *k) == LookupAction::Add {
+                let t = cur_a_ll.peek_next().unwrap();
+                t.0 += *v;
+                if t.0.is_zero() {
+                    cur_a_ll.remove();
+                }
+            } else {
+                cur_a_ll.insert((*v, *k))
             }
-        } else {
-            let value = self.value.map(|a| other.value.map(|b| a+b)).flatten();
-            let var:Self = self.derive_alloc(value.as_ref());
-            CS::enforce_add(self, other, &var);
-            var
         }
     }
 }
@@ -220,7 +243,23 @@ impl<'l, Fr:PrimeField> SubAssign<&'l CNum<Fr>> for CNum<Fr> {
 
     #[inline]
     fn sub_assign(&mut self, other: &'l CNum<Fr>)  {
-        self.add_assign(&-other)
+        self.value = self.value.map(|a| other.value.map(|b| a+b)).flatten();
+
+        let mut cur_a_ll = self.lc.1.cursor();
+
+        self.lc.0 -= other.lc.0;
+
+        for (v, k) in other.lc.1.iter() {
+            if ll_lookup(&mut cur_a_ll, *k) == LookupAction::Add {
+                let t = cur_a_ll.peek_next().unwrap();
+                t.0 -= *v;
+                if t.0.is_zero() {
+                    cur_a_ll.remove();
+                }
+            } else {
+                cur_a_ll.insert((-*v, *k))
+            }
+        }
     }
 }
 
@@ -235,8 +274,15 @@ impl<'l, Fr:PrimeField> SubAssign<&'l Num<Fr>> for CNum<Fr> {
 impl<'l, Fr:PrimeField> MulAssign<&'l Num<Fr>> for CNum<Fr> {
     #[inline]
     fn mul_assign(&mut self, other: &'l Num<Fr>)  {
-        self.lc.0*=other;
-        self.lc.2*=other;
+        if other.is_zero() {
+            *self = self.derive_const(&Num::ZERO)
+        } else {
+            self.value = self.value.map(|v| v*other);
+            self.lc.0 *= other;
+            for (v, _) in self.lc.1.iter_mut() {
+                *v *= other;
+            }
+        }
     }
 }
 
@@ -252,22 +298,16 @@ impl<'l, Fr:PrimeField> DivAssign<&'l Num<Fr>> for CNum<Fr> {
 impl<'l, Fr:PrimeField> MulAssign<&'l CNum<Fr>> for CNum<Fr> {
     #[inline]
     fn mul_assign(&mut self, other: &'l CNum<Fr>)  {
-        let cs = self.cs.clone();
-        *self = if let Some(c) = self.as_const() {
-            let mut lc = other.lc;
-            lc.0*=c;
-            lc.2*=c;
-            Self {value: other.value.map(|v| v*c), lc, cs}
-        } else if let Some(c) = other.as_const() {
-            let mut lc = self.lc;
-            lc.0*=c;
-            lc.2*=c;
-            Self {value: self.value.map(|v| v*c), lc, cs}
-        } else {
-            let value = self.value.map(|a| other.value.map(|b| a*b)).flatten();
-            let var = self.derive_alloc(value.as_ref());
-            CS::enforce_mul(self, other, &var);
-            var
+        match (self.as_const(), other.as_const()) {
+            (Some(a), _) => {*self = other*a;},
+            (_, Some(b)) => {*self *= b;},
+            _ => {
+                let value = self.value.map(|a| other.value.map(|b| a*b)).flatten();
+
+                let signal = self.derive_alloc(value.as_ref());
+                CS::enforce(self, other, &signal);
+                *self = signal;
+            }
         }
     }
 }
@@ -281,10 +321,10 @@ impl<'l, Fr:PrimeField> DivAssign<&'l CNum<Fr>> for CNum<Fr> {
             (_, Some(b)) => {*self /= b},
             _ => {
                 let value = self.value.map(|a| other.value.map(|b| a/b)).flatten();
-                let var = self.derive_alloc(value.as_ref());
+                let signal = self.derive_alloc(value.as_ref());
                 other.assert_nonzero();
-                CS::enforce_mul(&var, other, self);
-                *self = var;
+                CS::enforce(&signal, other, self);
+                *self = signal;
             }
         }
     }

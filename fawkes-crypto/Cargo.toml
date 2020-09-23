@@ -11,3 +11,4 @@ crate-type = ["rlib"]
 [dependencies]
 
 ff-uint = {path="../ff-uint"}
+linked-list = "0.0.3"

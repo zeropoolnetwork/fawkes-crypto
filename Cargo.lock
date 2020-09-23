@@ -106,6 +106,7 @@ name = "fawkes-crypto"
 version = "0.1.0"
 dependencies = [
  "ff-uint",
+ "linked-list",
 ]
 
 [[package]]
@@ -162,6 +163,12 @@ name = "libc"
 version = "0.2.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99e85c08494b21a9054e7fe1374a732aeadaff3980b6990b94bfd3a70f690005"
+
+[[package]]
+name = "linked-list"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4dacf969043dc69f1f731b5042eb05e030d264bcf34f2242889fcbdc7a65f06"
 
 [[package]]
 name = "log"

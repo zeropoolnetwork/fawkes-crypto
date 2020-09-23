@@ -8,7 +8,6 @@ use super::{
 
 #[derive(Clone, Debug)]
 pub enum Gate<Fr:PrimeField> {
-    Pub(Variable),
     // a*x + b *y + c*z + d*x*y + e == 0
     Arith(Num<Fr>, Variable, Num<Fr>, Variable, Num<Fr>, Variable, Num<Fr>, Num<Fr>)
 }
@@ -16,7 +15,8 @@ pub enum Gate<Fr:PrimeField> {
 pub struct CS<Fr:PrimeField> {
     pub n_vars: usize,
     pub gates: Vec<Gate<Fr>>,
-    pub tracking:bool
+    pub tracking:bool,
+    pub public:Vec<Variable>
 }
 
 
@@ -54,7 +54,14 @@ impl<Fr:PrimeField> CS<Fr> {
     }
 
     pub fn enforce_pub(n:&CNum<Fr>) {
-        assert!(n.lc.0 == Num::ONE && n.lc.2 == Num::ZERO, "Wrong pub signal format");
-        n.get_cs().borrow_mut().gates.push(Gate::Pub(n.lc.1));
+        let v = if n.lc.0 == Num::ONE && n.lc.2 == Num::ZERO {
+            n.lc.1
+        } else {
+            let m:CNum<Fr> = n.derive_alloc(n.value.as_ref());
+            m.assert_eq(n);
+            m.lc.1
+        };
+
+        n.get_cs().borrow_mut().public.push(v);
     }
 }

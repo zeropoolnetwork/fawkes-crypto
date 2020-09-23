@@ -1,5 +1,5 @@
 use ff_uint::{Num, PrimeField};
-use crate::circuit::plonk::{num::CNum, cs::CS};
+use crate::circuit::r1cs::{num::CNum, cs::CS};
 use crate::circuit::general::{traits::{signal::Signal, bool::SignalBool}};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -19,11 +19,11 @@ impl<Fr:PrimeField> Signal for CBool<Fr> {
     type Bool = Self;
 
     fn as_const(&self) -> Option<Self::Value> {
-        let lc = self.0.lc;
-        if lc.0 == Num::ZERO {
-            if lc.2==Num::ZERO {
+        let lc = &self.0.lc;
+        if lc.1.len() == 0 {
+            if lc.0==Num::ZERO {
                 Some(false)
-            } else if lc.2==Num::ONE {
+            } else if lc.0==Num::ONE {
                 Some(true)
             }   else {
                 panic!("Wrong boolean value")
@@ -63,7 +63,7 @@ impl<Fr:PrimeField> Signal for CBool<Fr> {
     }
 
     fn assert_const(&self, value: &Self::Value) {
-        CS::enforce_add(&self.to_num(), &self.derive_const(&Num::ZERO), &self.derive_const(&(*value).into()))
+        CS::enforce(&self.to_num(), &self.derive_const(&Num::ONE), &self.derive_const(&(*value).into()))
     }
 
     fn switch(&self, bit: &Self::Bool, if_else: &Self) -> Self {
@@ -77,7 +77,7 @@ impl<Fr:PrimeField> Signal for CBool<Fr> {
     fn is_eq(&self, other:&Self) -> Self::Bool {
         let value = self.get_value().map(|a| other.get_value().map(|b| a==b )).flatten();
         let signal:Self::Bool = self.derive_alloc(value.as_ref());
-        CS::enforce_mul(&(self.to_num()*Num::from(2)-Num::ONE), &(other.to_num()*Num::from(2)-Num::ONE), &(signal.to_num()*Num::from(2)-Num::ONE));
+        CS::enforce(&(self.to_num()*Num::from(2)-Num::ONE), &(other.to_num()*Num::from(2)-Num::ONE), &(signal.to_num()*Num::from(2)-Num::ONE));
         signal
     }
 
