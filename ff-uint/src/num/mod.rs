@@ -7,6 +7,8 @@ use crate::borsh::{BorshDeserialize, BorshSerialize};
 use ref_cast::RefCast;
 use crate::serde::{Serialize, Serializer, Deserialize, Deserializer};
 
+use std::convert::TryInto;
+
 #[repr(transparent)]
 #[derive(Clone, Copy, RefCast)]
 pub struct NumRepr<U:Uint>(pub U);
@@ -103,6 +105,8 @@ impl_num_map_from!(impl<U:Uint> From<i32> for NumRepr<U>);
 impl_num_map_from!(impl<U:Uint> From<i64> for NumRepr<U>);
 impl_num_map_from!(impl<U:Uint> From<i128> for NumRepr<U>);
 
+
+impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for bool);
 
 
 impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for u8);
@@ -328,3 +332,52 @@ impl<'de, Fp:PrimeField> Deserialize<'de> for Num<Fp> {
     }
 }
 
+
+
+
+impl<Fp:PrimeField> From<bool> for Num<Fp> {
+    fn from(n:bool) -> Self {
+        match n {
+            false => Self::ZERO,
+            true => Self::ONE
+        }
+    }
+}
+
+impl_fnum_map_from!(impl<Fp:PrimeField> From<u8> for Num<Fp>);
+impl_fnum_map_from!(impl<Fp:PrimeField> From<u16> for Num<Fp>);
+impl_fnum_map_from!(impl<Fp:PrimeField> From<u32> for Num<Fp>);
+impl_fnum_map_from!(impl<Fp:PrimeField> From<u64> for Num<Fp>);
+impl_fnum_map_from!(impl<Fp:PrimeField> From<u128> for Num<Fp>);
+
+impl_fnum_map_from_signed!(impl<Fp:PrimeField> From<i8> for Num<Fp>);
+impl_fnum_map_from_signed!(impl<Fp:PrimeField> From<i16> for Num<Fp>);
+impl_fnum_map_from_signed!(impl<Fp:PrimeField> From<i32> for Num<Fp>);
+impl_fnum_map_from_signed!(impl<Fp:PrimeField> From<i64> for Num<Fp>);
+impl_fnum_map_from_signed!(impl<Fp:PrimeField> From<i128> for Num<Fp>);
+
+impl<Fp:PrimeField> std::convert::TryFrom<Num<Fp>> for bool {
+    type Error = &'static str;
+
+    #[inline]
+    fn try_from(u: Num<Fp>) -> std::result::Result<bool, &'static str> {
+        match u.to_uint().try_into() {
+            Ok(v)=>Ok(v),
+            _=> Err(concat!("integer overflow when casting to bool"))
+        }
+        
+    }
+}
+
+impl_fnum_try_from_for_primitive!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for u8);
+impl_fnum_try_from_for_primitive!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for u16);
+impl_fnum_try_from_for_primitive!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for u32);
+impl_fnum_try_from_for_primitive!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for u64);
+impl_fnum_try_from_for_primitive!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for u128);
+
+
+impl_fnum_try_from_for_primitive_signed!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for i8);
+impl_fnum_try_from_for_primitive_signed!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for i16);
+impl_fnum_try_from_for_primitive_signed!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for i32);
+impl_fnum_try_from_for_primitive_signed!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for i64);
+impl_fnum_try_from_for_primitive_signed!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for i128);

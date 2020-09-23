@@ -39,7 +39,8 @@ pub trait Uint:
     From<i16> +
     From<i32> +
     From<i64> +
-    From<i128> +
+	From<i128> +
+	std::convert::TryInto<bool> +
     std::convert::TryInto<u8> +
     std::convert::TryInto<u16> +
     std::convert::TryInto<u32> +

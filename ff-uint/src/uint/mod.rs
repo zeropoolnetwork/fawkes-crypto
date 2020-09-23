@@ -310,6 +310,20 @@ macro_rules! construct_uint {
 				$crate::impl_map_from!($name, isize, i64);
 		
 		
+				impl std::convert::TryFrom<$name> for bool {
+					type Error = &'static str;
+		
+					#[inline]
+					fn try_from(u: $name) -> std::result::Result<bool, &'static str> {
+						let $name(arr) = u;
+						if !u.fits_word() || arr[0] > 2 {
+							Err("integer overflow when casting to bool",)
+						} else {
+							Ok(arr[0] == 1)
+						}
+					}
+				}
+				
 				$crate::impl_try_from_for_primitive!($name, u8);
 				$crate::impl_try_from_for_primitive!($name, u16);
 				$crate::impl_try_from_for_primitive!($name, u32);

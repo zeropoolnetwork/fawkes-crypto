@@ -205,6 +205,37 @@ macro_rules! impl_num_map_from {
 	};
 }
 
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! impl_fnum_map_from {
+    (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> From<$from:ty> for $to: ty) => {
+		impl<$($imp_l, )*$($imp_i : $imp_p),+> From<$from> for $to {
+			fn from(value: $from) -> $to {
+				<$to>::from_uint_unchecked(From::from(value))
+			}
+		}
+	};
+}
+
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! impl_fnum_map_from_signed {
+    (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> From<$from:ty> for $to: ty) => {
+		impl<$($imp_l, )*$($imp_i : $imp_p),+> From<$from> for $to {
+			fn from(value: $from) -> $to {
+                if value > 0 {
+                    <$to>::from_uint_unchecked(From::from(value))
+                } else {
+                    -<$to>::from_uint_unchecked(From::from(-value))
+                }
+			}
+		}
+	};
+}
+
+
 #[macro_export]
 #[doc(hidden)]
 macro_rules! impl_num_try_from_for_primitive {
@@ -217,6 +248,48 @@ macro_rules! impl_num_try_from_for_primitive {
                 match u.0.try_into() {
                     Ok(v)=>Ok(v),
                     _=> Err(concat!("integer overflow when casting to ", stringify!($to)))
+                }
+                
+            }
+		}
+	};
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! impl_fnum_try_from_for_primitive {
+    (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> TryFrom<$from:ty> for $to: ty) => {
+		impl<$($imp_l, )*$($imp_i : $imp_p),+> std::convert::TryFrom<$from> for $to {
+			type Error = &'static str;
+
+			#[inline]
+			fn try_from(u: $from) -> std::result::Result<$to, &'static str> {
+                match u.to_uint().try_into() {
+                    Ok(v)=>Ok(v),
+                    _=> Err(concat!("integer overflow when casting to ", stringify!($to)))
+                }
+                
+            }
+		}
+	};
+}
+
+#[macro_export]
+#[doc(hidden)]
+macro_rules! impl_fnum_try_from_for_primitive_signed {
+    (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> TryFrom<$from:ty> for $to: ty) => {
+		impl<$($imp_l, )*$($imp_i : $imp_p),+> std::convert::TryFrom<$from> for $to {
+			type Error = &'static str;
+
+			#[inline]
+			fn try_from(u: $from) -> std::result::Result<$to, &'static str> {
+                let u = u.to_uint();
+                match u.try_into() {
+                    Ok(v)=>Ok(v),
+                    _=> match (<$from>::MODULUS-u).try_into() {
+                            Ok(v)=> {let v:$to = v; Ok(-v)}
+                            _=> Err(concat!("integer overflow when casting to ", stringify!($to)))
+                        }
                 }
                 
             }
