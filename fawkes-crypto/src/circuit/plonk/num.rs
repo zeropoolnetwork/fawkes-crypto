@@ -25,6 +25,7 @@ impl<Fr:PrimeField> SignalNum for CNum<Fr> {
 impl<Fr:PrimeField> Signal for CNum<Fr> {
     type Value = Num<Fr>;
     type CS = Rc<RefCell<CS<Fr>>>;
+    type Bool = CBool<Fr>;
 
     fn as_const(&self) -> Option<Self::Value> {
         let lc = self.lc;
@@ -67,6 +68,22 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
     fn assert_const(&self, value: &Self::Value) {
         CS::enforce_add(self, &self.derive_const(&Num::ZERO), &self.derive_const(value))
     }
+
+    fn switch(&self, bit: &Self::Bool, if_else: &Self) -> Self {
+        if let Some(b) = bit.as_const() {
+            if b {self.clone()} else {if_else.clone()}
+        } else {
+            if_else + (self - if_else) * bit.to_num()
+        }
+    }
+
+    fn assert_eq(&self, other:&Self) {
+        CS::enforce_add(self, &self.derive_const(&Num::ZERO), other);
+    }
+
+    fn is_eq(&self, other:&Self) -> Self::Bool {
+        (self-other).is_zero()
+    }
     
 }
 
@@ -91,12 +108,26 @@ impl<Fr:PrimeField> CNum<Fr> {
                 assert!(v!=Num::ZERO);
             },
             _ => {
-                let inv_value = self.get_value().map(|v| if v.is_zero() {Num::ONE} else {v.checked_inv().unwrap()});
+                let inv_value = self.get_value().map(|v| v.checked_inv().unwrap_or(Num::ONE));
                 let inv_signal = self.derive_alloc(inv_value.as_ref());
                 CS::enforce_mul(self, &inv_signal, &self.derive_const(&Num::ONE));
             }
         }
     }
+
+    pub fn is_zero(&self) -> CBool<Fr> {
+        match self.as_const() {
+            Some(c) => self.derive_const(&c.is_zero()),
+            _ => {
+                let inv_value = self.get_value().map(|v| v.checked_inv().unwrap_or(Num::ONE));
+                let inv_signal: CNum<Fr> = self.derive_alloc(inv_value.as_ref());
+                inv_signal.assert_nonzero();
+                let res_signal = inv_signal * self;
+                (Num::ONE - res_signal).to_bool()
+            }
+        }
+    }
+
 
     pub fn assert_bit(&self) {
         CS::enforce_mul(self, &(self-Num::ONE), &self.derive_const(&Num::ZERO));
