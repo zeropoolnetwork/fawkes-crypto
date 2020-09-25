@@ -5,23 +5,8 @@ use syn::parse::Error as ParseError;
 
 mod signal;
 
-trait Output {
-    fn process(self) -> TokenStream;
-}
-
-impl Output for proc_macro2::TokenStream {
-    fn process(self) -> TokenStream {
-        self.into()
-    }
-}
-
-impl Output for Result<proc_macro2::TokenStream, ParseError> {
-    fn process(self) -> TokenStream {
-        match self {
-            Ok(ts) => ts.into(),
-            Err(e) => e.to_compile_error().into(),
-        }
-    }
+fn process(this: proc_macro2::TokenStream) -> TokenStream {
+    this.into()
 }
 
 macro_rules! create_derive(
@@ -29,7 +14,7 @@ macro_rules! create_derive(
         #[proc_macro_derive($trait_, attributes($($attribute),*))]
         pub fn $fn_name(input: TokenStream) -> TokenStream {
             let ast = syn::parse(input).unwrap();
-            Output::process($mod_::expand(&ast, stringify!($trait_)))
+            $crate::process($mod_::expand(&ast, stringify!($trait_)))
         }
     }
 );
