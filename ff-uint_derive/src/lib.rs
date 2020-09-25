@@ -32,18 +32,7 @@ impl Parse for PrimeFieldParamsDef {
     }
 }
 
-// TODO: Automatically prefix repr with super.
-/// ### Example
-/// ```
-/// construct_primefield_params! {
-///     pub struct Fs(super::U256);
-///     impl PrimeFieldParams for Fs {
-///         type Inner = super::U256;
-///         const MODULUS: &'static str = "6554484396890773809930967563523245729705921265872317281365359162392183254199";
-///         const GENERATOR: &'static str = "7";
-///     }
-/// }
-/// ```
+
 #[proc_macro]
 pub fn construct_primefield_params(input: TokenStream) -> TokenStream {
     let PrimeFieldParamsDef {
@@ -51,7 +40,10 @@ pub fn construct_primefield_params(input: TokenStream) -> TokenStream {
         impl_block,
     } = parse_macro_input!(input as PrimeFieldParamsDef);
 
-    let cratename = crate_name("ff_uint").unwrap_or("ff_uint".to_string());
+    let cratename = Ident::new(
+        &crate_name("ff_uint").unwrap_or("ff_uint".to_string()),
+        syn::export::Span::call_site(),
+    );
 
     if let Some((_, name, _)) = &impl_block.trait_ {
         if name.segments.last().unwrap().ident != "PrimeFieldParams" {
@@ -100,21 +92,21 @@ pub fn construct_primefield_params(input: TokenStream) -> TokenStream {
     let mut gen = proc_macro2::TokenStream::new();
 
     let (params_impl, sqrt_impl) =
-        prime_field_constants_and_sqrt(&self_ty, &repr_ty, modulus, limbs, generator);
+        prime_field_constants_and_sqrt(&cratename, &self_ty, &repr_ty, modulus, limbs, generator);
 
     let module_name = Ident::new(
         &format!("__generated_{}", struct_def.ident),
         syn::export::Span::call_site(),
     );
-    let prime_field_impl = prime_field_impl(&self_ty, &repr_ty, limbs);
+    let prime_field_impl = prime_field_impl(&cratename, &self_ty, &repr_ty, limbs);
 
     gen.extend(quote! {
         pub use self::#module_name::*;
         mod #module_name {
-            use ::ff_uint::PrimeFieldParams;
-            use ::ff_uint::Field;
-            use ::ff_uint::PrimeField;
-            use ::ff_uint::Uint;
+            use ::#cratename::PrimeFieldParams;
+            use ::#cratename::Field;
+            use ::#cratename::PrimeField;
+            use ::#cratename::Uint;
             #struct_def
             #params_impl
             #prime_field_impl
@@ -232,6 +224,7 @@ fn test_exp() {
 }
 
 fn prime_field_constants_and_sqrt(
+    cratename: &Ident,
     name: &syn::Type,
     inner: &syn::Type,
     modulus: BigUint,
@@ -267,15 +260,15 @@ fn prime_field_constants_and_sqrt(
     let mod_minus_1_over_2 =
         biguint_to_u64_vec((&modulus - BigUint::from_str("1").unwrap()) >> 1, limbs);
     let legendre_impl = quote! {
-        fn legendre(&self) -> ::ff_uint::LegendreSymbol {
+        fn legendre(&self) -> ::#cratename::LegendreSymbol {
             // s = self^((modulus - 1) // 2)
             let s = self.pow(#inner(#mod_minus_1_over_2));
             if s.is_zero() {
-                ::ff_uint::LegendreSymbol::Zero
+                ::#cratename::LegendreSymbol::Zero
             } else if s == Self::ONE {
-                ::ff_uint::LegendreSymbol::QuadraticResidue
+                ::#cratename::LegendreSymbol::QuadraticResidue
             } else {
-                ::ff_uint::LegendreSymbol::QuadraticNonResidue
+                ::#cratename::LegendreSymbol::QuadraticNonResidue
             }
         }
     };
@@ -289,7 +282,7 @@ fn prime_field_constants_and_sqrt(
             let rneg = biguint_to_u64_vec(&modulus - &r, limbs);
 
             quote! {
-                impl ::ff_uint::SqrtField for #name {
+                impl ::#cratename::SqrtField for #name {
                     #legendre_impl
 
                     fn sqrt(&self) -> Option<Self> {
@@ -314,7 +307,7 @@ fn prime_field_constants_and_sqrt(
             let t = biguint_to_u64_vec(t.clone(), limbs);
 
             quote! {
-                impl ::ff_uint::SqrtField for #name {
+                impl ::#cratename::SqrtField for #name {
                     #legendre_impl
 
                     fn sqrt(&self) -> Option<Self> {
@@ -322,9 +315,9 @@ fn prime_field_constants_and_sqrt(
                         // https://eprint.iacr.org/2012/685.pdf (page 12, algorithm 5)
 
                         match self.legendre() {
-                            ::ff_uint::LegendreSymbol::Zero => Some(*self),
-                            ::ff_uint::LegendreSymbol::QuadraticNonResidue => None,
-                            ::ff_uint::LegendreSymbol::QuadraticResidue => {
+                            ::#cratename::LegendreSymbol::Zero => Some(*self),
+                            ::#cratename::LegendreSymbol::QuadraticNonResidue => None,
+                            ::#cratename::LegendreSymbol::QuadraticResidue => {
                                 let mut c = #name(Self::ROOT_OF_UNITY);
                                 let mut r = self.pow(#inner(#t_plus_1_over_2));
                                 let mut t = self.pow(#inner(#t));
@@ -379,7 +372,7 @@ fn prime_field_constants_and_sqrt(
 
     (
         quote! {
-            impl ::ff_uint::PrimeFieldParams for #name {
+            impl ::#cratename::PrimeFieldParams for #name {
                 type Inner = #inner;
 
                 /// This is the modulus m of the prime field
@@ -417,7 +410,7 @@ fn prime_field_constants_and_sqrt(
 }
 
 /// Implement PrimeField for the derived type.
-fn prime_field_impl(name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_macro2::TokenStream {
+fn prime_field_impl(cratename:&Ident, name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_macro2::TokenStream {
     // Returns r{n} as an ident.
     fn get_temp(n: usize) -> syn::Ident {
         syn::Ident::new(&format!("r{}", n), proc_macro2::Span::call_site())
@@ -438,7 +431,7 @@ fn prime_field_impl(name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_m
     );
 
     // Implement montgomery reduction for some number of limbs
-    fn mont_impl(limbs: usize) -> proc_macro2::TokenStream {
+    fn mont_impl(cratename:&Ident, limbs: usize) -> proc_macro2::TokenStream {
         let mut gen = proc_macro2::TokenStream::new();
 
         for i in 0..limbs {
@@ -447,14 +440,14 @@ fn prime_field_impl(name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_m
                 gen.extend(quote! {
                     let k = #temp.wrapping_mul(Self::INV);
                     let mut carry = 0;
-                    ::ff_uint::mac_with_carry(#temp, k, Self::MODULUS.0[0], &mut carry);
+                    ::#cratename::mac_with_carry(#temp, k, Self::MODULUS.0[0], &mut carry);
                 });
             }
 
             for j in 1..limbs {
                 let temp = get_temp(i + j);
                 gen.extend(quote! {
-                    #temp = ::ff_uint::mac_with_carry(#temp, k, Self::MODULUS.0[#j], &mut carry);
+                    #temp = ::#cratename::mac_with_carry(#temp, k, Self::MODULUS.0[#j], &mut carry);
                 });
             }
 
@@ -462,11 +455,11 @@ fn prime_field_impl(name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_m
 
             if i == 0 {
                 gen.extend(quote! {
-                    #temp = ::ff_uint::adc(#temp, 0, &mut carry);
+                    #temp = ::#cratename::adc(#temp, 0, &mut carry);
                 });
             } else {
                 gen.extend(quote! {
-                    #temp = ::ff_uint::adc(#temp, carry2, &mut carry);
+                    #temp = ::#cratename::adc(#temp, carry2, &mut carry);
                 });
             }
 
@@ -496,7 +489,7 @@ fn prime_field_impl(name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_m
         gen
     }
 
-    fn sqr_impl(a: proc_macro2::TokenStream, limbs: usize) -> proc_macro2::TokenStream {
+    fn sqr_impl(cratename:&Ident, a: proc_macro2::TokenStream, limbs: usize) -> proc_macro2::TokenStream {
         let mut gen = proc_macro2::TokenStream::new();
 
         for i in 0..(limbs - 1) {
@@ -508,11 +501,11 @@ fn prime_field_impl(name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_m
                 let temp = get_temp(i + j);
                 if i == 0 {
                     gen.extend(quote! {
-                        let #temp = ::ff_uint::mac_with_carry(0, (#a.0).0[#i], (#a.0).0[#j], &mut carry);
+                        let #temp = ::#cratename::mac_with_carry(0, (#a.0).0[#i], (#a.0).0[#j], &mut carry);
                     });
                 } else {
                     gen.extend(quote!{
-                        let #temp = ::ff_uint::mac_with_carry(#temp, (#a.0).0[#i], (#a.0).0[#j], &mut carry);
+                        let #temp = ::#cratename::mac_with_carry(#temp, (#a.0).0[#i], (#a.0).0[#j], &mut carry);
                     });
                 }
             }
@@ -552,16 +545,16 @@ fn prime_field_impl(name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_m
             let temp1 = get_temp(i * 2 + 1);
             if i == 0 {
                 gen.extend(quote! {
-                    let #temp0 = ::ff_uint::mac_with_carry(0, (#a.0).0[#i], (#a.0).0[#i], &mut carry);
+                    let #temp0 = ::#cratename::mac_with_carry(0, (#a.0).0[#i], (#a.0).0[#i], &mut carry);
                 });
             } else {
                 gen.extend(quote!{
-                    let #temp0 = ::ff_uint::mac_with_carry(#temp0, (#a.0).0[#i], (#a.0).0[#i], &mut carry);
+                    let #temp0 = ::#cratename::mac_with_carry(#temp0, (#a.0).0[#i], (#a.0).0[#i], &mut carry);
                 });
             }
 
             gen.extend(quote! {
-                let #temp1 = ::ff_uint::adc(#temp1, 0, &mut carry);
+                let #temp1 = ::#cratename::adc(#temp1, 0, &mut carry);
             });
         }
 
@@ -579,6 +572,7 @@ fn prime_field_impl(name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_m
     }
 
     fn mul_impl(
+        cratename:&Ident,
         a: proc_macro2::TokenStream,
         b: proc_macro2::TokenStream,
         limbs: usize,
@@ -595,11 +589,11 @@ fn prime_field_impl(name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_m
 
                 if i == 0 {
                     gen.extend(quote! {
-                        let #temp = ::ff_uint::mac_with_carry(0, (#a.0).0[#i], (#b.0).0[#j], &mut carry);
+                        let #temp = ::#cratename::mac_with_carry(0, (#a.0).0[#i], (#b.0).0[#j], &mut carry);
                     });
                 } else {
                     gen.extend(quote!{
-                        let #temp = ::ff_uint::mac_with_carry(#temp, (#a.0).0[#i], (#b.0).0[#j], &mut carry);
+                        let #temp = ::#cratename::mac_with_carry(#temp, (#a.0).0[#i], (#b.0).0[#j], &mut carry);
                     });
                 }
             }
@@ -624,9 +618,9 @@ fn prime_field_impl(name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_m
         gen
     }
 
-    let squaring_impl = sqr_impl(quote! {self}, limbs);
-    let multiply_impl = mul_impl(quote! {self}, quote! {other}, limbs);
-    let montgomery_impl = mont_impl(limbs);
+    let squaring_impl = sqr_impl(&cratename, quote! {self}, limbs);
+    let multiply_impl = mul_impl(&cratename, quote! {self}, quote! {other}, limbs);
+    let montgomery_impl = mont_impl(&cratename, limbs);
 
     // (self.0).0[0], (self.0).0[1], ..., 0, 0, 0, 0, ...
     let mut into_repr_params = proc_macro2::TokenStream::new();
@@ -810,7 +804,7 @@ fn prime_field_impl(name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_m
             }
         }
 
-        impl ::ff_uint::PrimeField for #name {
+        impl ::#cratename::PrimeField for #name {
             fn from_mont_uint_unchecked(r: #inner) -> Self {
                 #name(r)
             }
@@ -855,7 +849,7 @@ fn prime_field_impl(name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_m
             }
         }
 
-        impl ::ff_uint::Field for #name {
+        impl ::#cratename::Field for #name {
             const ZERO: #name = #name(#inner::ZERO);
             const ONE: #name = #name(Self::R);
 
