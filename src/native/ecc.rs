@@ -1,9 +1,10 @@
 use bellman::pairing::BitIterator;
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 
 use crate::{
+    core::field::{Field, PrimeField, PrimeFieldRepr},
     native::num::Num,
-    core::field::{Field, PrimeField, PrimeFieldRepr}
 };
 
 #[derive(Clone, Copy, Debug)]

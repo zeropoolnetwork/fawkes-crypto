@@ -1,3 +1,4 @@
+use fawkes_crypto_derive::Signal;
 use typenum::Unsigned;
 
 use crate::{

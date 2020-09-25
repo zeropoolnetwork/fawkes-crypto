@@ -1,26 +1,26 @@
 use std::{
+    io::{self, ErrorKind, Write},
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     str::FromStr,
     string::ToString,
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
-    io::{self, ErrorKind, Write}
 };
 
 use blake2_rfc::blake2s::Blake2s;
+use borsh::{BorshDeserialize, BorshSerialize};
 use ff::BitIterator;
 use num::{
     bigint::{BigInt, BigUint, ToBigInt},
-    traits::Signed
+    traits::Signed,
 };
 use rand::{Rand, Rng};
-use borsh::{BorshDeserialize, BorshSerialize};
 use serde::{
     de::{self, Deserialize, Deserializer},
-    ser::{Serialize, Serializer}
+    ser::{Serialize, Serializer},
 };
 
 use crate::{
+    constants::PERSONALIZATION,
     core::field::{Field, PrimeField, PrimeFieldRepr},
-    constants::PERSONALIZATION
 };
 
 #[derive(Clone, Copy, Debug)]

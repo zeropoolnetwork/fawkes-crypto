@@ -1,8 +1,3 @@
-use crate::{
-    core::field::{AbstractField, Field, PrimeField},
-    helpers::groth16::{prover::Proof, G1PointData, G2PointData},
-};
-
 use std::{
     io,
     io::{Read, Write},
@@ -10,6 +5,12 @@ use std::{
 
 use bellman::{groth16::VerifyingKey, SynthesisError};
 use pairing::{bls12_381, bn256, CurveAffine, CurveProjective, EncodedPoint, Engine};
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    core::field::{AbstractField, Field, PrimeField},
+    helpers::groth16::{prover::Proof, G1PointData, G2PointData},
+};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(bound(serialize = "", deserialize = ""))]

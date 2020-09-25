@@ -1,3 +1,5 @@
+use fawkes_crypto_derive::Signal;
+
 use crate::{
     circuit::bitify::c_into_bits_le_strict,
     circuit::bool::CBool,

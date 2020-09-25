@@ -2,6 +2,7 @@ use std::io::{self, Read, Write};
 
 use bellman::{self, SynthesisError};
 use pairing::{bls12_381, bn256, Engine};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     core::cs::Circuit,

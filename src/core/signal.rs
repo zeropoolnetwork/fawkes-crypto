@@ -1,4 +1,4 @@
-use std::marker::Sized;
+use impl_trait_for_tuples::impl_for_tuples;
 use typenum::Unsigned;
 
 use crate::{

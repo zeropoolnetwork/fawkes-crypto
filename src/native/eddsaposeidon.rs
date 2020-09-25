@@ -1,11 +1,11 @@
 use blake2_rfc::blake2s::Blake2s;
 
 use crate::{
-    native::ecc::{EdwardsPoint, JubJubParams},
     constants::{PERSONALIZATION, SEED_EDDSA_POSEIDON},
-    native::num::Num,
     core::field::Field,
-    native::poseidon::{poseidon_with_salt, PoseidonParams}
+    native::ecc::{EdwardsPoint, JubJubParams},
+    native::num::Num,
+    native::poseidon::{poseidon_with_salt, PoseidonParams},
 };
 
 fn hash_r<Fr: Field, Fs: Field>(sk: Num<Fs>, m: Num<Fr>) -> Num<Fs> {

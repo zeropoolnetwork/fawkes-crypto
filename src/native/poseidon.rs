@@ -1,11 +1,9 @@
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 use typenum::Unsigned;
 
 use crate::{
-    core::seedbox::SeedboxBlake2,
-    core::field::Field,
-    core::sizedvec::SizedVec,
-    native::num::Num
+    core::field::Field, core::seedbox::SeedboxBlake2, core::sizedvec::SizedVec, native::num::Num,
 };
 
 #[derive(Debug, Clone)]

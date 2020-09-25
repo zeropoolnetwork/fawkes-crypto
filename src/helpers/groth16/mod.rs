@@ -5,16 +5,17 @@ pub mod verifier;
 
 use std::{cell::RefCell, mem::transmute};
 
+use bellman::{self, SynthesisError};
+use lazy_static::lazy_static;
+use pairing::{bls12_381, bn256, CurveAffine, CurveProjective};
+use serde::{Deserialize, Serialize};
+
 use crate::{
     circuit::num::{CNum, Index},
     core::cs::ConstraintSystem,
     core::field::{AbstractField, Field, PrimeField},
     native::num::Num,
 };
-
-use bellman::{self, SynthesisError};
-use lazy_static::lazy_static;
-use pairing::{bls12_381, bn256, CurveAffine, CurveProjective};
 
 lazy_static! {
     static ref BN256_B_COEFF: bn256::Fq = bn256::Fq::from_raw_repr(bn256::FqRepr([

@@ -1,10 +1,10 @@
 use crate::{
-    core::field::{AbstractField, PrimeField, PrimeFieldRepr},
     constants::SEED_EDWARDS_G,
+    core::field::{AbstractField, PrimeField, PrimeFieldRepr},
     native::{
         ecc::{EdwardsPoint, JubJubParams},
         num::Num,
-    }
+    },
 };
 
 pub use bellman::pairing::bn256::Fr;
