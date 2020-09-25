@@ -10,11 +10,11 @@ extern crate serde;
 #[macro_use]
 extern crate impl_trait_for_tuples;
 
-pub mod core;
 pub mod circuit;
-pub mod native;
-pub mod helpers;
 pub mod constants;
+pub mod core;
+pub mod helpers;
+pub mod native;
 
 pub use base64;
 pub use borsh;

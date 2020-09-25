@@ -3,7 +3,6 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use syn::parse::Error as ParseError;
 
-
 mod signal;
 
 trait Output {
@@ -25,7 +24,6 @@ impl Output for Result<proc_macro2::TokenStream, ParseError> {
     }
 }
 
-
 macro_rules! create_derive(
     ($mod_:ident, $trait_:ident, $fn_name: ident $(,$attribute:ident)* $(,)?) => {
         #[proc_macro_derive($trait_, attributes($($attribute),*))]
@@ -35,6 +33,5 @@ macro_rules! create_derive(
         }
     }
 );
-
 
 create_derive!(signal, Signal, signal_derive, Value);
