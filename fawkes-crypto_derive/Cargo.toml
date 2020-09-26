@@ -1,0 +1,25 @@
+[package]
+name = "fawkes-crypto_derive"
+version = "0.1.2"
+authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
+edition = "2018"
+description = "zk-SNARK circuit building framework"
+homepage = "https://github.com/zeropoolnetwork/fawkes-crypto"
+repository = "https://github.com/zeropoolnetwork/fawkes-crypto"
+license = "MIT OR Apache-2.0"
+
+
+
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "1", features = ["extra-traits"] }
+
+

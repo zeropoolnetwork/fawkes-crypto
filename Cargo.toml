@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "fawkes-crypto",
+  "fawkes-crypto_derive",
   "ff-uint",
   "ff-uint_derive"
 ]

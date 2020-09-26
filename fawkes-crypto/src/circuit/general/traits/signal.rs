@@ -35,14 +35,6 @@ pub trait Signal: Sized+Clone {
 
     fn inputize(&self);
 
-    // fn linearize_builder(&self, acc: &mut Vec<CNum<'a, CS>>);
-
-    // fn linearize(&self) -> Vec<CNum<'a, CS>> {
-    //     let mut acc = Vec::new();
-    //     self.linearize_builder(&mut acc);
-    //     acc
-    // }
-
     #[inline]
     fn derive_alloc<T:Signal<Fr=Self::Fr>>(&self, value:Option<&T::Value>) -> T {
         T::alloc(self.get_cs(), value)
