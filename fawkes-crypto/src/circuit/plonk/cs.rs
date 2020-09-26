@@ -1,10 +1,11 @@
 use ff_uint::{Num, PrimeField};
 use super::{
-    super::general::{traits::signal::{Signal, RCS}, Variable},
+    super::general::{traits::signal::{Signal}, Variable},
     num::CNum
 };
-
-
+use std::cell::RefCell;
+use std::rc::Rc;
+pub type RCS<Fr> = Rc<RefCell<CS<Fr>>>;
 
 #[derive(Clone, Debug)]
 pub enum Gate<Fr:PrimeField> {
@@ -22,6 +23,19 @@ pub struct CS<Fr:PrimeField> {
 
 
 impl<Fr:PrimeField> CS<Fr> {
+    pub fn new(tracking:bool) -> Self {
+        Self {
+            values:vec![],
+            gates:vec![],
+            tracking,
+            public:vec![]
+        }
+    }
+
+    pub fn rnew(tracking:bool) -> RCS<Fr> {
+        Rc::new(RefCell::new(Self::new(tracking)))
+    }
+
     // a*b === c
     pub fn enforce_mul(a:&CNum<Fr>, b:&CNum<Fr>, c:&CNum<Fr>) {
         let mut rcs = a.get_cs().borrow_mut();

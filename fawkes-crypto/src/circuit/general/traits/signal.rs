@@ -1,9 +1,6 @@
-use crate::circuit::{bool::CBool, cs::CS};
+use crate::circuit::{bool::CBool, cs::RCS};
 use ff_uint::PrimeField;
-use std::cell::RefCell;
-use std::rc::Rc;
 
-pub type RCS<Fr> = Rc<RefCell<CS<Fr>>>;
 
 pub trait Signal: Sized+Clone {
     type Value: Clone + Sized;

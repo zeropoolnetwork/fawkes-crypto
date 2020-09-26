@@ -1,6 +1,6 @@
 use ff_uint::{Num, PrimeField};
-use crate::circuit::plonk::{num::CNum, cs::CS};
-use crate::circuit::general::{traits::{signal::{Signal, RCS}}};
+use crate::circuit::plonk::{num::CNum, cs::{CS, RCS}};
+use crate::circuit::general::{traits::{signal::{Signal}}};
 
 
 use std::ops::{Not, BitAndAssign, BitOrAssign, BitXorAssign, BitAnd, BitOr, BitXor};
