@@ -1,6 +1,6 @@
 use ff_uint::{Num, PrimeField};
 use crate::circuit::plonk::{num::CNum, cs::CS};
-use crate::circuit::general::{traits::{signal::Signal, bool::SignalBool, num::SignalNum}, Variable};
+use crate::circuit::general::{traits::{signal::Signal}, Variable};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -9,27 +9,27 @@ use std::ops::{Not, BitAndAssign, BitOrAssign, BitXorAssign, BitAnd, BitOr, BitX
 #[derive(Clone, Debug)]
 pub struct CBool<Fr:PrimeField>(CNum<Fr>);
 
-impl<Fr:PrimeField> SignalBool for CBool<Fr> {
-    type Num=CNum<Fr>;
-
-    fn new_unchecked(n:&CNum<Fr>) -> Self {
+impl<Fr:PrimeField> CBool<Fr> {
+    pub fn new_unchecked(n:&CNum<Fr>) -> Self {
         CBool(n.clone())
     }
 
-    fn new(n: &CNum<Fr>) -> Self {
+    pub fn new(n: &CNum<Fr>) -> Self {
         n.assert_bit();
         Self::new_unchecked(n)
     }
 
-    fn to_num(&self) -> CNum<Fr> {
+    pub fn to_num(&self) -> CNum<Fr> {
         self.0.clone()
     }
+
+    pub fn capacity(&self) -> usize { 0 }
 }
 
 impl<Fr:PrimeField> Signal for CBool<Fr> {
     type Value = bool;
     type CS = Rc<RefCell<CS<Fr>>>;
-    type Bool = Self;
+    type Fr = Fr;
 
     fn as_const(&self) -> Option<Self::Value> {
         let lc = self.0.lc;
@@ -82,7 +82,7 @@ impl<Fr:PrimeField> Signal for CBool<Fr> {
         CS::enforce_add(&self.to_num(), &self.derive_const(&Num::ZERO), &self.derive_const(&(*value).into()))
     }
 
-    fn switch(&self, bit: &Self::Bool, if_else: &Self) -> Self {
+    fn switch(&self, bit: &CBool<Fr>, if_else: &Self) -> Self {
         self.to_num().switch(bit, &if_else.to_num()).to_bool_unchecked()
     }
 
@@ -90,18 +90,16 @@ impl<Fr:PrimeField> Signal for CBool<Fr> {
         self.to_num().assert_eq(&other.to_num())
     }
 
-    fn is_eq(&self, other:&Self) -> Self::Bool {
+    fn is_eq(&self, other:&Self) -> CBool<Fr> {
         let value = self.get_value().map(|a| other.get_value().map(|b| a==b )).flatten();
-        let signal:Self::Bool = self.derive_alloc(value.as_ref());
+        let signal:CBool<Fr> = self.derive_alloc(value.as_ref());
         CS::enforce_mul(&(self.to_num()*Num::from(2)-Num::ONE), &(other.to_num()*Num::from(2)-Num::ONE), &(signal.to_num()*Num::from(2)-Num::ONE));
         signal
     }
 
 }
 
-impl<Fr:PrimeField> CBool<Fr> {
-    pub fn capacity(&self) -> usize { 0 }
-}
+
 
 impl<Fr:PrimeField> Not for CBool<Fr> {
     type Output = Self;

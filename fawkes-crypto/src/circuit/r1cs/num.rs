@@ -2,7 +2,7 @@ use ff_uint::{Num, PrimeField};
 use crate::circuit::{
     general::Variable,
     r1cs::{cs::{CS, LC}, bool::CBool},
-    general::traits::{signal::Signal, num::SignalNum, bool::SignalBool}
+    general::traits::{signal::Signal}
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -18,16 +18,13 @@ pub struct CNum<Fr:PrimeField> {
     pub cs: Rc<RefCell<CS<Fr>>>
 }
 
-impl<Fr:PrimeField> SignalNum for CNum<Fr> {
-    type Bool = CBool<Fr>;
-
-
-    fn assert_zero(&self) {
+impl<Fr:PrimeField> CNum<Fr> {
+    pub fn assert_zero(&self) {
         self.assert_const(&Num::ZERO) 
     }
 
 
-    fn assert_nonzero(&self) {
+    pub fn assert_nonzero(&self) {
         match self.as_const() {
             Some(v) => {
                 assert!(v!=Num::ZERO);
@@ -40,7 +37,7 @@ impl<Fr:PrimeField> SignalNum for CNum<Fr> {
         }
     }
 
-    fn is_zero(&self) -> CBool<Fr> {
+    pub fn is_zero(&self) -> CBool<Fr> {
         match self.as_const() {
             Some(c) => self.derive_const(&c.is_zero()),
             _ => {
@@ -54,23 +51,23 @@ impl<Fr:PrimeField> SignalNum for CNum<Fr> {
     }
 
 
-    fn assert_bit(&self) {
+    pub fn assert_bit(&self) {
         CS::enforce(self, &(self-Num::ONE), &self.derive_const(&Num::ZERO));
     }
 
-    fn to_bool(&self) -> CBool<Fr> {
+    pub fn to_bool(&self) -> CBool<Fr> {
         CBool::new(self)
     }
 
-    fn to_bool_unchecked(&self) -> CBool<Fr> {
+    pub fn to_bool_unchecked(&self) -> CBool<Fr> {
         CBool::new_unchecked(self)
     }
 
-    fn from_bool(b:CBool<Fr>) -> Self {
+    pub fn from_bool(b:CBool<Fr>) -> Self {
         b.to_num()
     }
 
-    fn inv(&self) -> Self {
+    pub fn inv(&self) -> Self {
         match self.as_const() {
             Some(v) => {
                 self.derive_const(&v.checked_inv().expect("Division by zero"))
@@ -88,8 +85,8 @@ impl<Fr:PrimeField> SignalNum for CNum<Fr> {
 
 impl<Fr:PrimeField> Signal for CNum<Fr> {
     type Value = Num<Fr>;
+    type Fr = Fr;
     type CS = Rc<RefCell<CS<Fr>>>;
-    type Bool = CBool<Fr>;
 
     fn as_const(&self) -> Option<Self::Value> {
         let lc = &self.lc;
@@ -134,7 +131,7 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
         CS::enforce(self, &self.derive_const(&Num::ONE), &self.derive_const(value))
     }
 
-    fn switch(&self, bit: &Self::Bool, if_else: &Self) -> Self {
+    fn switch(&self, bit: &CBool<Fr>, if_else: &Self) -> Self {
         if let Some(b) = bit.as_const() {
             if b {self.clone()} else {if_else.clone()}
         } else {
@@ -146,7 +143,7 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
         CS::enforce(self, &self.derive_const(&Num::ONE), other);
     }
 
-    fn is_eq(&self, other:&Self) -> Self::Bool {
+    fn is_eq(&self, other:&Self) -> CBool<Fr> {
         (self-other).is_zero()
     }
     

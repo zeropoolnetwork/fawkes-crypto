@@ -1,6 +1,6 @@
 [package]
 name = "fawkes-crypto"
-version = "0.1.0"
+version = "3.0.0"
 authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
 edition = "2018"
 
@@ -11,4 +11,9 @@ crate-type = ["rlib"]
 [dependencies]
 
 ff-uint = {path="../ff-uint"}
-linked-list = "0.0.3"
+linked-list = {version="0.0.3", optional=true}
+
+[features]
+default=["r1cs"]
+r1cs=["linked-list"]
+plonk=[]

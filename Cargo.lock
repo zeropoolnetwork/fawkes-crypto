@@ -103,7 +103,7 @@ dependencies = [
 
 [[package]]
 name = "fawkes-crypto"
-version = "0.1.0"
+version = "3.0.0"
 dependencies = [
  "ff-uint",
  "linked-list",

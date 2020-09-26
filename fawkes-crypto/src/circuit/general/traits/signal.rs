@@ -1,9 +1,11 @@
-use super::bool::SignalBool;
+use crate::circuit::bool::CBool;
+use ff_uint::PrimeField;
 
 pub trait Signal: Sized+Clone {
     type Value: Clone + Sized;
     type CS: Clone;
-    type Bool:SignalBool;
+    type Fr:PrimeField;
+
 
     fn as_const(&self) -> Option<Self::Value>;
 
@@ -20,13 +22,13 @@ pub trait Signal: Sized+Clone {
 
     fn alloc(cs:&Self::CS, value:Option<&Self::Value>) -> Self;
 
-    fn switch(&self, bit: &Self::Bool, if_else: &Self) -> Self;
+    fn switch(&self, bit: &CBool<Self::Fr>, if_else: &Self) -> Self;
 
     fn assert_const(&self, value: &Self::Value);
 
     fn assert_eq(&self, other:&Self);
 
-    fn is_eq(&self, other:&Self) -> Self::Bool;
+    fn is_eq(&self, other:&Self) -> CBool<Self::Fr>;
 
     fn inputize(&self);
 
