@@ -1,8 +1,7 @@
 use ff_uint::{Num, PrimeField};
 use crate::circuit::plonk::{num::CNum, cs::CS};
-use crate::circuit::general::{traits::{signal::Signal}, Variable};
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::circuit::general::{traits::{signal::{Signal, RCS}}, Variable};
+
 
 use std::ops::{Not, BitAndAssign, BitOrAssign, BitXorAssign, BitAnd, BitOr, BitXor};
 
@@ -28,7 +27,6 @@ impl<Fr:PrimeField> CBool<Fr> {
 
 impl<Fr:PrimeField> Signal for CBool<Fr> {
     type Value = bool;
-    type CS = Rc<RefCell<CS<Fr>>>;
     type Fr = Fr;
 
     fn as_const(&self) -> Option<Self::Value> {
@@ -62,15 +60,15 @@ impl<Fr:PrimeField> Signal for CBool<Fr> {
         })
     }
 
-    fn from_const(cs:&Self::CS, value: &Self::Value) -> Self {
+    fn from_const(cs:&RCS<Fr>, value: &Self::Value) -> Self {
         Self::new_unchecked(&CNum::from_const(cs, &(*value).into()))
     }
 
-    fn get_cs(&self) -> &Self::CS {
+    fn get_cs(&self) -> &RCS<Fr> {
         &self.0.cs
     }
 
-    fn alloc(cs:&Self::CS, value:Option<&Self::Value>) -> Self {
+    fn alloc(cs:&RCS<Fr>, value:Option<&Self::Value>) -> Self {
         let mut rcs = cs.borrow_mut();
         let value = value.map(|&b| Into::<Num<Fr>>::into(b));
         let v = Variable(rcs.n_vars);

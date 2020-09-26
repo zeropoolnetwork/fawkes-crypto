@@ -1,9 +1,12 @@
-use crate::circuit::bool::CBool;
+use crate::circuit::{bool::CBool, cs::CS};
 use ff_uint::PrimeField;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+pub type RCS<Fr> = Rc<RefCell<CS<Fr>>>;
 
 pub trait Signal: Sized+Clone {
     type Value: Clone + Sized;
-    type CS: Clone;
     type Fr:PrimeField;
 
 
@@ -12,15 +15,15 @@ pub trait Signal: Sized+Clone {
     fn get_value(&self) -> Option<Self::Value>;
 
     #[inline]
-    fn derive_const<T:Signal<CS=Self::CS>>(&self, value: &T::Value) -> T {
+    fn derive_const<T:Signal<Fr=Self::Fr>>(&self, value: &T::Value) -> T {
         T::from_const(self.get_cs(), value)
     }
 
-    fn from_const(cs:&Self::CS, value: &Self::Value) -> Self;
+    fn from_const(cs:&RCS<Self::Fr>, value: &Self::Value) -> Self;
 
-    fn get_cs(&self) -> &Self::CS;
+    fn get_cs(&self) -> &RCS<Self::Fr>;
 
-    fn alloc(cs:&Self::CS, value:Option<&Self::Value>) -> Self;
+    fn alloc(cs:&RCS<Self::Fr>, value:Option<&Self::Value>) -> Self;
 
     fn switch(&self, bit: &CBool<Self::Fr>, if_else: &Self) -> Self;
 
@@ -41,7 +44,7 @@ pub trait Signal: Sized+Clone {
     // }
 
     #[inline]
-    fn derive_alloc<T:Signal<CS=Self::CS>>(&self, value:Option<&T::Value>) -> T {
+    fn derive_alloc<T:Signal<Fr=Self::Fr>>(&self, value:Option<&T::Value>) -> T {
         T::alloc(self.get_cs(), value)
     }
 }

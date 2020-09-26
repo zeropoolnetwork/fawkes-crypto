@@ -2,7 +2,7 @@ use ff_uint::{Num, PrimeField};
 use crate::circuit::{
     general::Variable,
     r1cs::{cs::{CS, LC}, bool::CBool},
-    general::traits::{signal::Signal}
+    general::traits::{signal::{Signal, RCS}}
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -86,7 +86,7 @@ impl<Fr:PrimeField> CNum<Fr> {
 impl<Fr:PrimeField> Signal for CNum<Fr> {
     type Value = Num<Fr>;
     type Fr = Fr;
-    type CS = Rc<RefCell<CS<Fr>>>;
+
 
     fn as_const(&self) -> Option<Self::Value> {
         let lc = &self.lc;
@@ -105,7 +105,7 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
         self.value
     }
 
-    fn from_const(cs:&Self::CS, value: &Self::Value) -> Self {
+    fn from_const(cs:&RCS<Fr>, value: &Self::Value) -> Self {
         let value = value.clone();
         Self {
             value: Some(value),
@@ -114,11 +114,11 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
         }
     }
 
-    fn get_cs(&self) -> &Self::CS {
+    fn get_cs(&self) -> &RCS<Fr> {
         &self.cs
     }
 
-    fn alloc(cs:&Self::CS, value:Option<&Self::Value>) -> Self {
+    fn alloc(cs:&RCS<Fr>, value:Option<&Self::Value>) -> Self {
         let mut rcs = cs.borrow_mut();
         let v = Variable(rcs.n_vars);
         rcs.n_vars+=1;
