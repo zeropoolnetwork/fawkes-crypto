@@ -1,6 +1,5 @@
 use ff_uint::{Num, PrimeField};
 use crate::circuit::{
-    general::Variable,
     r1cs::{cs::{CS, LC}, bool::CBool},
     general::traits::{signal::{Signal, RCS}}
 };
@@ -119,12 +118,7 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
     }
 
     fn alloc(cs:&RCS<Fr>, value:Option<&Self::Value>) -> Self {
-        let mut rcs = cs.borrow_mut();
-        let v = Variable(rcs.n_vars);
-        rcs.n_vars+=1;
-        let mut ll = LinkedList::new();
-        ll.push_back((Num::ONE, v));
-        Self {value:value.cloned(), lc:LC(Num::ZERO, ll), cs:cs.clone()}
+        CS::alloc(cs, value)
     }
 
     fn assert_const(&self, value: &Self::Value) {

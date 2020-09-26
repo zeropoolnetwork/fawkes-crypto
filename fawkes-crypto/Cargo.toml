@@ -14,6 +14,6 @@ ff-uint = {path="../ff-uint"}
 linked-list = {version="0.0.3", optional=true}
 
 [features]
-default=["r1cs"]
+default=["plonk"]
 r1cs=["linked-list"]
 plonk=[]

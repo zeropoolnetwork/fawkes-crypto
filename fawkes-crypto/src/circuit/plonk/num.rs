@@ -107,7 +107,7 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
         let value = value.clone();
         Self {
             value: Some(value),
-            lc: (Num::ZERO, Variable(0), value),
+            lc: (Num::ZERO, 0, value),
             cs:cs.clone()
         }
     }
@@ -117,10 +117,7 @@ impl<Fr:PrimeField> Signal for CNum<Fr> {
     }
 
     fn alloc(cs:&RCS<Fr>, value:Option<&Self::Value>) -> Self {
-        let mut rcs = cs.borrow_mut();
-        let v = Variable(rcs.n_vars);
-        rcs.n_vars+=1;
-        Self {value:value.cloned(), lc:(Num::ONE, v, Num::ZERO), cs:cs.clone()}
+        CS::alloc(cs, value)
     }
 
     fn assert_const(&self, value: &Self::Value) {

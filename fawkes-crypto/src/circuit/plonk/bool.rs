@@ -1,6 +1,6 @@
 use ff_uint::{Num, PrimeField};
 use crate::circuit::plonk::{num::CNum, cs::CS};
-use crate::circuit::general::{traits::{signal::{Signal, RCS}}, Variable};
+use crate::circuit::general::{traits::{signal::{Signal, RCS}}};
 
 
 use std::ops::{Not, BitAndAssign, BitOrAssign, BitXorAssign, BitAnd, BitOr, BitXor};
@@ -69,11 +69,8 @@ impl<Fr:PrimeField> Signal for CBool<Fr> {
     }
 
     fn alloc(cs:&RCS<Fr>, value:Option<&Self::Value>) -> Self {
-        let mut rcs = cs.borrow_mut();
         let value = value.map(|&b| Into::<Num<Fr>>::into(b));
-        let v = Variable(rcs.n_vars);
-        rcs.n_vars+=1;
-        Self::new_unchecked(&CNum {value:value, lc:(Num::ONE, v, Num::ZERO), cs:cs.clone()})
+        Self::new_unchecked(&CNum::alloc(cs, value.as_ref()))
     }
 
     fn assert_const(&self, value: &Self::Value) {

@@ -1,6 +1,6 @@
 use ff_uint::{Num, PrimeField};
 use super::{
-    super::general::{traits::signal::Signal, Variable},
+    super::general::{traits::signal::{Signal, RCS}, Variable},
     num::CNum
 };
 
@@ -13,10 +13,11 @@ pub enum Gate<Fr:PrimeField> {
 }
 #[derive(Clone, Debug)]
 pub struct CS<Fr:PrimeField> {
-    pub n_vars: usize,
-    pub gates: Vec<Gate<Fr>>,
-    pub tracking:bool,
-    pub public:Vec<Variable>
+    values:Vec<Option<Num<Fr>>>,
+    gates: Vec<Gate<Fr>>,
+    tracking:bool,
+    public:Vec<Variable>
+
 }
 
 
@@ -64,4 +65,13 @@ impl<Fr:PrimeField> CS<Fr> {
 
         n.get_cs().borrow_mut().public.push(v);
     }
+
+    pub fn alloc(cs:&RCS<Fr>, value:Option<&Num<Fr>>) -> CNum<Fr> {
+        let mut rcs = cs.borrow_mut();
+        let n_vars = rcs.values.len();
+        let v = n_vars;
+        rcs.values.push(value.cloned());
+        CNum {value:value.cloned(), lc:(Num::ONE, v, Num::ZERO), cs:cs.clone()}
+    }
+
 }

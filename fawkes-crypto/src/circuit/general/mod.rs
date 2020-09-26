@@ -1,8 +1,4 @@
 pub mod traits;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct Variable(pub usize);
-
-impl Variable {
-    pub const ZERO:Self = Self(0);
-}
+pub type Variable=usize;
+pub const VARIABLE_ZERO:usize=0;
