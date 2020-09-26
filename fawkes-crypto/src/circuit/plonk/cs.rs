@@ -1,6 +1,7 @@
 use ff_uint::{Num, PrimeField};
-use super::{
-    super::general::{traits::signal::{Signal}, Variable},
+use crate::circuit::{
+    signal::Signal, 
+    Variable,
     num::CNum
 };
 use std::cell::RefCell;

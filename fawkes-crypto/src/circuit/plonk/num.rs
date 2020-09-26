@@ -1,8 +1,8 @@
 use ff_uint::{Num, PrimeField};
 use crate::circuit::{
-    general::Variable,
-    plonk::{cs::{CS, RCS}, bool::CBool},
-    general::traits::{signal::{Signal}}
+    Variable,
+    cs::{CS, RCS}, bool::CBool,
+    signal::Signal
 };
 use std::cell::RefCell;
 use std::rc::Rc;

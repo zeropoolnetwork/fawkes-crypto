@@ -10,6 +10,6 @@ mod plonk;
 #[cfg(feature = "plonk")]
 pub use plonk::*;
 
-pub mod general;
-
+mod general;
+pub use general::*;
 
