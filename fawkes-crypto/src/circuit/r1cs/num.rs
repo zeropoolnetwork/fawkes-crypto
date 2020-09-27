@@ -81,11 +81,16 @@ impl<Fr:PrimeField> CNum<Fr> {
             }
         }
     }
+
+    #[inline]
+    pub fn square(&self) -> Self {
+        self * self
+    }
+    
 }
 
-impl<Fr:PrimeField> Signal for CNum<Fr> {
+impl<Fr:PrimeField> Signal<Fr> for CNum<Fr> {
     type Value = Num<Fr>;
-    type Fr = Fr;
 
 
     fn as_const(&self) -> Option<Self::Value> {

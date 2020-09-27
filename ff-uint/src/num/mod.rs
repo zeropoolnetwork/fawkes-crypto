@@ -231,6 +231,7 @@ impl <Fp:PrimeField> Num<Fp> {
     pub const ZERO:Self = Num(Fp::ZERO);
     pub const ONE:Self = Num(Fp::ONE);
     pub const MODULUS: NumRepr<Fp::Inner> = NumRepr(Fp::MODULUS);
+    pub const MODULUS_BITS: u32 = Fp::MODULUS_BITS;
 
     pub fn is_even(&self) -> bool {
         self.to_uint().0.is_even()

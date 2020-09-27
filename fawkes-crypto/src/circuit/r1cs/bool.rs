@@ -30,9 +30,8 @@ impl<Fr:PrimeField> CBool<Fr> {
 
 }
 
-impl<Fr:PrimeField> Signal for CBool<Fr> {
+impl<Fr:PrimeField> Signal<Fr> for CBool<Fr> {
     type Value = bool;
-    type Fr = Fr;
     
 
     fn as_const(&self) -> Option<Self::Value> {
@@ -76,7 +75,7 @@ impl<Fr:PrimeField> Signal for CBool<Fr> {
 
     fn alloc(cs:&RCS<Fr>, value:Option<&Self::Value>) -> Self {
         let value = value.map(|&b| Into::<Num<Fr>>::into(b));
-        Self::new_unchecked(&CNum::alloc(cs, value.as_ref()))
+        Self::new(&CNum::alloc(cs, value.as_ref()))
     }
 
     fn assert_const(&self, value: &Self::Value) {

@@ -71,9 +71,8 @@ pub fn expand(input: &DeriveInput, _: &str) -> TokenStream {
     
 
     quote! {
-        impl #impl_generics Signal for #input_type#ty_generics #where_clause {
+        impl #impl_generics Signal<Fr> for #input_type#ty_generics #where_clause {
             type Value = #value_type;
-            type Fr = Fr;
 
             #body
 
@@ -142,9 +141,9 @@ fn tuple_impl(fields: &[&Field]) -> TokenStream {
         }
 
         fn is_eq(&self, other: &Self) -> CBool<Fr> {
-            let mut acc = CNum::one(self.get_cs());
-            #(acc *= self. #var_ids .is_eq(&other. #var_ids).0;)*
-            acc.into_bool()
+            let mut acc = self.derive_const(&true);
+            #(acc &= self. #var_ids .is_eq(&other. #var_ids);)*
+            acc
         }
     
         fn alloc(cs:&RCS<Fr>, value:Option<&Self::Value>) -> Self {
@@ -199,9 +198,9 @@ fn struct_impl(fields: &[&Field]) -> TokenStream {
         }
 
         fn is_eq(&self, other: &Self) -> CBool<Fr> {
-            let mut acc = CNum::one(self.get_cs());
-            #(acc *= self. #var_names .is_eq(&other. #var_names).0;)*
-            acc.into_bool()
+            let mut acc = self.derive_const(&true);
+            #(acc &= self. #var_names .is_eq(&other. #var_names);)*
+            acc
         }
     
         fn alloc(cs:&RCS<Fr>, value:Option<&Self::Value>) -> Self {

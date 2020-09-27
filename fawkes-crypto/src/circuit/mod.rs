@@ -11,6 +11,13 @@ mod plonk;
 pub use plonk::*;
 
 
+pub mod bitify;
+pub mod poseidon;
+pub mod mux;
+pub mod ecc;
+pub mod eddsaposeidon;
+
+
 
 pub type Variable=usize;
 pub const VARIABLE_ZERO:usize=0;

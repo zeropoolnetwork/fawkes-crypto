@@ -80,6 +80,11 @@ impl<Fr:PrimeField> CNum<Fr> {
             }
         }
     }
+
+    #[inline]
+    pub fn square(&self) -> Self {
+        self * self
+    }
 }
 
 impl<Fr:PrimeField> Signal for CNum<Fr> {
