@@ -26,6 +26,11 @@ borsh = "0.7"
 serde = "1.0"
 ref-cast = "1.0"
 
+
+[dependencies.blake2_rfc]
+version = "0.0.1"
+package = "blake2-rfc_bellman_edition"
+
 [features]
 default = []
 

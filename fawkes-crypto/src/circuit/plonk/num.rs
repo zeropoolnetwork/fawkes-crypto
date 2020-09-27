@@ -1,9 +1,9 @@
 use ff_uint::{Num, PrimeField};
 use crate::circuit::{
     Variable,
-    cs::{CS, RCS}, bool::CBool,
-    signal::Signal
+    cs::{CS, RCS}, bool::CBool
 };
+use crate::core::signal::Signal;
 use std::cell::RefCell;
 use std::rc::Rc;
 

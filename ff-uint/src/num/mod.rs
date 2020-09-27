@@ -8,6 +8,7 @@ use ref_cast::RefCast;
 use crate::serde::{Serialize, Serializer, Deserialize, Deserializer};
 
 use std::convert::TryInto;
+use crate::rand::Rng;
 
 #[repr(transparent)]
 #[derive(Clone, Copy, RefCast)]
@@ -31,6 +32,21 @@ impl <U:Uint> NumRepr<U> {
 
     pub fn is_zero(self) -> bool {
         self == Self::ZERO
+    }
+
+    pub fn is_even(&self) -> bool {
+        self.0.is_even()
+    }
+
+    pub fn is_odd(&self) -> bool {
+        self.0.is_odd()
+    }
+}
+
+impl<U:Uint> crate::rand::distributions::Distribution<NumRepr<U>> for crate::rand::distributions::Standard {
+    #[inline]
+    fn sample<R: crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> NumRepr<U> {
+        NumRepr::new(U::random(rng))
     }
 }
 
@@ -192,6 +208,13 @@ impl<U:Uint> std::convert::From<&'static str> for NumRepr<U> {
 
 // num ops for PrimeField
 
+impl<Fp:PrimeField> crate::rand::distributions::Distribution<Num<Fp>> for crate::rand::distributions::Standard {
+    #[inline]
+    fn sample<R: crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> Num<Fp> {
+        Num::new(Fp::random(rng))
+    }
+}
+
 impl<Fp:PrimeField> BorshSerialize for Num<Fp> {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
         self.0.serialize(writer)
@@ -209,11 +232,32 @@ impl <Fp:PrimeField> Num<Fp> {
     pub const ONE:Self = Num(Fp::ONE);
     pub const MODULUS: NumRepr<Fp::Inner> = NumRepr(Fp::MODULUS);
 
+    pub fn is_even(&self) -> bool {
+        self.to_uint().0.is_even()
+    }
+
+    pub fn is_odd(&self) -> bool {
+        self.to_uint().0.is_odd()
+    }
+
+    pub fn double(self) -> Self {
+        Self(self.0.double())
+    }
+
+    pub fn from_seed(blob: &[u8]) -> Self {
+        let mut rng = crate::seedbox::SeedboxBlake2::new_with_salt(blob);
+        rng.gen()
+    }
+
+    pub fn square(self) -> Self {
+        Self(self.0.square())
+    }
+
     pub fn new(n:Fp) -> Self {
         Self(n)
     }
 
-    pub fn checked_inv(&self) -> Option<Self> {
+    pub fn checked_inv(self) -> Option<Self> {
         Some(Self(self.0.checked_inv()?))
     }
 
@@ -223,6 +267,11 @@ impl <Fp:PrimeField> Num<Fp> {
 
     pub fn from_uint(v:NumRepr<Fp::Inner>) -> Option<Self> {
         Some(Self(Fp::from_uint(v.0)?))
+    }
+
+    pub fn from_uint_reduced(v:NumRepr<Fp::Inner>) -> Self {
+        let n = v % Num::<Fp>::MODULUS;
+        Self(Fp::from_uint_unchecked(n.0))
     }
 
     pub fn from_mont_uint(v: NumRepr<Fp::Inner>) -> Option<Self> {
@@ -235,6 +284,10 @@ impl <Fp:PrimeField> Num<Fp> {
 
     pub fn from_mont_uint_unchecked(v: NumRepr<Fp::Inner>) -> Self {
         Self(Fp::from_mont_uint_unchecked(v.0))
+    }
+
+    pub fn sqrt(&self) -> Option<Self> {
+        Some(Self(self.0.sqrt()?))
     }
 
 
@@ -381,3 +434,43 @@ impl_fnum_try_from_for_primitive_signed!(impl<Fp:PrimeField> TryFrom<Num<Fp>> fo
 impl_fnum_try_from_for_primitive_signed!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for i32);
 impl_fnum_try_from_for_primitive_signed!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for i64);
 impl_fnum_try_from_for_primitive_signed!(impl<Fp:PrimeField> TryFrom<Num<Fp>> for i128);
+
+
+use crate::{BitIterLE, BitIteratorLE, BitIterBE, BitIteratorBE};
+
+
+
+impl<I:Uint> BitIterBE for NumRepr<I> {
+	type Iter = BitIteratorBE<I>;
+
+	fn bit_iter_be(&self) -> Self::Iter {
+		self.0.bit_iter_be()
+	}
+} 
+
+
+impl<I:Uint> BitIterLE for NumRepr<I> {
+	type Iter = BitIteratorLE<I>;
+
+	fn bit_iter_le(&self) -> Self::Iter {
+		self.0.bit_iter_le()
+	}
+} 
+
+
+impl<Fp:PrimeField> BitIterBE for Num<Fp> {
+	type Iter = BitIteratorBE<Fp::Inner>;
+
+	fn bit_iter_be(&self) -> Self::Iter {
+		self.to_uint().bit_iter_be()
+	}
+} 
+
+
+impl<Fp:PrimeField> BitIterLE for Num<Fp> {
+	type Iter = BitIteratorLE<Fp::Inner>;
+
+	fn bit_iter_le(&self) -> Self::Iter {
+		self.to_uint().bit_iter_le()
+	}
+} 

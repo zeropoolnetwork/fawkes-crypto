@@ -10,6 +10,10 @@ mod plonk;
 #[cfg(feature = "plonk")]
 pub use plonk::*;
 
-mod general;
-pub use general::*;
+
+
+pub type Variable=usize;
+pub const VARIABLE_ZERO:usize=0;
+
+
 

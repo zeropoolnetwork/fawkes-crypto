@@ -12,6 +12,8 @@
 #[macro_use] mod ff;
 mod num;
 
+pub mod seedbox;
+
 pub use uint::traits::*;
 pub use uint::macros::*;
 pub use ff::*;

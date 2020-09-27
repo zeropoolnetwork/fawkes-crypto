@@ -12,8 +12,18 @@ crate-type = ["rlib"]
 
 ff-uint = {path="../ff-uint"}
 linked-list = {version="0.0.3", optional=true}
+typenum = "1.12.0"
+rand = "0.7.3"
+byteorder = "1"
+serde = { version = "1.0", features = ["derive"] }
+borsh = "0.7"
+
+[dependencies.blake2_rfc]
+version = "0.0.1"
+package = "blake2-rfc_bellman_edition"
+
 
 [features]
-default=["plonk"]
+default=["r1cs"]
 r1cs=["linked-list"]
 plonk=[]
