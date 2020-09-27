@@ -22,7 +22,19 @@ impl<Fr:PrimeField> CNum<Fr> {
     pub fn assert_zero(&self) {
         self.assert_const(&Num::ZERO) 
     }
-
+    
+    // for 0/0 uncertainty case any return value is valid
+    pub fn div_unchecked(&self, other:&Self) -> Self {
+        match (self.as_const(), other.as_const()) {
+            (_, Some(b)) => {self / b},
+            _ => {
+                let value = self.value.map(|a| other.value.map(|b| a/b)).flatten();
+                let signal = self.derive_alloc(value.as_ref());
+                CS::enforce(&signal, other, self);
+                signal
+            }
+        }
+    }
 
     pub fn assert_nonzero(&self) {
         match self.as_const() {
@@ -68,25 +80,15 @@ impl<Fr:PrimeField> CNum<Fr> {
     }
 
     pub fn inv(&self) -> Self {
-        match self.as_const() {
-            Some(v) => {
-                self.derive_const(&v.checked_inv().expect("Division by zero"))
-            }
-            _ => {
-                self.assert_nonzero();
-                let inv_value = self.get_value().map(|v| v.checked_inv().expect("Division by zero"));
-                let inv_signal = self.derive_alloc(inv_value.as_ref());
-                CS::enforce(self, &inv_signal, &self.derive_const(&Num::ONE));
-                inv_signal
-            }
-        }
+        let one:Self = self.derive_const(&Num::ONE);
+        one/self
     }
 
     #[inline]
     pub fn square(&self) -> Self {
         self * self
     }
-    
+
 }
 
 impl<Fr:PrimeField> Signal<Fr> for CNum<Fr> {
@@ -315,17 +317,8 @@ impl<'l, Fr:PrimeField> MulAssign<&'l CNum<Fr>> for CNum<Fr> {
 impl<'l, Fr:PrimeField> DivAssign<&'l CNum<Fr>> for CNum<Fr> {
     #[inline]
     fn div_assign(&mut self, other: &'l CNum<Fr>)  {
-        match (self.as_const(), other.as_const()) {
-            (Some(a), _) => {*self = a*other.inv(); },
-            (_, Some(b)) => {*self /= b},
-            _ => {
-                let value = self.value.map(|a| other.value.map(|b| a/b)).flatten();
-                let signal = self.derive_alloc(value.as_ref());
-                other.assert_nonzero();
-                CS::enforce(&signal, other, self);
-                *self = signal;
-            }
-        }
+        other.assert_nonzero();
+        *self = self.div_unchecked(other);
     }
 }
 

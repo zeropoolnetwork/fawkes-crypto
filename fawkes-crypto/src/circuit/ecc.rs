@@ -31,8 +31,8 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
         let v2 = v.square();
         let u = (&self.x + &self.y).square();
         Self {
-            x: &v*Num::from(2) / (Num::ONE + params.edwards_d()*&v2),
-            y: (&u-&v*Num::from(2)) / (Num::ONE -  params.edwards_d()*&v2)
+            x: (&v*Num::from(2)).div_unchecked(&(Num::ONE + params.edwards_d()*&v2)),
+            y: (&u-&v*Num::from(2)).div_unchecked(&(Num::ONE -  params.edwards_d()*&v2))
         }
     }
 
@@ -48,8 +48,8 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
         let v12 = &v1 * &v2;
         let u = (&self.x + &self.y) * (&p.x + &p.y);
         Self {
-            x: (&v1+&v2)/ (Num::ONE +  params.edwards_d()*&v12),
-            y: (&u-&v1-&v2)/(Num::ONE -  params.edwards_d()*&v12)
+            x: (&v1+&v2).div_unchecked(&(Num::ONE +  params.edwards_d()*&v12)),
+            y: (&u-&v1-&v2).div_unchecked(&(Num::ONE -  params.edwards_d()*&v12))
         }
     }
 
@@ -83,8 +83,8 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
 
     // assume nonzero subgroup point
     pub fn into_montgomery(&self) -> CMontgomeryPoint<Fr> {
-        let x = (Num::ONE + &self.y)/(Num::ONE - &self.y);
-        let y = &x / &self.x;
+        let x = (Num::ONE + &self.y).div_unchecked(&(Num::ONE - &self.y));
+        let y = x.div_unchecked(&self.x);
         CMontgomeryPoint {x, y}
     }
 
@@ -212,7 +212,7 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
         
 
         let x3 = - Num::ONE/params.montgomery_a() * (&t2g1 + Num::ONE);
-        let x2 = &x3 / &t2g1;
+        let x2 = x3.div_unchecked(&t2g1);
 
         let (is_valid, y2) = check_and_get_y(&x2, params);        
         let (_, y3) = check_and_get_y(&x3, params);
@@ -229,7 +229,7 @@ impl<Fr: PrimeField> CMontgomeryPoint<Fr> {
     // assume self != (0, 0)
     pub fn double<J:JubJubParams<Fr=Fr>>(&self, params: &J) -> Self {
         let x2 = self.x.square();
-        let l = (Num::from(3)*&x2 + Num::from(2)*params.montgomery_a()*&self.x + Num::ONE) / (Num::from(2)*params.montgomery_b() * &self.y);
+        let l = (Num::from(3)*&x2 + Num::from(2)*params.montgomery_a()*&self.x + Num::ONE).div_unchecked(&(Num::from(2)*params.montgomery_b() * &self.y));
         let b_l2 = params.montgomery_b()*&l.square();
         let a = params.montgomery_a();
 
@@ -241,7 +241,7 @@ impl<Fr: PrimeField> CMontgomeryPoint<Fr> {
 
     // assume self != p
     pub fn add<J:JubJubParams<Fr=Fr>>(&self, p: &Self, params: &J) -> Self {
-        let l = (&p.y - &self.y) / (&p.x - &self.x);
+        let l = (&p.y - &self.y).div_unchecked(&(&p.x - &self.x));
         let b_l2 = params.montgomery_b()*&l.square();
         let a = params.montgomery_a();
         
@@ -255,8 +255,8 @@ impl<Fr: PrimeField> CMontgomeryPoint<Fr> {
     pub fn into_edwards(&self) -> CEdwardsPoint<Fr> {
         let y_is_zero = self.y.is_zero();
         CEdwardsPoint {
-            x: &self.x / (&self.y + y_is_zero.to_num()),
-            y: (&self.x - Num::ONE) / (&self.x + Num::ONE)
+            x: self.x.div_unchecked(&(&self.y + y_is_zero.to_num())),
+            y: (&self.x - Num::ONE).div_unchecked(&(&self.x + Num::ONE))
         }
     }
 }
