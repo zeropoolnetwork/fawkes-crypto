@@ -4,7 +4,8 @@ pub mod circuit;
 pub mod native;
 pub mod core;
 pub mod constants;
-
+pub mod backend;
+pub mod engines;
 
 pub use typenum;
 pub use rand;

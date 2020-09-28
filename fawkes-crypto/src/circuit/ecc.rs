@@ -112,7 +112,7 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
                     self.derive_const(&EdwardsPoint::zero())
                 } else {
                     let bits_len = bits.len();
-                    let zeros_len = (3 - (bits_len % 3))%3;
+                    let zeros_len = (2 * bits_len) % 3;
                     let zero_bits = vec![CBool::from_const(cs, &false); zeros_len];
                     let all_bits = [bits, &zero_bits].concat();
 

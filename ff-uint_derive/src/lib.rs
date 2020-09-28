@@ -113,10 +113,6 @@ pub fn construct_primefield_params(input: TokenStream) -> TokenStream {
             #sqrt_impl
         }
     });
-    // gen.extend(params_impl);
-    // gen.extend(prime_field_repr_impl(&repr_ty, limbs));
-    // gen.extend(prime_field_impl(&self_ty, &repr_ty, limbs));
-    // gen.extend(sqrt_impl);
 
     // Return the generated impl
     gen.into()
@@ -262,7 +258,7 @@ fn prime_field_constants_and_sqrt(
     let legendre_impl = quote! {
         fn legendre(&self) -> ::#cratename::LegendreSymbol {
             // s = self^((modulus - 1) // 2)
-            let s = self.pow(#inner(#mod_minus_1_over_2));
+            let s = self.pow(#inner::new(#mod_minus_1_over_2));
             if s.is_zero() {
                 ::#cratename::LegendreSymbol::Zero
             } else if s == Self::ONE {
@@ -289,12 +285,12 @@ fn prime_field_constants_and_sqrt(
                         // Shank's algorithm for q mod 4 = 3
                         // https://eprint.iacr.org/2012/685.pdf (page 9, algorithm 2)
 
-                        let mut a1 = self.pow(#inner(#mod_minus_3_over_4));
+                        let mut a1 = self.pow(#inner::new(#mod_minus_3_over_4));
 
                         let mut a0 = a1;
                         a0 = a0.square().wrapping_mul(*self);
 
-                        if a0.0 == #inner(#rneg) {
+                        if a0.0 == #inner::new(#rneg) {
                             None
                         } else {
                             Some(a1.wrapping_mul(*self))
@@ -319,17 +315,17 @@ fn prime_field_constants_and_sqrt(
                             ::#cratename::LegendreSymbol::QuadraticNonResidue => None,
                             ::#cratename::LegendreSymbol::QuadraticResidue => {
                                 let mut c = #name(Self::ROOT_OF_UNITY);
-                                let mut r = self.pow(#inner(#t_plus_1_over_2));
-                                let mut t = self.pow(#inner(#t));
+                                let mut r = self.pow(#inner::new(#t_plus_1_over_2));
+                                let mut t = self.pow(#inner::new(#t));
                                 let mut m = <Self as PrimeFieldParams>::S;
 
-                                while t != Self::one() {
+                                while t != Self::ONE {
                                     let mut i = 1;
                                     {
                                         let mut t2i = t;
                                         t2i=t2i.square();
                                         loop {
-                                            if t2i == Self::one() {
+                                            if t2i == Self::ONE {
                                                 break;
                                             }
                                             t2i= t2i.square();
@@ -376,7 +372,7 @@ fn prime_field_constants_and_sqrt(
                 type Inner = #inner;
 
                 /// This is the modulus m of the prime field
-                const MODULUS: #inner = #inner([#(#modulus,)*]);
+                const MODULUS: #inner = #inner::new([#(#modulus,)*]);
 
                 /// The number of bits needed to represent the modulus.
                 const MODULUS_BITS: u32 = #modulus_num_bits;
@@ -386,23 +382,23 @@ fn prime_field_constants_and_sqrt(
                 const REPR_SHAVE_BITS: u32 = #inner_shave_bits;
 
                 /// 2^{limbs*64} mod m
-                const R: #inner = #inner(#r);
+                const R: #inner = #inner::new(#r);
 
                 /// 2^{limbs*64*2} mod m
-                const R2: #inner = #inner(#r2);
+                const R2: #inner = #inner::new(#r2);
 
                 /// -(m^{-1} mod m) mod m
                 const INV: u64 = #inv;
 
                 /// Multiplicative generator of `MODULUS` - 1 order, also quadratic
                 /// nonresidue.
-                const GENERATOR: #inner = #inner(#generator);
+                const GENERATOR: #inner = #inner::new(#generator);
 
                 /// 2^s * t = MODULUS - 1 with t odd
                 const S: u32 = #s;
 
                 /// 2^s root of unity computed by GENERATOR^t
-                const ROOT_OF_UNITY: #inner = #inner(#root_of_unity);
+                const ROOT_OF_UNITY: #inner = #inner::new(#root_of_unity);
             }
         },
         sqrt_impl,
@@ -861,7 +857,7 @@ fn prime_field_impl(cratename:&Ident, name: &syn::Type, inner: &syn::Type, limbs
                         for i in 0..#limbs {
                             repr[i] = rng.next_u64();
                         }
-                        #name(#inner(repr))
+                        #name(#inner::new(repr))
                     };
 
                     // Mask away the unused most-significant bits.

@@ -32,6 +32,11 @@ macro_rules! construct_uint {
 					const ZERO : Self = Self([0u64; $n_words]);
 					const ONE : Self = uint_from_u64(1);
 
+					#[inline]
+					pub const fn new(v:[u64; $n_words]) -> Self {
+						Self(v)
+					}
+
 					// Whether this fits u64.
 					#[inline]
 					fn fits_word(&self) -> bool {
