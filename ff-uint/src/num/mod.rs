@@ -41,6 +41,17 @@ impl <U:Uint> NumRepr<U> {
     pub fn is_odd(&self) -> bool {
         self.0.is_odd()
     }
+
+	pub fn into_inner(self) -> U::Inner {
+        self.0.into_inner()
+    }
+	pub fn as_inner(&self) -> &U::Inner {
+        self.0.as_inner()
+    }
+    pub fn as_inner_mut(&mut self) -> &mut U::Inner{
+        self.0.as_inner_mut()
+    }
+    
 }
 
 impl<U:Uint> crate::rand::distributions::Distribution<NumRepr<U>> for crate::rand::distributions::Standard {

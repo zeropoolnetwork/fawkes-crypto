@@ -21,10 +21,10 @@ pub struct Gate<Fr:PrimeField>(pub LC<Fr>,pub LC<Fr>,pub LC<Fr>);
 
 #[derive(Clone, Debug)]
 pub struct CS<Fr:PrimeField> {
-    values: Vec<Option<Num<Fr>>>,
-    gates: Vec<Gate<Fr>>,
-    tracking:bool,
-    public:Vec<Variable>
+    pub values: Vec<Option<Num<Fr>>>,
+    pub gates: Vec<Gate<Fr>>,
+    pub tracking:bool,
+    pub public:Vec<Variable>
 }
 
 
