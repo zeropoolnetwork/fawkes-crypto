@@ -12,11 +12,17 @@ pub type RCS<Fr> = Rc<RefCell<CS<Fr>>>;
 use linked_list::LinkedList;
 
 #[derive(Clone, Debug)]
-pub struct LC<Fr:PrimeField>(pub Num<Fr>, pub LinkedList<(Num<Fr>, Variable)>);
+pub struct LC<Fr:PrimeField>(pub LinkedList<(Num<Fr>, Variable)>);
+
+impl<Fr:PrimeField> LC<Fr> {
+    pub fn to_vec(&self) -> Vec<(Num<Fr>, Variable)> {
+        self.0.iter().cloned().collect()
+    }
+}
 
 
 #[derive(Clone, Debug)]
-pub struct Gate<Fr:PrimeField>(pub LC<Fr>,pub LC<Fr>,pub LC<Fr>);
+pub struct Gate<Fr:PrimeField>(pub Vec<(Num<Fr>, Variable)>,pub Vec<(Num<Fr>, Variable)>,pub Vec<(Num<Fr>, Variable)>);
 
 
 #[derive(Clone, Debug)]
@@ -31,10 +37,10 @@ pub struct CS<Fr:PrimeField> {
 impl<Fr:PrimeField> CS<Fr> {
     pub fn new(tracking:bool) -> Self {
         Self {
-            values:vec![],
+            values:vec![Some(Num::ONE)],
             gates:vec![],
             tracking,
-            public:vec![]
+            public:vec![0]
         }
     }
 
@@ -53,23 +59,20 @@ impl<Fr:PrimeField> CS<Fr> {
                 _ => {}
             } 
         }
-        rcs.gates.push(Gate(a.lc.clone(), b.lc.clone(), c.lc.clone()))
+        rcs.gates.push(Gate(a.lc.to_vec(), b.lc.to_vec(), c.lc.to_vec()))
 
     }
 
 
     pub fn enforce_pub(n:&CNum<Fr>) {
-        let f = n.lc.1.front();
-        let v = if n.lc.0.is_zero() && n.lc.1.len()==1 && f.map(|v| v.0 == Num::ONE).unwrap_or(false) {
-            f.unwrap().1
-        } else {
-            let m: CNum<Fr> = n.derive_alloc(n.value.as_ref());
-            CS::enforce(n, &n.derive_const(&Num::ONE), &m);
-            m.lc.1.front().unwrap().1
-        };
-
-        n.get_cs().borrow_mut().public.push(v);
+        let mut rcs = n.get_cs().borrow_mut();
+        let n_vars = rcs.values.len();
+        let v = n_vars;
+        rcs.values.push(n.get_value());
+        rcs.public.push(v);
+        rcs.gates.push(Gate(n.lc.to_vec(), vec![(Num::ONE, 0)], vec![(Num::ONE, v)]));
     }
+
 
     pub fn alloc(cs:&RCS<Fr>, value:Option<&Num<Fr>>) -> CNum<Fr> {
         let mut rcs = cs.borrow_mut();
@@ -78,6 +81,6 @@ impl<Fr:PrimeField> CS<Fr> {
         rcs.values.push(value.cloned());
         let mut ll = LinkedList::new();
         ll.push_back((Num::ONE, v));
-        CNum {value:value.cloned(), lc:LC(Num::ZERO, ll), cs:cs.clone()}
+        CNum {value:value.cloned(), lc:LC(ll), cs:cs.clone()}
     }
 }

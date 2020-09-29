@@ -96,9 +96,15 @@ impl<Fr:PrimeField> Signal<Fr> for CNum<Fr> {
 
 
     fn as_const(&self) -> Option<Self::Value> {
-        let lc = &self.lc;
-        if lc.1.len() == 0 {
-            Some(lc.0)
+        if self.lc.0.len()==0 {
+            Some(Num::ZERO)
+        } else if self.lc.0.len() == 1 {
+            let front = self.lc.0.front().unwrap();
+            if front.1 == 0 {
+                Some(front.0)
+            } else {
+                None
+            }
         } else {
             None
         }
@@ -114,9 +120,11 @@ impl<Fr:PrimeField> Signal<Fr> for CNum<Fr> {
 
     fn from_const(cs:&RCS<Fr>, value: &Self::Value) -> Self {
         let value = value.clone();
+        let mut ll = LinkedList::new();
+        ll.push_back((value, 0));
         Self {
             value: Some(value),
-            lc: LC(value, LinkedList::new()),
+            lc: LC(ll),
             cs:cs.clone()
         }
     }
@@ -154,11 +162,7 @@ impl<Fr:PrimeField> Signal<Fr> for CNum<Fr> {
 
 impl<Fr:PrimeField> CNum<Fr> {
     pub fn capacity(&self) -> usize {
-        if self.lc.0==Num::ZERO {
-            0
-        } else {
-            1
-        }
+        self.lc.0.len()
     }
 
 }
@@ -170,8 +174,7 @@ impl<Fr:PrimeField> std::ops::Neg for CNum<Fr> {
     #[inline]
     fn neg(mut self) -> Self::Output {
         self.value = self.value.map(|x| -x);
-        self.lc.0 = -self.lc.0;
-        for (v, _) in self.lc.1.iter_mut() {
+        for (v, _) in self.lc.0.iter_mut() {
             *v = -*v;
         }
         self
@@ -214,11 +217,10 @@ impl<'l, Fr:PrimeField> AddAssign<&'l CNum<Fr>> for CNum<Fr> {
     fn add_assign(&mut self, other: &'l CNum<Fr>)  {
         self.value = self.value.map(|a| other.value.map(|b| a+b)).flatten();
 
-        let mut cur_a_ll = self.lc.1.cursor();
+        let mut cur_a_ll = self.lc.0.cursor();
 
-        self.lc.0 += other.lc.0;
 
-        for (v, k) in other.lc.1.iter() {
+        for (v, k) in other.lc.0.iter() {
             if ll_lookup(&mut cur_a_ll, *k) == LookupAction::Add {
                 let t = cur_a_ll.peek_next().unwrap();
                 t.0 += *v;
@@ -246,11 +248,9 @@ impl<'l, Fr:PrimeField> SubAssign<&'l CNum<Fr>> for CNum<Fr> {
     fn sub_assign(&mut self, other: &'l CNum<Fr>)  {
         self.value = self.value.map(|a| other.value.map(|b| a+b)).flatten();
 
-        let mut cur_a_ll = self.lc.1.cursor();
+        let mut cur_a_ll = self.lc.0.cursor();
 
-        self.lc.0 -= other.lc.0;
-
-        for (v, k) in other.lc.1.iter() {
+        for (v, k) in other.lc.0.iter() {
             if ll_lookup(&mut cur_a_ll, *k) == LookupAction::Add {
                 let t = cur_a_ll.peek_next().unwrap();
                 t.0 -= *v;
@@ -279,8 +279,7 @@ impl<'l, Fr:PrimeField> MulAssign<&'l Num<Fr>> for CNum<Fr> {
             *self = self.derive_const(&Num::ZERO)
         } else {
             self.value = self.value.map(|v| v*other);
-            self.lc.0 *= other;
-            for (v, _) in self.lc.1.iter_mut() {
+            for (v, _) in self.lc.0.iter_mut() {
                 *v *= other;
             }
         }

@@ -35,18 +35,7 @@ impl<Fr:PrimeField> Signal<Fr> for CBool<Fr> {
     
 
     fn as_const(&self) -> Option<Self::Value> {
-        let lc = &self.0.lc;
-        if lc.1.len() == 0 {
-            if lc.0==Num::ZERO {
-                Some(false)
-            } else if lc.0==Num::ONE {
-                Some(true)
-            }   else {
-                panic!("Wrong boolean value")
-            }
-        } else {
-            None
-        }
+        self.0.as_const().map(|v| v==Num::ONE)
     }
 
     fn inputize(&self) {
