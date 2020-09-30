@@ -7,28 +7,7 @@ pub trait Uint:
     + std::cmp::Eq
     + std::cmp::PartialOrd
     + std::cmp::Ord
-    + std::ops::Add<Self, Output = Self>
-    + std::ops::Sub<Self, Output = Self>
-    + std::ops::Mul<Self, Output = Self>
-    + std::ops::Mul<u64, Output = Self>
-    + std::ops::Div<Self, Output = Self>
     + std::ops::Rem<Self, Output = Self>
-    + std::ops::Shl<u32, Output = Self>
-    + std::ops::Shr<u32, Output = Self>
-    + std::ops::AddAssign<Self>
-    + std::ops::SubAssign<Self>
-    + std::ops::MulAssign<Self>
-    + std::ops::MulAssign<u64>
-    + std::ops::DivAssign<Self>
-    + std::ops::RemAssign<Self>
-    + std::ops::Not<Output = Self>
-    + std::ops::BitAnd<Self, Output = Self>
-    + std::ops::BitOr<Self, Output = Self>
-    + std::ops::BitXor<Self, Output = Self>
-    + std::ops::BitAndAssign<Self>
-    + std::ops::BitOrAssign<Self>
-    + std::ops::ShlAssign<u32>
-    + std::ops::ShrAssign<u32>
     + From<bool>
     + From<u8>
     + From<u16>

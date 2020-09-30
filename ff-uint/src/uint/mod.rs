@@ -199,7 +199,7 @@ macro_rules! construct_uint {
 						let un32 = (hi << s) | lo.checked_shr(64 - s).unwrap_or(0);
 						let un10 = lo << s;
 						let (un1, un0) = Self::split(un10);
-						let mut q1 = un32 / yn1;
+						let mut q1 = un32.wrapping_div(yn1);
 						let mut rhat = un32 - q1 * yn1;
 
 						while q1 >= TWO32 || q1 * yn0 > TWO32 * rhat + un1 {
@@ -211,7 +211,7 @@ macro_rules! construct_uint {
 						}
 
 						let un21 = un32.wrapping_mul(TWO32).wrapping_add(un1).wrapping_sub(q1.wrapping_mul(y));
-						let mut q0 = un21 / yn1;
+						let mut q0 = un21.wrapping_div(yn1);
 						rhat = un21.wrapping_sub(q0.wrapping_mul(yn1));
 
 						while q0 >= TWO32 || q0 * yn0 > TWO32 * rhat + un0 {
@@ -272,37 +272,7 @@ macro_rules! construct_uint {
 
 				}
 
-				$crate::impl_overflowing_unop!(Not, not, overflowing_not, $name);
-				$crate::impl_overflowing_unop!(Neg, neg, overflowing_neg, $name);
-
-				$crate::impl_overflowing_binop!(Add, add, overflowing_add, $name);
-				$crate::impl_overflowing_binop!(Sub, sub, overflowing_sub, $name);
-				$crate::impl_overflowing_binop!(Mul, mul, overflowing_mul, $name);
-				$crate::impl_overflowing_binop!(Mul, mul, overflowing_mul_u64, $name, u64);
-				$crate::impl_overflowing_binop!(Div, div, overflowing_div, $name);
 				$crate::impl_overflowing_binop!(Rem, rem, overflowing_rem, $name);
-				$crate::impl_overflowing_binop!(Shr, shr, overflowing_shr, $name, u32);
-				$crate::impl_overflowing_binop!(Shl, shl, overflowing_shl, $name, u32);
-
-
-				$crate::impl_overflowing_binop!(BitAnd, bitand, overflowing_bitand, $name);
-				$crate::impl_overflowing_binop!(BitOr, bitor, overflowing_bitor, $name);
-				$crate::impl_overflowing_binop!(BitXor, bitxor, overflowing_bitxor, $name);
-
-
-				$crate::impl_overflowing_assignop!(AddAssign, add_assign, overflowing_add, $name);
-				$crate::impl_overflowing_assignop!(SubAssign, sub_assign, overflowing_sub, $name);
-				$crate::impl_overflowing_assignop!(MulAssign, mul_assign, overflowing_mul, $name);
-				$crate::impl_overflowing_assignop!(MulAssign, mul_assign, overflowing_mul_u64, $name, u64);
-				$crate::impl_overflowing_assignop!(DivAssign, div_assign, overflowing_div, $name);
-				$crate::impl_overflowing_assignop!(RemAssign, rem_assign, overflowing_rem, $name);
-				$crate::impl_overflowing_assignop!(ShrAssign, shr_assign, overflowing_shr, $name, u32);
-				$crate::impl_overflowing_assignop!(ShlAssign, shl_assign, overflowing_shl, $name, u32);
-
-				$crate::impl_overflowing_assignop!(BitAndAssign, bitand_assign, overflowing_bitand, $name);
-				$crate::impl_overflowing_assignop!(BitOrAssign, bitor_assign, overflowing_bitor, $name);
-				$crate::impl_overflowing_assignop!(BitXorAssign, bitxor_assign, overflowing_bitxor, $name);
-
 
 				$crate::impl_map_from!($name, bool, u64);
 				$crate::impl_map_from!($name, u8, u64);
@@ -400,7 +370,7 @@ macro_rules! construct_uint {
 							let t = current % ten;
 							let digit = t.low_u64() as u8;
 							buf[i] = digit + b'0';
-							current = current / ten;
+							current = current.wrapping_div(ten);
 							if current.is_zero() {
 								break;
 							}
