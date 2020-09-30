@@ -1,11 +1,10 @@
-use pairing::bn256::{Fq};
+use pairing::bn256::Fq;
 
-use super::verifier::{TruncatedVerifyingKeyData};
-use super::{G1PointData, G2PointData};
+use super::{verifier::TruncatedVerifyingKeyData, G1PointData, G2PointData};
 
-
-pub fn generate_sol_data(vk:&TruncatedVerifyingKeyData<Fq>) -> String {
-    let tpl = String::from(r###"pragma solidity ^0.6.0;
+pub fn generate_sol_data(vk: &TruncatedVerifyingKeyData<Fq>) -> String {
+    let tpl = String::from(
+        r###"pragma solidity ^0.6.0;
 
 library Pairing {
     uint256 constant PRIME_Q = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
@@ -194,13 +193,21 @@ contract Verifier {
         );
     }
 }
-"###);
-    fn stringify_g1(p:&G1PointData<Fq>) -> String {
+"###,
+    );
+    fn stringify_g1(p: &G1PointData<Fq>) -> String {
         format!("{}, {}", p.0.to_string(), p.1.to_string()).to_string()
     }
 
-    fn stringify_g2(p:&G2PointData<Fq>) -> String {
-        format!("[{}, {}], [{}, {}]", p.0 .0.to_string(), p.0 .1.to_string(), p.1 .0.to_string(), p.1 .1.to_string()).to_string()
+    fn stringify_g2(p: &G2PointData<Fq>) -> String {
+        format!(
+            "[{}, {}], [{}, {}]",
+            p.0 .0.to_string(),
+            p.0 .1.to_string(),
+            p.1 .0.to_string(),
+            p.1 .1.to_string()
+        )
+        .to_string()
     }
 
     let mut tpl = tpl.replace("<%vk_alfa1%>", &stringify_g1(&vk.alpha_g1));
@@ -213,7 +220,13 @@ contract Verifier {
 
     let mut vi = String::from("");
     for i in 0..vk.ic.len() {
-        vi = format!("{}{}vk.IC[{}] = Pairing.G1Point({});\n", vi, if vi.is_empty() { "" } else { "        " }, i, &stringify_g1(&vk.ic[i]));
+        vi = format!(
+            "{}{}vk.IC[{}] = Pairing.G1Point({});\n",
+            vi,
+            if vi.is_empty() { "" } else { "        " },
+            i,
+            &stringify_g1(&vk.ic[i])
+        );
     }
     tpl = tpl.replace("<%vk_ic_pts%>", &vi);
     tpl

@@ -1,9 +1,13 @@
-use crate::core::field::{PrimeField, PrimeFieldRepr, AbstractField};
-use crate::native::{ecc::{EdwardsPoint, JubJubParams}, num::Num};
-use crate::constants::SEED_EDWARDS_G;
+use crate::{
+    constants::SEED_EDWARDS_G,
+    core::field::{AbstractField, PrimeField, PrimeFieldRepr},
+    native::{
+        ecc::{EdwardsPoint, JubJubParams},
+        num::Num,
+    },
+};
 
 pub use bellman::pairing::bn256::Fr;
-
 
 #[derive(PrimeField)]
 #[PrimeFieldModulus = "2736030358979909402780800718157159386076813972158567259200215660948447373041"]
@@ -19,29 +23,31 @@ pub struct JubJubBN256 {
     montgomery_u: Num<Fr>,
 }
 
-
 impl JubJubBN256 {
     pub fn new() -> Self {
-        let edwards_d = -num!(168696)/num!(168700);
+        let edwards_d = -num!(168696) / num!(168700);
 
-        let montgomery_a = num!(2)*(Num::one()-edwards_d)/(Num::one()+edwards_d);
-        let montgomery_b = -num!(4)/(Num::one()+edwards_d);
-        
+        let montgomery_a = num!(2) * (Num::one() - edwards_d) / (Num::one() + edwards_d);
+        let montgomery_b = -num!(4) / (Num::one() + edwards_d);
+
         // value of montgomery polynomial for x=montgomery_b (has no square root in Fr)
-        let montgomery_u= num!(337401);
+        let montgomery_u = num!(337401);
 
-        let edwards_g = EdwardsPoint::from_scalar_raw(Num::from_seed(SEED_EDWARDS_G), montgomery_a, montgomery_b, montgomery_u);
+        let edwards_g = EdwardsPoint::from_scalar_raw(
+            Num::from_seed(SEED_EDWARDS_G),
+            montgomery_a,
+            montgomery_b,
+            montgomery_u,
+        );
         Self {
             edwards_g,
             edwards_d,
             montgomery_a,
             montgomery_b,
-            montgomery_u
+            montgomery_u,
         }
     }
 }
-
-
 
 impl JubJubParams for JubJubBN256 {
     type Fr = Fr;
@@ -51,11 +57,9 @@ impl JubJubParams for JubJubBN256 {
         &self.edwards_g
     }
 
-
     fn edwards_d(&self) -> Num<Fr> {
         self.edwards_d
     }
-
 
     fn montgomery_a(&self) -> Num<Fr> {
         self.montgomery_a
