@@ -36,7 +36,7 @@ impl<E:Engine> VK<E> {
     }
 }
 
-pub fn verify<E:Engine>(vk:&VK<E>, proof:Proof<E>, inputs:&[Num<E::Fr>]) -> bool {
+pub fn verify<E:Engine>(vk:&VK<E>, proof:&Proof<E>, inputs:&[Num<E::Fr>]) -> bool {
     let inputs:Vec<_> = inputs.iter().map(|e| num_to_bellman_fp(*e)).collect();
     let vk = vk.to_bellman();
     let proof = proof.to_bellman();

@@ -3,13 +3,14 @@
 use ff_uint::{PrimeField, NumRepr, Num};
 use crate::core::signal::Signal;
 use crate::borsh::{BorshSerialize, BorshDeserialize};
+use crate::circuit::{cs::{CS, RCS}, Variable};
 use std::io::{Cursor};
 use bellman::pairing::{CurveAffine, RawEncodable};
 
 pub mod osrng;
 pub mod prover;
 pub mod verifier;
-
+pub mod setup;
 pub mod engines;
 
 pub trait Engine {
@@ -19,6 +20,9 @@ pub trait Engine {
 }
 
 
+
+#[repr(transparent)]
+struct BellmanCS<E:Engine>(RCS<E::Fr>);
 
 
 pub fn num_to_bellman_fp<Fx:PrimeField, Fy:bellman::pairing::ff::PrimeField>(from:Num<Fx>) -> Fy {
@@ -49,6 +53,13 @@ pub fn bellman_fp_to_num<Fx:PrimeField, Fy:bellman::pairing::ff::PrimeField>(fro
 
 
 pub struct Parameters<E:Engine>(bellman::groth16::Parameters<E::BE>);
+
+impl<E:Engine> Parameters<E> {
+    pub fn get_vk(&self) -> verifier::VK<E> {
+        verifier::VK::from_bellman(&self.0.vk)
+    }
+}
+
 pub struct G1Point<E:Engine>(Num<E::Fq>, Num<E::Fq>);
 
 impl<E:Engine> BorshSerialize for G1Point<E> {
@@ -154,3 +165,51 @@ impl<E:Engine> G2Point<E> {
 
 
 
+#[cfg(feature = "heavy_tests")]
+#[cfg(test)]
+mod bellman_groth16_test {
+    use super::*;
+    use crate::native::poseidon::{poseidon_merkle_proof_root, MerkleProof, PoseidonParams};
+    use crate::core::signal::Signal;
+    use rand::{Rng, thread_rng};
+    use crate::typenum::U32;
+    use crate::engines::bn256::Fr;
+    use super::setup::setup;
+    use ff_uint::PrimeField;
+    use crate::circuit::num::CNum;
+    use crate::circuit::poseidon::{CMerkleProof, c_poseidon_merkle_proof_root};
+    use super::engines::Bn256;
+    use crate::core::sizedvec::SizedVec;
+    
+    
+
+    
+    
+
+    #[test]
+    fn test_circuit_poseidon_merkle_root() {
+        fn circuit<Fr:PrimeField>(public: CNum<Fr>, secret: (CNum<Fr>, CMerkleProof<Fr,U32>)) {
+            let poseidon_params = PoseidonParams::<Fr>::new(3, 8, 53);
+            let res = c_poseidon_merkle_proof_root(&secret.0, &secret.1, &poseidon_params);
+            res.assert_eq(&public);
+        }
+        let params = setup::<Bn256,_,_,_>(circuit);
+
+
+        const PROOF_LENGTH: usize = 32;
+        let mut rng = thread_rng();
+        let poseidon_params = PoseidonParams::<Fr>::new(3, 8, 53);
+        let leaf = rng.gen();
+        let sibling = (0..PROOF_LENGTH).map(|_| rng.gen()).collect::<SizedVec<_, U32>>();
+        let path = (0..PROOF_LENGTH).map(|_| rng.gen()).collect::<SizedVec<bool, U32>>();
+        let proof = MerkleProof {sibling, path};
+        let root = poseidon_merkle_proof_root(leaf, &proof, &poseidon_params);
+
+        let (inputs, snark_proof) = prover::prove(&params, &root, &(leaf, proof), circuit);
+
+        let res = verifier::verify(&params.get_vk(), &snark_proof, &inputs);
+        assert!(res, "Verifier result should be true");
+
+    }
+
+}

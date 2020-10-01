@@ -119,7 +119,7 @@ mod poseidon_test {
     use crate::typenum::{U3, U32};
     use crate::engines::bn256::Fr;
     use crate::circuit::cs::CS;
-    
+    use std::time::Instant;
     
     #[test]
     fn test_circuit_poseidon() {
@@ -169,7 +169,10 @@ mod poseidon_test {
         
         let mut n_constraints = cs.borrow().num_constraints();
         let ref signal_proof = CMerkleProof {sibling:signal_sibling, path:signal_path};
+        let now = Instant::now();
         let res = c_poseidon_merkle_proof_root(&signal_leaf, &signal_proof, &poseidon_params);
+        let elapsed = now.elapsed();
+
         n_constraints=cs.borrow().num_constraints()-n_constraints;
         
         let proof = MerkleProof {sibling, path};
@@ -177,6 +180,7 @@ mod poseidon_test {
         res.assert_const(&res2);
 
         println!("merkle root poseidon(3,8,53)x32 constraints = {}", n_constraints);
+        println!("circuit constructing time = {} ms", elapsed.as_millis());
         assert!(res.get_value().unwrap() == res2);
     }
 

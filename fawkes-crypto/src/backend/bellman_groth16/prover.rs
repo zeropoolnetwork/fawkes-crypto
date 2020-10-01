@@ -1,6 +1,5 @@
 use super::*;
 use super::osrng::OsRng;
-use crate::circuit::{cs::{CS, RCS}, Variable};
 use bellman::{ConstraintSystem, SynthesisError};
 pub struct Proof<E:Engine> {
     a:G1Point<E>,
@@ -29,8 +28,6 @@ impl<E:Engine> Proof<E> {
 
 
 
-#[repr(transparent)]
-struct BellmanCS<E:Engine>(RCS<E::Fr>);
 
 pub fn convert_lc<E:Engine>(lc:&[(Num<E::Fr>, Variable)], varmap:&[bellman::Variable]) -> bellman::LinearCombination<E::BE> {
     let mut res = Vec::with_capacity(lc.len());
@@ -96,7 +93,7 @@ impl<E:Engine> bellman::Circuit<E::BE> for BellmanCS<E> {
 
 pub fn prove<E:Engine, Pub:Signal<E::Fr>, Sec:Signal<E::Fr>, C: Fn(Pub, Sec)>(
     params:&Parameters<E>, input_pub:&Pub::Value, input_sec:&Sec::Value, circuit:C
-) -> Proof<E> {
+) -> (Vec<Num<E::Fr>>, Proof<E>) {
     let ref rcs = CS::rc_new(false);
     let signal_pub = Pub::alloc(rcs, Some(input_pub));
     signal_pub.inputize();
@@ -107,5 +104,9 @@ pub fn prove<E:Engine, Pub:Signal<E::Fr>, Sec:Signal<E::Fr>, C: Fn(Pub, Sec)>(
     let bcs = BellmanCS::<E>(rcs.clone());
 
     let ref mut rng = OsRng::new();
-    Proof::from_bellman(&bellman::groth16::create_random_proof(bcs, &params.0, rng).unwrap())
+    let proof = Proof::from_bellman(&bellman::groth16::create_random_proof(bcs, &params.0, rng).unwrap());
+    let values = &rcs.borrow().values;
+    let pub_indexes = &rcs.borrow().public;
+    let inputs = pub_indexes.iter().skip(1).map(|&i| values[i].unwrap()).collect();
+    (inputs, proof)
 }
