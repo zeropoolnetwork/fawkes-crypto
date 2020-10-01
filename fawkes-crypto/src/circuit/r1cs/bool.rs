@@ -215,7 +215,7 @@ impl<'l, Fr:PrimeField> BitXor<&'l CBool<Fr>> for CBool<Fr> {
 
     #[inline]
     fn bitxor(mut self, other: &'l CBool<Fr>) -> Self::Output  {
-        self |= other;
+        self ^= other;
         self
     }
 }
@@ -225,7 +225,7 @@ impl<'l, Fr:PrimeField> BitXor<&'l bool> for CBool<Fr> {
 
     #[inline]
     fn bitxor(mut self, other: &'l bool) -> Self::Output  {
-        self |= other;
+        self ^= other;
         self
     }
 }

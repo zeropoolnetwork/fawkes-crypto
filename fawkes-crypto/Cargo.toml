@@ -27,19 +27,16 @@ package = "blake2-rfc_bellman_edition"
 
 
 [dependencies.bellman]
-version = "0.3.1"
+version = "0.3.4"
 package = "fawkes-crypto-bellman_ce"
 default_features = false
 optional = true
 
-[dependencies.bellman_rand]
-version = "0.4"
-package = "rand"
-optional = true
+
 
 
 [features]
 default=["backend_bellman_groth16", "r1cs"]
 r1cs=["linked-list"]
 plonk=[]
-backend_bellman_groth16=["bellman", "bellman_rand"]
+backend_bellman_groth16=["bellman"]

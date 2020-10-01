@@ -1,4 +1,4 @@
-use bellman_rand::Rng;
+use bellman::rand::Rng;
 use getrandom::getrandom;
 
 pub struct OsRng {

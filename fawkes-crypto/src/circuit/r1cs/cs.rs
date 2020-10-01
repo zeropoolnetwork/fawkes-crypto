@@ -35,6 +35,10 @@ pub struct CS<Fr:PrimeField> {
 
 
 impl<Fr:PrimeField> CS<Fr> {
+    pub fn num_constraints(&self) -> usize {
+       self.gates.len() 
+    }
+
     pub fn new(tracking:bool) -> Self {
         Self {
             values:vec![Some(Num::ONE)],
@@ -44,7 +48,7 @@ impl<Fr:PrimeField> CS<Fr> {
         }
     }
 
-    pub fn rnew(tracking:bool) -> RCS<Fr> {
+    pub fn rc_new(tracking:bool) -> RCS<Fr> {
         Rc::new(RefCell::new(Self::new(tracking)))
     }
 

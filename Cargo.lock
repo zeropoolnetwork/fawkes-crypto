@@ -146,7 +146,6 @@ dependencies = [
  "getrandom 0.2.0",
  "impl-trait-for-tuples",
  "linked-list",
- "rand 0.4.6",
  "rand 0.7.3",
  "serde",
  "typenum",
@@ -154,9 +153,9 @@ dependencies = [
 
 [[package]]
 name = "fawkes-crypto-bellman_ce"
-version = "0.3.1"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a98cbe6cf59e6e64041023fc2bafadb37e8c6adf78ac979079d4ee12dc09e289"
+checksum = "4113289418eaef77657736cd9bc81665fb4a189f914a2ca32880e267bd378e67"
 dependencies = [
  "bit-vec",
  "byteorder",
@@ -168,9 +167,9 @@ dependencies = [
 
 [[package]]
 name = "fawkes-crypto-pairing_ce"
-version = "0.18.0"
+version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1896dd95c0c95148ebb522aee41f3007f94048aafe6692548f026c83d317029f"
+checksum = "6949d6a13fbd939f9dbb1b8c2113f75de69f46f2500ddaa3f23405fa04ce23df"
 dependencies = [
  "byteorder",
  "ff_ce",

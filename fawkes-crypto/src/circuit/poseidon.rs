@@ -107,3 +107,77 @@ pub fn c_poseidon_merkle_tree_root<Fr: PrimeField>(leaf: &[CNum<Fr>], params: &P
     state[0].clone()
 }
 
+
+
+
+#[cfg(test)]
+mod poseidon_test {
+    use super::*;
+    use crate::native::poseidon::{poseidon, poseidon_merkle_proof_root, MerkleProof};
+    use crate::core::signal::Signal;
+    use rand::{Rng, thread_rng};
+    use crate::typenum::{U3, U32};
+    use crate::engines::bn256::Fr;
+    use crate::circuit::cs::CS;
+    
+    
+    #[test]
+    fn test_circuit_poseidon() {
+        const N_INPUTS: usize = 3;
+        let mut rng = thread_rng();
+        let poseidon_params = PoseidonParams::<Fr>::new(N_INPUTS+1, 8, 54);
+
+    
+        let ref mut cs = CS::rc_new(true);
+
+        let data = (0..N_INPUTS).map(|_| rng.gen()).collect::<SizedVec<_, U3>>();
+        let inputs = SizedVec::alloc(cs, Some(&data));
+        
+        let mut n_constraints = cs.borrow().num_constraints();
+        let res = c_poseidon(&inputs.0, &poseidon_params);
+        n_constraints=cs.borrow().num_constraints()-n_constraints;
+        
+        let res2 = poseidon(&data.0, &poseidon_params);
+        res.assert_const(&res2);
+
+        
+        println!("poseidon(4,8,54) constraints = {}", n_constraints);
+        assert!(res.get_value().unwrap() == res2);
+    }
+
+    #[test]
+    fn test_circuit_poseidon_merkle_root() {
+        const PROOF_LENGTH: usize = 32;
+
+        let mut rng = thread_rng();
+        let poseidon_params = PoseidonParams::<Fr>::new(3, 8, 53);
+
+    
+        let ref mut cs = CS::rc_new(true);
+
+
+
+        let leaf = rng.gen();
+        let sibling = (0..PROOF_LENGTH).map(|_| rng.gen()).collect::<SizedVec<_, U32>>();
+        let path = (0..PROOF_LENGTH).map(|_| rng.gen()).collect::<SizedVec<bool, U32>>();
+
+        let signal_leaf = CNum::alloc(cs, Some(&leaf));
+        let signal_sibling = SizedVec::alloc(cs, Some(&sibling));
+        let signal_path = SizedVec::alloc(cs, Some(&path));
+    
+        
+        
+        let mut n_constraints = cs.borrow().num_constraints();
+        let ref signal_proof = CMerkleProof {sibling:signal_sibling, path:signal_path};
+        let res = c_poseidon_merkle_proof_root(&signal_leaf, &signal_proof, &poseidon_params);
+        n_constraints=cs.borrow().num_constraints()-n_constraints;
+        
+        let proof = MerkleProof {sibling, path};
+        let res2 = poseidon_merkle_proof_root(leaf, &proof, &poseidon_params);
+        res.assert_const(&res2);
+
+        println!("merkle root poseidon(3,8,53)x32 constraints = {}", n_constraints);
+        assert!(res.get_value().unwrap() == res2);
+    }
+
+}

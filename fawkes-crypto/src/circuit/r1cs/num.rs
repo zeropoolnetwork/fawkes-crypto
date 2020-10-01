@@ -246,7 +246,7 @@ impl<'l, Fr:PrimeField> SubAssign<&'l CNum<Fr>> for CNum<Fr> {
 
     #[inline]
     fn sub_assign(&mut self, other: &'l CNum<Fr>)  {
-        self.value = self.value.map(|a| other.value.map(|b| a+b)).flatten();
+        self.value = self.value.map(|a| other.value.map(|b| a-b)).flatten();
 
         let mut cur_a_ll = self.lc.0.cursor();
 

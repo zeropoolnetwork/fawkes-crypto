@@ -15,15 +15,19 @@ pub enum Gate<Fr:PrimeField> {
 }
 #[derive(Clone, Debug)]
 pub struct CS<Fr:PrimeField> {
-    values:Vec<Option<Num<Fr>>>,
-    gates: Vec<Gate<Fr>>,
-    tracking:bool,
-    public:Vec<Variable>
+    pub values:Vec<Option<Num<Fr>>>,
+    pub gates: Vec<Gate<Fr>>,
+    pub tracking:bool,
+    pub public:Vec<Variable>
 
 }
 
 
 impl<Fr:PrimeField> CS<Fr> {
+    pub fn num_constraints(&self) -> usize {
+        self.gates.len() 
+     }
+
     pub fn new(tracking:bool) -> Self {
         Self {
             values:vec![],
@@ -33,7 +37,7 @@ impl<Fr:PrimeField> CS<Fr> {
         }
     }
 
-    pub fn rnew(tracking:bool) -> RCS<Fr> {
+    pub fn rc_new(tracking:bool) -> RCS<Fr> {
         Rc::new(RefCell::new(Self::new(tracking)))
     }
 

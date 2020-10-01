@@ -24,7 +24,7 @@ impl<Fr:PrimeField> CNum<Fr> {
     }
     
     // for 0/0 uncertainty case any return value is valid
-    pub fn div_unchecked(&mut self, other: &'l CNum<Fr>) -> Self  {
+    pub fn div_unchecked(&self, other: &CNum<Fr>) -> Self  {
         match (self.as_const(), other.as_const()) {
             (_, Some(b)) => {self / b},
             _ => {
@@ -90,9 +90,8 @@ impl<Fr:PrimeField> CNum<Fr> {
     }
 }
 
-impl<Fr:PrimeField> Signal for CNum<Fr> {
+impl<Fr:PrimeField> Signal<Fr> for CNum<Fr> {
     type Value = Num<Fr>;
-    type Fr = Fr;
 
     fn as_const(&self) -> Option<Self::Value> {
         let lc = self.lc;
@@ -169,6 +168,7 @@ impl<Fr:PrimeField> std::ops::Neg for CNum<Fr> {
     fn neg(mut self) -> Self::Output {
         self.lc.0 = -self.lc.0;
         self.lc.2 = -self.lc.2;
+        self.value = self.value.map(|v| -v);
         self
     }
 }
@@ -237,6 +237,7 @@ impl<'l, Fr:PrimeField> MulAssign<&'l Num<Fr>> for CNum<Fr> {
     fn mul_assign(&mut self, other: &'l Num<Fr>)  {
         self.lc.0*=other;
         self.lc.2*=other;
+        self.value = self.value.map(|v| v*other);
     }
 }
 
