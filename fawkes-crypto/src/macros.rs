@@ -11,7 +11,6 @@ macro_rules! forward_val_assign_ex {
     };
 }
 
-
 macro_rules! forward_unop_ex {
     (impl<$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $imp:ident for $res:ty, $method:ident) => {
         impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> $imp for &'macro_lifetime $res {
@@ -23,8 +22,6 @@ macro_rules! forward_unop_ex {
         }
     };
 }
-
-
 
 macro_rules! forward_val_val_binop_commutative_ex {
     (impl<$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $imp:ident for $res:ty, $method:ident) => {
@@ -44,7 +41,6 @@ macro_rules! forward_val_val_binop_commutative_ex {
     };
 }
 
-
 macro_rules! forward_ref_val_binop_commutative_ex {
     (impl<$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $imp:ident for $res:ty, $method:ident) => {
         impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> $imp<$res> for &'macro_lifetime $res {
@@ -58,7 +54,6 @@ macro_rules! forward_ref_val_binop_commutative_ex {
         }
     };
 }
-
 
 macro_rules! forward_ref_ref_binop_commutative_ex {
     (impl<$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $imp:ident for $res:ty, $method:ident) => {
@@ -134,7 +129,6 @@ macro_rules! forward_ref_ref_binop_ex {
     };
 }
 
-
 macro_rules! forward_all_binop_to_val_ref_commutative_ex {
     (impl<$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $imp:ident for $res:ty, $method:ident) => {
         forward_val_val_binop_commutative_ex!(impl<$($imp_l, )*$($imp_i : $imp_p),+> $imp for $res, $method);
@@ -142,7 +136,6 @@ macro_rules! forward_all_binop_to_val_ref_commutative_ex {
         forward_ref_ref_binop_commutative_ex!(impl<$($imp_l, )*$($imp_i : $imp_p),+> $imp for $res, $method);
     };
 }
-
 
 macro_rules! forward_all_binop_to_val_ref_ex {
     (impl<$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $imp:ident<$res2:ty> for $res:ty, $method:ident -> $res3:ty) => {
@@ -199,7 +192,6 @@ macro_rules! swap_commutative_ref_val {
     };
 }
 
-
 macro_rules! swap_commutative_ref_ref {
     (impl<$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $imp:ident<$res2:ty> for $res:ty, $method:ident) => {
         impl<'macro_lifetime_a, 'macro_lifetime_b, $($imp_l, )*$($imp_i : $imp_p),+> $imp<&'macro_lifetime_b $res> for &'macro_lifetime_a $res2 {
@@ -212,7 +204,6 @@ macro_rules! swap_commutative_ref_ref {
         }
     };
 }
-
 
 macro_rules! swap_commutative {
     (impl<$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $imp:ident<$res2:ty> for $res:ty, $method:ident) => {

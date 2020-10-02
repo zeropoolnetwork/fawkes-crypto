@@ -6,11 +6,10 @@ use std::{
     slice::{Iter, IterMut},
 };
 
-use serde::{
-    de::{Deserialize, Deserializer},
-    ser::{Serialize, Serializer},
+use crate::{
+    serde::{Deserialize, Deserializer, Serialize, Serializer},
+    typenum::Unsigned,
 };
-use typenum::Unsigned;
 
 #[derive(Debug, Clone)]
 pub struct SizedVec<T: Sized, L: Unsigned>(pub Vec<T>, pub PhantomData<L>);

@@ -201,7 +201,7 @@ macro_rules! construct_uint {
 						let (un1, un0) = Self::split(un10);
 						let mut q1 = un32 / yn1;
 						let mut rhat = un32 - q1 * yn1;
-		
+
 						while q1 >= TWO32 || q1 * yn0 > TWO32 * rhat + un1 {
 							q1 -= 1;
 							rhat += yn1;
@@ -209,11 +209,11 @@ macro_rules! construct_uint {
 								break;
 							}
 						}
-		
+
 						let un21 = un32.wrapping_mul(TWO32).wrapping_add(un1).wrapping_sub(q1.wrapping_mul(y));
 						let mut q0 = un21 / yn1;
 						rhat = un21.wrapping_sub(q0.wrapping_mul(yn1));
-		
+
 						while q0 >= TWO32 || q0 * yn0 > TWO32 * rhat + un0 {
 							q0 -= 1;
 							rhat += yn1;
@@ -221,7 +221,7 @@ macro_rules! construct_uint {
 								break;
 							}
 						}
-		
+
 						let rem = un21.wrapping_mul(TWO32).wrapping_add(un0).wrapping_sub(y.wrapping_mul(q0));
 						(q1 * TWO32 + q0, rem >> s)
 					}
@@ -271,7 +271,7 @@ macro_rules! construct_uint {
 					}
 
 				}
-				
+
 				$crate::impl_overflowing_unop!(Not, not, overflowing_not, $name);
 				$crate::impl_overflowing_unop!(Neg, neg, overflowing_neg, $name);
 
@@ -283,13 +283,13 @@ macro_rules! construct_uint {
 				$crate::impl_overflowing_binop!(Rem, rem, overflowing_rem, $name);
 				$crate::impl_overflowing_binop!(Shr, shr, overflowing_shr, $name, u32);
 				$crate::impl_overflowing_binop!(Shl, shl, overflowing_shl, $name, u32);
-				
+
 
 				$crate::impl_overflowing_binop!(BitAnd, bitand, overflowing_bitand, $name);
 				$crate::impl_overflowing_binop!(BitOr, bitor, overflowing_bitor, $name);
 				$crate::impl_overflowing_binop!(BitXor, bitxor, overflowing_bitxor, $name);
-				
-				
+
+
 				$crate::impl_overflowing_assignop!(AddAssign, add_assign, overflowing_add, $name);
 				$crate::impl_overflowing_assignop!(SubAssign, sub_assign, overflowing_sub, $name);
 				$crate::impl_overflowing_assignop!(MulAssign, mul_assign, overflowing_mul, $name);
@@ -313,11 +313,11 @@ macro_rules! construct_uint {
 				$crate::impl_map_from!($name, i16, i64);
 				$crate::impl_map_from!($name, i32, i64);
 				$crate::impl_map_from!($name, isize, i64);
-		
-		
+
+
 				impl std::convert::TryFrom<$name> for bool {
 					type Error = &'static str;
-		
+
 					#[inline]
 					fn try_from(u: $name) -> std::result::Result<bool, &'static str> {
 						let $name(arr) = u;
@@ -328,7 +328,7 @@ macro_rules! construct_uint {
 						}
 					}
 				}
-				
+
 				$crate::impl_try_from_for_primitive!($name, u8);
 				$crate::impl_try_from_for_primitive!($name, u16);
 				$crate::impl_try_from_for_primitive!($name, u32);
@@ -350,7 +350,7 @@ macro_rules! construct_uint {
 						self.wrapping_cmp(other)
 					}
 				}
-		
+
 				impl std::cmp::PartialOrd for $name {
 					#[inline]
 					fn partial_cmp(&self, other: &$name) -> Option<std::cmp::Ordering> {
@@ -371,7 +371,7 @@ macro_rules! construct_uint {
 						true
 					}
 				}
-		
+
 				impl std::cmp::Eq for $name {}
 
 				impl std::hash::Hash for $name {
@@ -385,13 +385,13 @@ macro_rules! construct_uint {
 						std::fmt::Display::fmt(self, f)
 					}
 				}
-		
+
 				impl std::fmt::Display for $name {
 					fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
 						if self.is_zero() {
 							return std::write!(f, "0");
 						}
-		
+
 						let mut buf = [0_u8; $n_words*20];
 						let mut i = buf.len() - 1;
 						let mut current = *self;
@@ -414,7 +414,7 @@ macro_rules! construct_uint {
 						f.write_str(s)
 					}
 				}
-		
+
 				impl std::fmt::LowerHex for $name {
 					fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
 						let &$name(ref data) = self;
@@ -425,7 +425,7 @@ macro_rules! construct_uint {
 						if self.is_zero() {
 							return std::write!(f, "0");
 						}
-		
+
 						let mut latch = false;
 						for ch in data.iter().rev() {
 							for x in 0..16 {
@@ -433,7 +433,7 @@ macro_rules! construct_uint {
 								if !latch {
 									latch = nibble != 0;
 								}
-		
+
 								if latch {
 									std::write!(f, "{:x}", nibble)?;
 								}
@@ -449,15 +449,15 @@ macro_rules! construct_uint {
 						$name(rng.gen())
 					}
 				}
-		
+
 				impl std::str::FromStr for $name {
 					type Err = &'static str;
-		
+
 					fn from_str(value: &str) -> std::result::Result<$name, Self::Err> {
 						if !value.bytes().all(|b| b >= 48 && b <= 57) {
 							return Err("Invalid character")
 						}
-		
+
 						let mut res = Self::default();
 						for b in value.bytes().map(|b| b - 48) {
 							let (r, overflow) = res.overflowing_mul_u64(10);
@@ -473,7 +473,7 @@ macro_rules! construct_uint {
 						Ok(res)
 					}
 				}
-		
+
 				impl std::convert::From<&'static str> for $name {
 					fn from(s: &'static str) -> Self {
 						s.parse().unwrap()
@@ -599,7 +599,7 @@ macro_rules! construct_uint {
 						0x40 - arr[0].leading_zeros() as usize
 					}
 
-					
+
 					/// Returns a pair `(self / other, self % other)`.
 					///
 					/// # Panics
@@ -631,7 +631,7 @@ macro_rules! construct_uint {
 
 						self.div_mod_knuth(other, n, m)
 					}
-				
+
 					#[inline]
 					fn overflowing_add(self, other: Self) -> (Self, bool) {
 						$crate::uint_overflowing_binop!(
@@ -699,7 +699,7 @@ macro_rules! construct_uint {
 						}
 						($name(ret), (lhs > ($n_words*64 - 1)))
 					}
-					
+
 					#[inline]
 					fn overflowing_shr(self, rhs: u32) -> ($name, bool) {
 						let shift = rhs as usize;
@@ -806,31 +806,31 @@ macro_rules! construct_uint {
 					fn from_big_endian(slice: &[u8]) -> Self {
 						use $crate::byteorder::{ByteOrder, BigEndian};
 						assert!($n_words * 8 >= slice.len());
-		
+
 						let mut padded = [0u8; $n_words * 8];
 						padded[$n_words * 8 - slice.len() .. $n_words * 8].copy_from_slice(&slice);
-		
+
 						let mut ret = [0; $n_words];
 						for i in 0..$n_words {
 							ret[$n_words - i - 1] = BigEndian::read_u64(&padded[8 * i..]);
 						}
-		
+
 						$name(ret)
 					}
-		
+
 					#[inline]
 					fn from_little_endian(slice: &[u8]) -> Self {
 						use $crate::byteorder::{ByteOrder, LittleEndian};
 						assert!($n_words * 8 >= slice.len());
-		
+
 						let mut padded = [0u8; $n_words * 8];
 						padded[0..slice.len()].copy_from_slice(&slice);
-		
+
 						let mut ret = [0; $n_words];
 						for i in 0..$n_words {
 							ret[i] = LittleEndian::read_u64(&padded[8 * i..]);
 						}
-		
+
 						$name(ret)
 					}
 
@@ -844,7 +844,7 @@ macro_rules! construct_uint {
 							if a[i] < b[i] { return std::cmp::Ordering::Less; }
 							if a[i] > b[i] { return std::cmp::Ordering::Greater; }
 						}
-						
+
 						std::cmp::Ordering::Equal
 					}
 

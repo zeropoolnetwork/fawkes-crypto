@@ -7,7 +7,6 @@ construct_uint! {
     struct _U256(4);
 }
 
-
 construct_uint! {
     struct _U384(6);
 }

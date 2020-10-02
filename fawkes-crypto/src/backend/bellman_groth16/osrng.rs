@@ -1,14 +1,12 @@
 use bellman::rand::Rng;
 use getrandom::getrandom;
 
-pub struct OsRng {
-}
+pub struct OsRng {}
 
 impl OsRng {
     pub fn new() -> Self {
         Self {}
     }
-
 }
 
 impl Rng for OsRng {

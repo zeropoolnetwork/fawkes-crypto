@@ -18,7 +18,7 @@ macro_rules! impl_num_overflowing_binop{
                 let (res, overflow) = self.0.$overflowing_op(other.0);
                 panic_on_overflow!(overflow);
                 <$name>::new(res)
-            }       
+            }
         }
 
 		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime $other> for $name {
@@ -29,9 +29,9 @@ macro_rules! impl_num_overflowing_binop{
                 let (res, overflow) = self.0.$overflowing_op(other.0);
                 panic_on_overflow!(overflow);
                 <$name>::new(res)
-            }       
-        }   
-    
+            }
+        }
+
 		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for &'macro_lifetime $name {
 			type Output = $name;
 
@@ -40,7 +40,7 @@ macro_rules! impl_num_overflowing_binop{
                 let (res, overflow) = self.0.$overflowing_op(other.0);
                 panic_on_overflow!(overflow);
                 <$name>::new(res)
-            }       
+            }
         }
 
 		impl<'macro_lifetime_a, 'macro_lifetime_b, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime_a $other> for &'macro_lifetime_b $name {
@@ -51,11 +51,10 @@ macro_rules! impl_num_overflowing_binop{
                 let (res, overflow) = self.0.$overflowing_op(other.0);
                 panic_on_overflow!(overflow);
                 <$name>::new(res)
-            }       
+            }
         }
 	};
 }
-
 
 #[macro_export]
 #[doc(hidden)]
@@ -70,7 +69,7 @@ macro_rules! impl_num_overflowing_binop_primitive{
                 let (res, overflow) = self.0.$overflowing_op(other);
                 panic_on_overflow!(overflow);
                 <$name>::new(res)
-            }       
+            }
         }
 
 		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime $other> for $name {
@@ -81,9 +80,9 @@ macro_rules! impl_num_overflowing_binop_primitive{
                 let (res, overflow) = self.0.$overflowing_op(*other);
                 panic_on_overflow!(overflow);
                 <$name>::new(res)
-            }       
-        }   
-    
+            }
+        }
+
 		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for &'macro_lifetime $name {
 			type Output = $name;
 
@@ -92,7 +91,7 @@ macro_rules! impl_num_overflowing_binop_primitive{
                 let (res, overflow) = self.0.$overflowing_op(other);
                 panic_on_overflow!(overflow);
                 <$name>::new(res)
-            }       
+            }
         }
 
 		impl<'macro_lifetime_a, 'macro_lifetime_b, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime_a $other> for &'macro_lifetime_b $name {
@@ -103,11 +102,10 @@ macro_rules! impl_num_overflowing_binop_primitive{
                 let (res, overflow) = self.0.$overflowing_op(*other);
                 panic_on_overflow!(overflow);
                 <$name>::new(res)
-            }       
+            }
         }
 	};
 }
-
 
 #[macro_export]
 #[doc(hidden)]
@@ -149,7 +147,7 @@ macro_rules! impl_num_overflowing_assignop{
                 let (res, overflow) = self.0.$overflowing_op(other.0);
                 panic_on_overflow!(overflow);
                 self.0 = res;
-            }       
+            }
         }
 
 		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime $other> for $name {
@@ -158,11 +156,10 @@ macro_rules! impl_num_overflowing_assignop{
                 let (res, overflow) = self.0.$overflowing_op(other.0);
                 panic_on_overflow!(overflow);
                 self.0 = res;
-            }       
-        }   
+            }
+        }
     };
 }
-
 
 #[macro_export]
 #[doc(hidden)]
@@ -178,7 +175,7 @@ macro_rules! impl_num_overflowing_assignop_primitive{
                 let (res, overflow) = self.0.$overflowing_op(other);
                 panic_on_overflow!(overflow);
                 self.0 = res;
-            }       
+            }
         }
 
 		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime $other> for $name {
@@ -187,11 +184,10 @@ macro_rules! impl_num_overflowing_assignop_primitive{
                 let (res, overflow) = self.0.$overflowing_op(*other);
                 panic_on_overflow!(overflow);
                 self.0 = res;
-            }       
-        }   
+            }
+        }
     };
 }
-
 
 #[macro_export]
 #[doc(hidden)]
@@ -205,7 +201,6 @@ macro_rules! impl_num_map_from {
 	};
 }
 
-
 #[macro_export]
 #[doc(hidden)]
 macro_rules! impl_fnum_map_from {
@@ -217,7 +212,6 @@ macro_rules! impl_fnum_map_from {
 		}
 	};
 }
-
 
 #[macro_export]
 #[doc(hidden)]
@@ -235,7 +229,6 @@ macro_rules! impl_fnum_map_from_signed {
 	};
 }
 
-
 #[macro_export]
 #[doc(hidden)]
 macro_rules! impl_num_try_from_for_primitive {
@@ -249,7 +242,7 @@ macro_rules! impl_num_try_from_for_primitive {
                     Ok(v)=>Ok(v),
                     _=> Err(concat!("integer overflow when casting to ", stringify!($to)))
                 }
-                
+
             }
 		}
 	};
@@ -268,7 +261,7 @@ macro_rules! impl_fnum_try_from_for_primitive {
                     Ok(v)=>Ok(v),
                     _=> Err(concat!("integer overflow when casting to ", stringify!($to)))
                 }
-                
+
             }
 		}
 	};
@@ -291,13 +284,11 @@ macro_rules! impl_fnum_try_from_for_primitive_signed {
                             _=> Err(concat!("integer overflow when casting to ", stringify!($to)))
                         }
                 }
-                
+
             }
 		}
 	};
 }
-
-
 
 #[macro_export]
 #[doc(hidden)]
@@ -313,7 +304,7 @@ macro_rules! impl_num_wrapping_binop{
             #[inline]
 			fn $method(self, other: $other) -> Self::Output {
                 <$name>::new(self.0.$wrapping_op(other.0))
-            }       
+            }
         }
 
 		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime $other> for $name {
@@ -322,16 +313,16 @@ macro_rules! impl_num_wrapping_binop{
             #[inline]
 			fn $method(self, other: &'macro_lifetime $other) -> Self::Output {
                 <$name>::new(self.0.$wrapping_op(other.0))
-            }       
-        }   
-    
+            }
+        }
+
 		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for &'macro_lifetime $name {
 			type Output = $name;
 
             #[inline]
 			fn $method(self, other: $other) -> Self::Output {
                 <$name>::new(self.0.$wrapping_op(other.0))
-            }       
+            }
         }
 
 		impl<'macro_lifetime_a, 'macro_lifetime_b, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime_a $other> for &'macro_lifetime_b $name {
@@ -340,12 +331,10 @@ macro_rules! impl_num_wrapping_binop{
             #[inline]
 			fn $method(self, other: &'macro_lifetime_a $other) -> Self::Output {
                 <$name>::new(self.0.$wrapping_op(other.0))
-            }       
+            }
         }
 	};
 }
-
-
 
 #[macro_export]
 #[doc(hidden)]
@@ -381,16 +370,14 @@ macro_rules! impl_num_wrapping_assignop{
             #[inline]
 			fn $method(&mut self, other: $other) {
                 self.0 = self.0.$wrapping_op(other.0);
-            }       
+            }
         }
 
 		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime $other> for $name {
             #[inline]
 			fn $method(&mut self, other: &'macro_lifetime $other) {
                 self.0 = self.0.$wrapping_op(other.0);
-            }       
-        }   
+            }
+        }
     };
 }
-
-

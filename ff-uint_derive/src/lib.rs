@@ -7,13 +7,12 @@ use num_bigint::BigUint;
 use num_integer::Integer;
 use num_traits::{One, ToPrimitive, Zero};
 use proc_macro::TokenStream;
+use proc_macro_crate::crate_name;
 use quote::quote;
 use quote::TokenStreamExt;
 use std::str::FromStr;
 use syn::parse::{Parse, ParseStream, Result as ParseResult};
 use syn::{parse_macro_input, Expr, ExprLit, Ident, ImplItem, ItemImpl, ItemStruct, Lit};
-use proc_macro_crate::crate_name;
-
 
 struct PrimeFieldParamsDef {
     struct_def: ItemStruct,
@@ -31,7 +30,6 @@ impl Parse for PrimeFieldParamsDef {
         })
     }
 }
-
 
 #[proc_macro]
 pub fn construct_primefield_params(input: TokenStream) -> TokenStream {
@@ -145,7 +143,6 @@ fn fetch_const(name: &str, items: &[ImplItem]) -> String {
         }
     }
 }
-
 
 /// Convert BigUint into a vector of 64-bit limbs.
 fn biguint_to_real_u64_vec(mut v: BigUint, limbs: usize) -> Vec<u64> {
@@ -406,7 +403,12 @@ fn prime_field_constants_and_sqrt(
 }
 
 /// Implement PrimeField for the derived type.
-fn prime_field_impl(cratename:&Ident, name: &syn::Type, inner: &syn::Type, limbs: usize) -> proc_macro2::TokenStream {
+fn prime_field_impl(
+    cratename: &Ident,
+    name: &syn::Type,
+    inner: &syn::Type,
+    limbs: usize,
+) -> proc_macro2::TokenStream {
     // Returns r{n} as an ident.
     fn get_temp(n: usize) -> syn::Ident {
         syn::Ident::new(&format!("r{}", n), proc_macro2::Span::call_site())
@@ -427,7 +429,7 @@ fn prime_field_impl(cratename:&Ident, name: &syn::Type, inner: &syn::Type, limbs
     );
 
     // Implement montgomery reduction for some number of limbs
-    fn mont_impl(cratename:&Ident, limbs: usize) -> proc_macro2::TokenStream {
+    fn mont_impl(cratename: &Ident, limbs: usize) -> proc_macro2::TokenStream {
         let mut gen = proc_macro2::TokenStream::new();
 
         for i in 0..limbs {
@@ -485,7 +487,11 @@ fn prime_field_impl(cratename:&Ident, name: &syn::Type, inner: &syn::Type, limbs
         gen
     }
 
-    fn sqr_impl(cratename:&Ident, a: proc_macro2::TokenStream, limbs: usize) -> proc_macro2::TokenStream {
+    fn sqr_impl(
+        cratename: &Ident,
+        a: proc_macro2::TokenStream,
+        limbs: usize,
+    ) -> proc_macro2::TokenStream {
         let mut gen = proc_macro2::TokenStream::new();
 
         for i in 0..(limbs - 1) {
@@ -568,7 +574,7 @@ fn prime_field_impl(cratename:&Ident, name: &syn::Type, inner: &syn::Type, limbs
     }
 
     fn mul_impl(
-        cratename:&Ident,
+        cratename: &Ident,
         a: proc_macro2::TokenStream,
         b: proc_macro2::TokenStream,
         limbs: usize,

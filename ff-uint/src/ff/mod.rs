@@ -14,7 +14,6 @@ use std::io::{self, Read, Write};
 
 pub mod traits;
 
-
 pub use self::arith_impl::*;
 
 mod arith_impl {

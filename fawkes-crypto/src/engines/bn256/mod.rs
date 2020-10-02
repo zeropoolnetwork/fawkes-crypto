@@ -1,7 +1,9 @@
-use ff_uint::{construct_primefield_params, Num};
-use crate::engines::U256;
-use crate::native::ecc::{EdwardsPoint, JubJubParams};
-use crate::constants::SEED_EDWARDS_G;
+use crate::{
+    constants::SEED_EDWARDS_G,
+    engines::U256,
+    ff_uint::{construct_primefield_params, Num},
+    native::ecc::{EdwardsPoint, JubJubParams},
+};
 
 construct_primefield_params! {
     pub struct _Fq(super::U256);
@@ -13,7 +15,6 @@ construct_primefield_params! {
    }
 }
 
-
 construct_primefield_params! {
     pub struct _Fr(super::U256);
 
@@ -23,7 +24,6 @@ construct_primefield_params! {
         const GENERATOR: &'static str = "7";
    }
 }
-
 
 construct_primefield_params! {
     pub struct _Fs(super::U256);
@@ -39,8 +39,6 @@ pub type Fq = _Fq;
 pub type Fr = _Fr;
 pub type Fs = _Fs;
 
-
-
 #[derive(Clone)]
 pub struct JubJubBN256 {
     edwards_g: EdwardsPoint<Fr>,
@@ -50,29 +48,31 @@ pub struct JubJubBN256 {
     montgomery_u: Num<Fr>,
 }
 
-
 impl JubJubBN256 {
     pub fn new() -> Self {
-        let edwards_d = -Num::from(168696)/Num::from(168700);
+        let edwards_d = -Num::from(168696) / Num::from(168700);
 
-        let montgomery_a = Num::from(2)*(Num::ONE-edwards_d)/(Num::ONE+edwards_d);
-        let montgomery_b = -Num::from(4)/(Num::ONE+edwards_d);
-        
+        let montgomery_a = Num::from(2) * (Num::ONE - edwards_d) / (Num::ONE + edwards_d);
+        let montgomery_b = -Num::from(4) / (Num::ONE + edwards_d);
+
         // value of montgomery polynomial for x=montgomery_b (has no square root in Fr)
-        let montgomery_u= Num::from(337401);
+        let montgomery_u = Num::from(337401);
 
-        let edwards_g = EdwardsPoint::from_scalar_raw(Num::from_seed(SEED_EDWARDS_G), montgomery_a, montgomery_b, montgomery_u);
+        let edwards_g = EdwardsPoint::from_scalar_raw(
+            Num::from_seed(SEED_EDWARDS_G),
+            montgomery_a,
+            montgomery_b,
+            montgomery_u,
+        );
         Self {
             edwards_g,
             edwards_d,
             montgomery_a,
             montgomery_b,
-            montgomery_u
+            montgomery_u,
         }
     }
 }
-
-
 
 impl JubJubParams for JubJubBN256 {
     type Fr = Fr;
@@ -82,11 +82,9 @@ impl JubJubParams for JubJubBN256 {
         &self.edwards_g
     }
 
-
     fn edwards_d(&self) -> Num<Fr> {
         self.edwards_d
     }
-
 
     fn montgomery_a(&self) -> Num<Fr> {
         self.montgomery_a
