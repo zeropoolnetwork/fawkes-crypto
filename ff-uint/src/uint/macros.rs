@@ -182,35 +182,6 @@ macro_rules! impl_wrapping_un_method {
     }
 }
 
-
-#[macro_export]
-#[doc(hidden)]
-macro_rules! impl_overflowing_assignop {
-    ($op: ident, $method:ident, $overflowing_op: ident, $name: ty) => {
-        $crate::impl_overflowing_assignop!($op, $method, $overflowing_op, $name, $name);
-    };
-
-    ($op: ident, $method:ident, $overflowing_op: ident, $name: ty, $other: ty) => {
-        impl std::ops::$op<$other> for $name {
-            #[inline]
-            fn $method(&mut self, other: $other) {
-                let (res, overflow) = (*self).$overflowing_op(other);
-                $crate::panic_on_overflow!(overflow);
-                *self = res;
-            }
-        }
-
-        impl<'a> std::ops::$op<&'a $other> for $name {
-            #[inline]
-            fn $method(&mut self, other: &'a $other) {
-                let (res, overflow) = (*self).$overflowing_op(*other);
-                $crate::panic_on_overflow!(overflow);
-                *self = res;
-            }
-        }
-    };
-}
-
 #[macro_export]
 #[doc(hidden)]
 macro_rules! impl_map_from {
