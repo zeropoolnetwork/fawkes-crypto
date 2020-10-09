@@ -7,7 +7,6 @@ pub trait Uint:
     + std::cmp::Eq
     + std::cmp::PartialOrd
     + std::cmp::Ord
-    + std::ops::Rem<Self, Output = Self>
     + From<bool>
     + From<u8>
     + From<u16>
@@ -152,96 +151,23 @@ pub trait Uint:
     fn wrapping_cmp(&self, other: &Self) -> std::cmp::Ordering;
 
     #[inline]
-    fn wrapping_pow(self, other: Self) -> Self {
+    fn unchecked_pow(self, other: Self) -> Self {
         self.overflowing_pow(other).0
     }
 
     #[inline]
-    fn checked_pow(self, expon: Self) -> Option<Self> {
-        match self.overflowing_pow(expon) {
-            (_, true) => None,
-            (val, _) => Some(val),
-        }
-    }
-
-    #[inline]
-    fn saturating_pow(self, other: Self) -> Self {
-        match self.overflowing_pow(other) {
-            (_, true) => Self::MAX,
-            (val, false) => val,
-        }
-    }
-
-    #[inline]
-    fn wrapping_add(self, other: Self) -> Self {
+    fn unchecked_add(self, other: Self) -> Self {
         self.overflowing_add(other).0
     }
 
     #[inline]
-    fn saturating_add(self, other: Self) -> Self {
-        match self.overflowing_add(other) {
-            (_, true) => Self::MAX,
-            (val, false) => val,
-        }
-    }
-
-    #[inline]
-    fn checked_add(self, other: Self) -> Option<Self> {
-        match self.overflowing_add(other) {
-            (_, true) => None,
-            (val, _) => Some(val),
-        }
-    }
-
-    #[inline]
-    fn wrapping_sub(self, other: Self) -> Self {
+    fn unchecked_sub(self, other: Self) -> Self {
         self.overflowing_sub(other).0
     }
 
     #[inline]
-    fn saturating_sub(self, other: Self) -> Self {
-        match self.overflowing_sub(other) {
-            (_, true) => Self::ZERO,
-            (val, false) => val,
-        }
-    }
-
-    #[inline]
-    fn checked_sub(self, other: Self) -> Option<Self> {
-        match self.overflowing_sub(other) {
-            (_, true) => None,
-            (val, _) => Some(val),
-        }
-    }
-
-    #[inline]
-    fn wrapping_mul(self, other: Self) -> Self {
+    fn unchecked_mul(self, other: Self) -> Self {
         self.overflowing_mul(other).0
-    }
-
-    #[inline]
-    fn saturating_mul(self, other: Self) -> Self {
-        match self.overflowing_mul(other) {
-            (_, true) => Self::MAX,
-            (val, false) => val,
-        }
-    }
-
-    #[inline]
-    fn checked_mul(self, other: Self) -> Option<Self> {
-        match self.overflowing_mul(other) {
-            (_, true) => None,
-            (val, _) => Some(val),
-        }
-    }
-
-    #[inline]
-    fn checked_div(self, other: Self) -> Option<Self> {
-        if other.is_zero() {
-            None
-        } else {
-            Some(self.div_mod(other).0)
-        }
     }
 
     /// Checked division. Returns `None` if `other == 0`.
@@ -251,18 +177,8 @@ pub trait Uint:
     }
 
     #[inline]
-    fn wrapping_div(self, other: Self) -> Self {
+    fn unchecked_div(self, other: Self) -> Self {
         self.div_mod(other).0
-    }
-
-    /// Checked modulus. Returns `None` if `other == 0`.
-    #[inline]
-    fn checked_rem(self, other: Self) -> Option<Self> {
-        if other.is_zero() {
-            None
-        } else {
-            Some(self.div_mod(other).1)
-        }
     }
 
     #[inline]
@@ -271,49 +187,35 @@ pub trait Uint:
     }
 
     #[inline]
-    fn wrapping_rem(self, other: Self) -> Self {
+    fn unchecked_rem(self, other: Self) -> Self {
         self.div_mod(other).1
     }
 
     #[inline]
-    fn wrapping_neg(self) -> Self {
+    fn unchecked_neg(self) -> Self {
         self.overflowing_neg().0
     }
 
-    /// Checked negation. Returns `None` unless `self == 0`.
     #[inline]
-    fn checked_neg(self) -> Option<Self> {
-        match self.overflowing_neg() {
-            (_, true) => None,
-            (zero, false) => Some(zero),
-        }
-    }
-
-    #[inline]
-    fn wrapping_shr(self, rhs: u32) -> Self {
+    fn unchecked_shr(self, rhs: u32) -> Self {
         self.overflowing_shr(rhs).0
     }
 
     #[inline]
-    fn checked_shr(self, rhs: u32) -> Option<Self> {
-        match self.overflowing_shr(rhs) {
-            (_, true) => None,
-            (val, false) => Some(val),
-        }
-    }
-
-    #[inline]
-    fn wrapping_shl(self, lhs: u32) -> Self {
+    fn unchecked_shl(self, lhs: u32) -> Self {
         self.overflowing_shl(lhs).0
     }
 
-    #[inline]
-    fn checked_shl(self, lhs: u32) -> Option<Self> {
-        match self.overflowing_shl(lhs) {
-            (_, true) => None,
-            (val, false) => Some(val),
-        }
-    }
+    crate::impl_wrapping_bin_method!(wrapping_pow, overflowing_pow, Self);
+    crate::impl_wrapping_bin_method!(wrapping_add, overflowing_add, Self);
+    crate::impl_wrapping_bin_method!(wrapping_sub, overflowing_sub, Self);
+    crate::impl_wrapping_bin_method!(wrapping_mul, overflowing_mul, Self);
+    crate::impl_wrapping_bin_method!(wrapping_div, overflowing_div, Self);
+    crate::impl_wrapping_bin_method!(wrapping_rem, overflowing_rem, Self);
+    crate::impl_wrapping_bin_method!(wrapping_shl, overflowing_shl, u32);
+    crate::impl_wrapping_bin_method!(wrapping_shr, overflowing_shr, u32);
+    crate::impl_wrapping_un_method!(wrapping_neg, overflowing_neg);
+    crate::impl_wrapping_un_method!(wrapping_not, overflowing_not);
 }
 
 pub struct BitIteratorLE<E> {

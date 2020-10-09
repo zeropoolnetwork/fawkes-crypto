@@ -272,8 +272,6 @@ macro_rules! construct_uint {
 
 				}
 
-				$crate::impl_overflowing_binop!(Rem, rem, overflowing_rem, $name);
-
 				$crate::impl_map_from!($name, bool, u64);
 				$crate::impl_map_from!($name, u8, u64);
 				$crate::impl_map_from!($name, u16, u64);
@@ -367,7 +365,7 @@ macro_rules! construct_uint {
 						let mut current = *self;
 						let ten = uint_from_u64(10);
 						loop {
-							let t = current % ten;
+							let t = current.wrapping_rem(ten);
 							let digit = t.low_u64() as u8;
 							buf[i] = digit + b'0';
 							current = current.wrapping_div(ten);

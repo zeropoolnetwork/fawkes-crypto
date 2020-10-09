@@ -102,9 +102,9 @@ pub trait PrimeField:
 
     fn to_other_reduced<Fq: PrimeField>(&self) -> Fq {
         match self.to_uint().to_other::<Fq::Inner>() {
-            Some(u) => Fq::from_uint_unchecked(u % Fq::MODULUS),
+            Some(u) => Fq::from_uint_unchecked(u.wrapping_rem(Fq::MODULUS)),
             None => {
-                let u = self.to_uint() % <Fq as PrimeFieldParams>::MODULUS.to_other().unwrap();
+                let u = self.to_uint().wrapping_rem(<Fq as PrimeFieldParams>::MODULUS.to_other().unwrap());
                 Fq::from_uint_unchecked(u.to_other().unwrap())
             }
         }

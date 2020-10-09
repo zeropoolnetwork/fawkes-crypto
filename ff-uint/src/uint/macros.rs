@@ -160,83 +160,28 @@ macro_rules! panic_on_overflow {
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! impl_overflowing_binop {
-    ($op: ident, $method:ident, $overflowing_op: ident, $name: ty) => {
-        $crate::impl_overflowing_binop!($op, $method, $overflowing_op, $name, $name);
-    };
-
-    ($op: ident, $method:ident, $overflowing_op: ident, $name: ty, $other: ty) => {
-        impl std::ops::$op<$other> for $name {
-            type Output = $name;
-
-            #[inline]
-            fn $method(self, other: $other) -> Self::Output {
-                let (res, overflow) = self.$overflowing_op(other);
-                $crate::panic_on_overflow!(overflow);
-                res
-            }
+macro_rules! impl_wrapping_bin_method {
+    ($name: ident, $overflowing_op: ident, $other: ty) => {
+        fn $name(self, other: $other) -> Self {
+            let (res, overflow) = self.$overflowing_op(other);
+            $crate::panic_on_overflow!(overflow);
+            res
         }
-
-        impl<'a> std::ops::$op<&'a $other> for $name {
-            type Output = $name;
-
-            #[inline]
-            fn $method(self, other: &'a $other) -> Self::Output {
-                let (res, overflow) = self.$overflowing_op(*other);
-                $crate::panic_on_overflow!(overflow);
-                res
-            }
-        }
-
-        impl<'a> std::ops::$op<$other> for &'a $name {
-            type Output = $name;
-
-            #[inline]
-            fn $method(self, other: $other) -> Self::Output {
-                let (res, overflow) = (*self).$overflowing_op(other);
-                $crate::panic_on_overflow!(overflow);
-                res
-            }
-        }
-
-        impl<'a, 'b> std::ops::$op<&'a $other> for &'b $name {
-            type Output = $name;
-
-            #[inline]
-            fn $method(self, other: &'a $other) -> Self::Output {
-                let (res, overflow) = (*self).$overflowing_op(*other);
-                $crate::panic_on_overflow!(overflow);
-                res
-            }
-        }
-    };
+    }
 }
 
 #[macro_export]
 #[doc(hidden)]
-macro_rules! impl_overflowing_unop {
-    ($op: ident, $method:ident, $overflowing_op: ident, $name: ty) => {
-        impl std::ops::$op for $name {
-            type Output = $name;
-            #[inline]
-            fn $method(self) -> $name {
-                let (res, overflow) = self.$overflowing_op();
-                $crate::panic_on_overflow!(overflow);
-                res
-            }
+macro_rules! impl_wrapping_un_method {
+    ($name: ident, $overflowing_op: ident) => {
+        fn $name(self) -> Self {
+            let (res, overflow) = self.$overflowing_op();
+            $crate::panic_on_overflow!(overflow);
+            res
         }
-
-        impl<'a> std::ops::$op for &'a $name {
-            type Output = $name;
-            #[inline]
-            fn $method(self) -> $name {
-                let (res, overflow) = (*self).$overflowing_op();
-                $crate::panic_on_overflow!(overflow);
-                res
-            }
-        }
-    };
+    }
 }
+
 
 #[macro_export]
 #[doc(hidden)]
