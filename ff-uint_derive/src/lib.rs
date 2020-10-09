@@ -805,15 +805,15 @@ fn prime_field_impl(
 
             #[inline]
             fn double(self) -> Self {
-                #name(self.0.wrapping_shl(1)).reduced()
+                #name(self.0.unchecked_shl(1)).reduced()
             }
 
             #[inline]
             fn wrapping_sub(self, other: #name) -> Self {
                 #name(if other.0 > self.0 {
-                    self.0.wrapping_add(Self::MODULUS.wrapping_sub(other.0))
+                    self.0.unchecked_add(Self::MODULUS.unchecked_sub(other.0))
                 } else {
-                    self.0.wrapping_sub(other.0)
+                    self.0.unchecked_sub(other.0)
                 })
             }
 
@@ -822,7 +822,7 @@ fn prime_field_impl(
                 if self.is_zero() {
                     self
                 } else {
-                    #name(Self::MODULUS.wrapping_sub(self.0))
+                    #name(Self::MODULUS.unchecked_sub(self.0))
                 }
             }
 
@@ -843,32 +843,32 @@ fn prime_field_impl(
 
                     while u != one && v != one {
                         while u.is_even() {
-                            u = u.wrapping_shr(1);
+                            u = u.unchecked_shr(1);
 
                             if b.0.is_even() {
-                                b.0 = b.0.wrapping_shr(1);
+                                b.0 = b.0.unchecked_shr(1);
                             } else {
-                                b.0 = b.0.wrapping_add(Self::MODULUS);
-                                b.0 = b.0.wrapping_shr(1);
+                                b.0 = b.0.unchecked_add(Self::MODULUS);
+                                b.0 = b.0.unchecked_shr(1);
                             }
                         }
 
                         while v.is_even() {
-                            v = v.wrapping_shr(1);
+                            v = v.unchecked_shr(1);
 
                             if c.0.is_even() {
-                                c.0 = c.0.wrapping_shr(1);
+                                c.0 = c.0.unchecked_shr(1);
                             } else {
-                                c.0 = c.0.wrapping_add(Self::MODULUS);
-                                c.0 = c.0.wrapping_shr(1);
+                                c.0 = c.0.unchecked_add(Self::MODULUS);
+                                c.0 = c.0.unchecked_shr(1);
                             }
                         }
 
                         if v < u {
-                            u = u.wrapping_sub(v);
+                            u = u.unchecked_sub(v);
                             b = b.wrapping_sub(c);
                         } else {
-                            v = v.wrapping_sub(u);
+                            v = v.unchecked_sub(u);
                             c = c.wrapping_sub(b);
                         }
                     }
@@ -914,7 +914,7 @@ fn prime_field_impl(
                 if self.is_valid() {
                     self
                 } else {
-                    #name(self.0.wrapping_sub(Self::MODULUS))
+                    #name(self.0.unchecked_sub(Self::MODULUS))
                 }
             }
 
