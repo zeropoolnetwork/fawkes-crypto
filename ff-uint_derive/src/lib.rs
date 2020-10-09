@@ -800,7 +800,7 @@ fn prime_field_impl(
 
             #[inline]
             fn wrapping_add(self, other: #name) -> Self {
-                #name(self.0.wrapping_add(other.0)).reduced()
+                #name(self.0.unchecked_add(other.0)).reduced()
             }
 
             #[inline]
