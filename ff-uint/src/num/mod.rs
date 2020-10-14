@@ -176,19 +176,64 @@ impl<U: Uint> std::hash::Hash for NumRepr<U> {
 
 impl<U: Uint> std::fmt::Debug for NumRepr<U> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        std::fmt::Debug::fmt(&self.0, f)
+        std::fmt::Display::fmt(&self, f)
     }
 }
 
 impl<U: Uint> std::fmt::Display for NumRepr<U> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self.0, f)
+        if self.is_zero() {
+            return std::write!(f, "0");
+        }
+
+        // error: constant expression depends on a generic parameter
+        // let mut buf = [0_u8; U::NUM_WORDS * 20];
+
+        let mut buf = vec![0u8; U::NUM_WORDS * 20];
+        let mut i = buf.len() - 1;
+        let mut current = self.0;
+        let ten = U::from_u64(10);
+        loop {
+            let t = current.wrapping_rem(ten);
+            let digit = t.low_u64() as u8;
+            buf[i] = digit + b'0';
+            current = current.wrapping_div(ten);
+            if current.is_zero() {
+                break;
+            }
+            i -= 1;
+        }
+
+        // sequence of `'0'..'9'` chars is guaranteed to be a valid UTF8 string
+        let s = unsafe { std::str::from_utf8_unchecked(&buf[i..]) };
+        f.write_str(s)
     }
 }
 
 impl<U: Uint> std::fmt::LowerHex for NumRepr<U> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        std::fmt::LowerHex::fmt(&self.0, f)
+        if f.alternate() {
+            std::write!(f, "0x")?;
+        }
+        // special case.
+        if self.is_zero() {
+            return std::write!(f, "0");
+        }
+
+        let mut latch = false;
+        for ch in self.0.as_inner().as_ref().iter().rev() {
+            for x in 0..16 {
+                let nibble = (ch & (15u64 << ((15 - x) * 4) as u64)) >> (((15 - x) * 4) as u64);
+                if !latch {
+                    latch = nibble != 0;
+                }
+
+                if latch {
+                    std::write!(f, "{:x}", nibble)?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 

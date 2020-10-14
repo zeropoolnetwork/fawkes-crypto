@@ -30,10 +30,7 @@ pub trait Uint:
     + std::convert::TryInto<i64>
     + std::convert::TryInto<i128>
     + std::hash::Hash
-    + std::fmt::Debug
-    + std::fmt::Display
     + std::str::FromStr
-    + std::fmt::LowerHex
     + From<&'static str>
     + crate::borsh::BorshSerialize
     + crate::borsh::BorshDeserialize
