@@ -28,17 +28,6 @@ pub trait Field:
     + Default
     + std::cmp::PartialEq
     + std::cmp::Eq
-    + std::ops::Add<Self, Output = Self>
-    + std::ops::Sub<Self, Output = Self>
-    + std::ops::Mul<Self, Output = Self>
-    + std::ops::Mul<u64, Output = Self>
-    + std::ops::Div<Self, Output = Self>
-    + std::ops::Neg<Output = Self>
-    + std::ops::AddAssign<Self>
-    + std::ops::SubAssign<Self>
-    + std::ops::MulAssign<Self>
-    + std::ops::MulAssign<u64>
-    + std::ops::DivAssign<Self>
     + std::fmt::Debug
     + std::fmt::Display
 {
@@ -113,9 +102,9 @@ pub trait PrimeField:
 
     fn to_other_reduced<Fq: PrimeField>(&self) -> Fq {
         match self.to_uint().to_other::<Fq::Inner>() {
-            Some(u) => Fq::from_uint_unchecked(u % Fq::MODULUS),
+            Some(u) => Fq::from_uint_unchecked(u.wrapping_rem(Fq::MODULUS)),
             None => {
-                let u = self.to_uint() % <Fq as PrimeFieldParams>::MODULUS.to_other().unwrap();
+                let u = self.to_uint().wrapping_rem(<Fq as PrimeFieldParams>::MODULUS.to_other().unwrap());
                 Fq::from_uint_unchecked(u.to_other().unwrap())
             }
         }

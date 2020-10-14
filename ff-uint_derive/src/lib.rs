@@ -665,88 +665,6 @@ fn prime_field_impl(
             }
         }
 
-        impl std::ops::Add for #name {
-            type Output = Self;
-
-            fn add(self, other: Self) -> Self {
-                self.wrapping_add(other)
-            }
-        }
-
-        impl std::ops::AddAssign for #name {
-            fn add_assign(&mut self, other: Self) {
-                *self = self.wrapping_add(other);
-            }
-        }
-
-        impl std::ops::Sub for #name {
-            type Output = Self;
-
-            fn sub(self, other: Self) -> Self {
-                self.wrapping_sub(other)
-            }
-        }
-
-        impl std::ops::SubAssign for #name {
-            fn sub_assign(&mut self, other: Self) {
-                *self = self.wrapping_sub(other);
-            }
-        }
-
-        impl std::ops::Mul for #name {
-            type Output = Self;
-
-            fn mul(self, other: Self) -> Self {
-                self.wrapping_mul(other)
-            }
-        }
-
-        impl std::ops::MulAssign for #name {
-            fn mul_assign(&mut self, other: Self) {
-                *self = self.wrapping_mul(other);
-            }
-        }
-
-        impl std::ops::Mul<u64> for #name {
-            type Output = Self;
-
-            fn mul(self, other: u64) -> Self {
-                let other = Self::from_uint(<<#name as PrimeFieldParams>::Inner as From<u64>>::from(other))
-                    .expect("non-canonical input");
-                self.wrapping_mul(other)
-            }
-        }
-
-        impl std::ops::MulAssign<u64> for #name {
-            fn mul_assign(&mut self, other: u64) {
-                let other = Self::from_uint(<<#name as PrimeFieldParams>::Inner as From<u64>>::from(other))
-                    .expect("non-canonical input");
-                *self = self.wrapping_mul(other);
-            }
-        }
-
-        impl std::ops::Div for #name {
-            type Output = Self;
-
-            fn div(self, other: Self) -> Self {
-                self.wrapping_div(other)
-            }
-        }
-
-        impl std::ops::DivAssign for #name {
-            fn div_assign(&mut self, other: Self) {
-                *self = self.wrapping_div(other);
-            }
-        }
-
-        impl std::ops::Neg for #name {
-            type Output = Self;
-
-            fn neg(self) -> Self {
-                self.wrapping_neg()
-            }
-        }
-
         impl std::str::FromStr for #name {
             type Err = &'static str;
 
@@ -882,20 +800,20 @@ fn prime_field_impl(
 
             #[inline]
             fn wrapping_add(self, other: #name) -> Self {
-                #name(self.0 + other.0).reduced()
+                #name(self.0.unchecked_add(other.0)).reduced()
             }
 
             #[inline]
             fn double(self) -> Self {
-                #name(self.0<<1).reduced()
+                #name(self.0.unchecked_shl(1)).reduced()
             }
 
             #[inline]
             fn wrapping_sub(self, other: #name) -> Self {
                 #name(if other.0 > self.0 {
-                    self.0 + Self::MODULUS - other.0
+                    self.0.unchecked_add(Self::MODULUS.unchecked_sub(other.0))
                 } else {
-                    self.0 - other.0
+                    self.0.unchecked_sub(other.0)
                 })
             }
 
@@ -904,7 +822,7 @@ fn prime_field_impl(
                 if self.is_zero() {
                     self
                 } else {
-                    #name(Self::MODULUS - self.0)
+                    #name(Self::MODULUS.unchecked_sub(self.0))
                 }
             }
 
@@ -925,32 +843,32 @@ fn prime_field_impl(
 
                     while u != one && v != one {
                         while u.is_even() {
-                            u >>= 1;
+                            u = u.unchecked_shr(1);
 
                             if b.0.is_even() {
-                                b.0 >>= 1;
+                                b.0 = b.0.unchecked_shr(1);
                             } else {
-                                b.0 += Self::MODULUS;
-                                b.0 >>= 1;
+                                b.0 = b.0.unchecked_add(Self::MODULUS);
+                                b.0 = b.0.unchecked_shr(1);
                             }
                         }
 
                         while v.is_even() {
-                            v >>= 1;
+                            v = v.unchecked_shr(1);
 
                             if c.0.is_even() {
-                                c.0 >>= 1;
+                                c.0 = c.0.unchecked_shr(1);
                             } else {
-                                c.0 += Self::MODULUS;
-                                c.0 >>= 1;
+                                c.0 = c.0.unchecked_add(Self::MODULUS);
+                                c.0 = c.0.unchecked_shr(1);
                             }
                         }
 
                         if v < u {
-                            u -= v;
+                            u = u.unchecked_sub(v);
                             b = b.wrapping_sub(c);
                         } else {
-                            v -= u;
+                            v = v.unchecked_sub(u);
                             c = c.wrapping_sub(b);
                         }
                     }
@@ -996,7 +914,7 @@ fn prime_field_impl(
                 if self.is_valid() {
                     self
                 } else {
-                    #name(self.0 - Self::MODULUS)
+                    #name(self.0.unchecked_sub(Self::MODULUS))
                 }
             }
 
