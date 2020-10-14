@@ -2,6 +2,7 @@
 pub(crate) mod macros;
 
 use crate::borsh::{BorshDeserialize, BorshSerialize};
+#[cfg(feature = "serde")]
 use crate::serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::{PrimeField, Uint};
 use ref_cast::RefCast;
@@ -60,24 +61,28 @@ impl<U: Uint> crate::rand::distributions::Distribution<NumRepr<U>>
     }
 }
 
+#[cfg(feature = "borsh")]
 impl<U: Uint> BorshSerialize for NumRepr<U> {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
         self.0.serialize(writer)
     }
 }
 
+#[cfg(feature = "borsh")]
 impl<U: Uint> BorshDeserialize for NumRepr<U> {
     fn deserialize(buf: &mut &[u8]) -> Result<Self, std::io::Error> {
         Ok(Self(U::deserialize(buf)?))
     }
 }
 
+#[cfg(feature = "borsh")]
 impl<U: Uint> Serialize for NumRepr<U> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         Serialize::serialize(&self.to_string(), serializer)
     }
 }
 
+#[cfg(feature = "borsh")]
 impl<'de, U: Uint> Deserialize<'de> for NumRepr<U> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         std::str::FromStr::from_str(&<String as Deserialize>::deserialize(deserializer)?)
@@ -212,12 +217,14 @@ impl<Fp: PrimeField> crate::rand::distributions::Distribution<Num<Fp>>
     }
 }
 
+#[cfg(feature = "borsh")]
 impl<Fp: PrimeField> BorshSerialize for Num<Fp> {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
         self.0.serialize(writer)
     }
 }
 
+#[cfg(feature = "borsh")]
 impl<Fp: PrimeField> BorshDeserialize for Num<Fp> {
     fn deserialize(buf: &mut &[u8]) -> Result<Self, std::io::Error> {
         Ok(Self(Fp::deserialize(buf)?))
@@ -382,12 +389,14 @@ impl<Fp: PrimeField> std::convert::From<&'static str> for Num<Fp> {
     }
 }
 
+#[cfg(feature = "serde")]
 impl<Fp: PrimeField> Serialize for Num<Fp> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         Serialize::serialize(&self.to_string(), serializer)
     }
 }
 
+#[cfg(feature = "serde")]
 impl<'de, Fp: PrimeField> Deserialize<'de> for Num<Fp> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let bn = <NumRepr<Fp::Inner> as Deserialize>::deserialize(deserializer)?;

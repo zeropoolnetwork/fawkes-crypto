@@ -72,13 +72,26 @@ pub trait SqrtField: Field {
     fn sqrt(&self) -> Option<Self>;
 }
 
+#[cfg(not(feature = "borsh"))]
+pub trait Borsh {}
+
+#[cfg(feature = "borsh")]
+pub trait Borsh: borsh::BorshSerialize + borsh::BorshDeserialize {}
+
+#[cfg(feature = "borsh")]
+impl<T> Borsh for T
+where
+    T: borsh::BorshSerialize + borsh::BorshDeserialize
+{
+
+}
+
 pub trait PrimeField:
     PrimeFieldParams
     + SqrtField
     + std::str::FromStr
     + From<&'static str>
-    + crate::borsh::BorshSerialize
-    + crate::borsh::BorshDeserialize
+    + Borsh
 {
     fn from_uint(v: Self::Inner) -> Option<Self>;
     fn from_mont_uint(v: Self::Inner) -> Option<Self>;

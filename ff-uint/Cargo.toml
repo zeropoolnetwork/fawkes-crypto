@@ -22,13 +22,13 @@ arbitrary = { version = "0.4", optional = true }
 ff-uint_derive = { version = "0.1.4", path = "../ff-uint_derive" }
 rand_core = "0.5"
 concat-idents = "1.0.0"
-borsh = "0.7"
-serde = "1.0"
+borsh = { version = "0.7", optional = true }
+serde = { version = "1.0", optional = true }
 ref-cast = "1.0"
 seedbox = {version="0.1", path = "../seedbox"}
 
 [features]
-default = []
+default = ["borsh", "serde"]
 
 
 
