@@ -8,10 +8,17 @@ pub mod core;
 pub mod engines;
 pub mod native;
 
+
 pub extern crate borsh;
+pub use borsh::{BorshSerialize, BorshDeserialize};
+
+pub extern crate serde;
+pub use serde::{Serialize, Deserialize};
+
 pub extern crate ff_uint;
 pub extern crate rand;
-pub extern crate serde;
+
+
 pub extern crate typenum;
 
 pub extern crate fawkes_crypto_derive;

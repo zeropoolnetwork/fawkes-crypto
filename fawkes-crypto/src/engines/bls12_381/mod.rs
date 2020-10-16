@@ -6,9 +6,9 @@ use crate::{
 };
 
 construct_primefield_params! {
-    pub struct _Fq(super::U384);
+    pub struct Fq(super::U384);
 
-    impl PrimeFieldParams for _Fq {
+    impl PrimeFieldParams for Fq {
         type Inner = super::U384;
         const MODULUS: &'static str = "4002409555221667393417789825735904156556882819939007885332058136124031650490837864442687629129015664037894272559787";
         const GENERATOR: &'static str = "2";
@@ -16,9 +16,9 @@ construct_primefield_params! {
 }
 
 construct_primefield_params! {
-    pub struct _Fr(super::U256);
+    pub struct Fr(super::U256);
 
-    impl PrimeFieldParams for _Fr {
+    impl PrimeFieldParams for Fr {
         type Inner = super::U256;
         const MODULUS: &'static str = "52435875175126190479447740508185965837690552500527637822603658699938581184513";
         const GENERATOR: &'static str = "7";
@@ -26,18 +26,15 @@ construct_primefield_params! {
 }
 
 construct_primefield_params! {
-    pub struct _Fs(super::U256);
+    pub struct Fs(super::U256);
 
-    impl PrimeFieldParams for _Fs {
+    impl PrimeFieldParams for Fs {
         type Inner = super::U256;
         const MODULUS: &'static str = "6554484396890773809930967563523245729705921265872317281365359162392183254199";
         const GENERATOR: &'static str = "7";
    }
 }
 
-pub type Fq = _Fq;
-pub type Fr = _Fr;
-pub type Fs = _Fs;
 
 #[derive(Clone)]
 pub struct JubJubBLS12_381 {
