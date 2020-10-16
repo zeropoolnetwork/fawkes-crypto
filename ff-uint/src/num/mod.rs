@@ -288,6 +288,15 @@ impl<Fp: PrimeField> Num<Fp> {
         Some(Self(self.0.sqrt()?))
     }
 
+    pub fn even_sqrt(&self) -> Option<Self> {
+        let res = self.sqrt()?;
+        if res.to_uint().is_even() {
+            Some(res)
+        } else {
+            Some(-res)
+        }
+    }
+
     pub fn to_uint(&self) -> NumRepr<Fp::Inner> {
         NumRepr(self.0.to_uint())
     }

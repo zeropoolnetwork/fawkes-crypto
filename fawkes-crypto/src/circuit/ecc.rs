@@ -190,13 +190,7 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
 
     // assuming t!=-1
     pub fn from_scalar<J: JubJubParams<Fr = Fr>>(t: &CNum<Fr>, params: &J) -> Self {
-        fn filter_even<Fr: PrimeField>(x: Num<Fr>) -> Num<Fr> {
-            if x.is_even() {
-                x
-            } else {
-                -x
-            }
-        }
+
 
         fn check_and_get_y<Fr: PrimeField, J: JubJubParams<Fr = Fr>>(
             x: &CNum<Fr>,
@@ -204,9 +198,9 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
         ) -> (CBool<Fr>, CNum<Fr>) {
             let g = (x.square() * (x + params.montgomery_a()) + x) / params.montgomery_b();
 
-            let preimage_value = g.get_value().map(|g| match g.sqrt() {
-                Some(g_sqrt) => filter_even(g_sqrt),
-                _ => filter_even((g * params.montgomery_u()).sqrt().unwrap()),
+            let preimage_value = g.get_value().map(|g| match g.even_sqrt() {
+                Some(g_sqrt) => g_sqrt,
+                _ => (g * params.montgomery_u()).even_sqrt().unwrap(),
             });
 
             let preimage = x.derive_alloc(preimage_value.as_ref());
