@@ -12,9 +12,20 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct SizedVec<T: Sized, L: Unsigned>(pub Vec<T>, pub PhantomData<L>);
+pub struct SizedVec<T: Sized, L: Unsigned>(Vec<T>, PhantomData<L>);
+
+impl<T: Clone, L: Unsigned> SizedVec<T, L> {
+    pub fn from_slice(slice:&[T]) -> Self {
+        assert!(slice.len() == L::USIZE, "Wrong length of SizedVec");
+        Self(slice.to_vec(), PhantomData)
+    }
+}
 
 impl<T, L: Unsigned> SizedVec<T, L> {
+    pub fn as_slice(&self) -> &[T] {
+        &self.0
+    }
+
     pub fn iter(&self) -> Iter<'_, T> {
         self.0.iter()
     }

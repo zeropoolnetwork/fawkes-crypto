@@ -142,10 +142,10 @@ mod poseidon_test {
         let inputs = SizedVec::alloc(cs, Some(&data));
 
         let mut n_constraints = cs.borrow().num_constraints();
-        let res = c_poseidon(&inputs.0, &poseidon_params);
+        let res = c_poseidon(inputs.as_slice(), &poseidon_params);
         n_constraints = cs.borrow().num_constraints() - n_constraints;
 
-        let res2 = poseidon(&data.0, &poseidon_params);
+        let res2 = poseidon(data.as_slice(), &poseidon_params);
         res.assert_const(&res2);
 
         println!("poseidon(4,8,54) constraints = {}", n_constraints);
