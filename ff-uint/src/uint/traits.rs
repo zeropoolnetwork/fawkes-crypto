@@ -32,8 +32,7 @@ pub trait Uint:
     + std::hash::Hash
     + std::str::FromStr
     + From<&'static str>
-    + crate::borsh::BorshSerialize
-    + crate::borsh::BorshDeserialize
+    + crate::traits::Borsh
 {
     type Inner: AsMut<[u64]> + AsRef<[u64]> + Copy + Clone + Default + Sized;
 

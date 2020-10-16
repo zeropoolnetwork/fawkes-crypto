@@ -20,6 +20,7 @@ mod uint;
 #[macro_use]
 mod ff;
 mod num;
+mod traits;
 
 pub extern crate seedbox;
 

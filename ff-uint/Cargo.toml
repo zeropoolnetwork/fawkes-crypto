@@ -28,7 +28,9 @@ ref-cast = "1.0"
 seedbox = {version="0.1", path = "../seedbox"}
 
 [features]
-default = ["borsh", "serde"]
+default = ["borsh_support", "serde_support"]
+borsh_support = ["borsh", "ff-uint_derive/borsh_support"]
+serde_support = ["serde"]
 
 
 
