@@ -394,7 +394,10 @@ fn uint256_arithmetic_test() {
         U256([0x8C8C3EE70C644118u64, 0x0209E7378231E632, 0, 0])
     );
     // Division
-    assert_eq!(U256::from(105u8).wrapping_div(U256::from(5u8)), U256::from(21u8));
+    assert_eq!(
+        U256::from(105u8).wrapping_div(U256::from(5u8)),
+        U256::from(21u8)
+    );
     let div = mult.wrapping_div(U256::from(300u16));
     assert_eq!(div, U256([0x9F30411021524112u64, 0x0001BD5B7DDFBD5A, 0, 0]));
 
@@ -449,11 +452,26 @@ fn uint256_extreme_bitshift_test() {
 
 #[test]
 fn uint256_mul64() {
-    assert_eq!(U256::from(0u64).wrapping_mul(U256::from(2u64)), U256::from(0u64));
-    assert_eq!(U256::from(1u64).wrapping_mul(U256::from(2u64)), U256::from(2u64));
-    assert_eq!(U256::from(10u64).wrapping_mul(U256::from(2u64)), U256::from(20u64));
-    assert_eq!(U256::from(10u64).wrapping_mul(U256::from(5u64)), U256::from(50u64));
-    assert_eq!(U256::from(1000u64).wrapping_mul(U256::from(50u64)), U256::from(50000u64));
+    assert_eq!(
+        U256::from(0u64).wrapping_mul(U256::from(2u64)),
+        U256::from(0u64)
+    );
+    assert_eq!(
+        U256::from(1u64).wrapping_mul(U256::from(2u64)),
+        U256::from(2u64)
+    );
+    assert_eq!(
+        U256::from(10u64).wrapping_mul(U256::from(2u64)),
+        U256::from(20u64)
+    );
+    assert_eq!(
+        U256::from(10u64).wrapping_mul(U256::from(5u64)),
+        U256::from(50u64)
+    );
+    assert_eq!(
+        U256::from(1000u64).wrapping_mul(U256::from(50u64)),
+        U256::from(50000u64)
+    );
 }
 
 #[test]
@@ -490,7 +508,10 @@ fn uint256_overflowing_pow() {
 
 #[test]
 fn uint256_mul1() {
-    assert_eq!(U256::from(1u64).wrapping_mul(U256::from(10u64)), U256::from(10u64));
+    assert_eq!(
+        U256::from(1u64).wrapping_mul(U256::from(10u64)),
+        U256::from(10u64)
+    );
 }
 
 #[test]
@@ -519,8 +540,14 @@ fn uint256_overflowing_mul() {
 
 #[test]
 fn uint512_mul() {
-    let a = U512::from_str("57896044618658097711785492504343953926634992332820282019728792003956564819967").unwrap();
-    let b = U512::from_str("57896044618658097711785492504343953926634992332820282019728792003956564819967").unwrap();
+    let a = U512::from_str(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819967",
+    )
+    .unwrap();
+    let b = U512::from_str(
+        "57896044618658097711785492504343953926634992332820282019728792003956564819967",
+    )
+    .unwrap();
     assert_eq!(
 		a.wrapping_mul(b),
 		U512::from_str("3351951982485649274893506249551461531869841455148098344430890360930441007518270952111231258346302285937499276638768242728772830138947184902600499121881089").unwrap()
@@ -552,9 +579,9 @@ fn uint256_mul_overflow_panic() {
         .unwrap()
         .wrapping_mul(
             U256::from_str(
-            "57896044618658097711785492504343953926634992332820282019728792003956564819967",
+                "57896044618658097711785492504343953926634992332820282019728792003956564819967",
             )
-            .unwrap()
+            .unwrap(),
         );
 }
 
@@ -578,7 +605,9 @@ fn uint256_sub_overflow() {
 #[should_panic]
 #[allow(unused_must_use)]
 fn uint256_sub_overflow_panic() {
-    U256::from_str("0").unwrap().wrapping_sub(U256::from_str("1").unwrap());
+    U256::from_str("0")
+        .unwrap()
+        .wrapping_sub(U256::from_str("1").unwrap());
 }
 
 #[test]
@@ -587,8 +616,8 @@ fn uint256_shl() {
         U256::from_str(
             "57896044618658097711785492504343953926634992332820282019728792003956564819967"
         )
-            .unwrap()
-            .wrapping_shl(4),
+        .unwrap()
+        .wrapping_shl(4),
         U256::from_str(
             "115792089237316195423570985008687907853269984665640564039457584007913129639920"
         )
@@ -624,7 +653,8 @@ fn uint256_mul() {
         U256::from_str(
             "57896044618658097711785492504343953926634992332820282019728792003956564819967"
         )
-        .unwrap().wrapping_mul(U256::from_str("2").unwrap()),
+        .unwrap()
+        .wrapping_mul(U256::from_str("2").unwrap()),
         U256::from_str(
             "115792089237316195423570985008687907853269984665640564039457584007913129639934"
         )
@@ -634,15 +664,30 @@ fn uint256_mul() {
 
 #[test]
 fn uint256_div() {
-    assert_eq!(U256::from(10u64).wrapping_div(U256::from(1u64)), U256::from(10u64));
-    assert_eq!(U256::from(10u64).wrapping_div(U256::from(2u64)), U256::from(5u64));
-    assert_eq!(U256::from(10u64).wrapping_div(U256::from(3u64)), U256::from(3u64));
+    assert_eq!(
+        U256::from(10u64).wrapping_div(U256::from(1u64)),
+        U256::from(10u64)
+    );
+    assert_eq!(
+        U256::from(10u64).wrapping_div(U256::from(2u64)),
+        U256::from(5u64)
+    );
+    assert_eq!(
+        U256::from(10u64).wrapping_div(U256::from(3u64)),
+        U256::from(3u64)
+    );
 }
 
 #[test]
 fn uint256_rem() {
-    assert_eq!(U256::from(10u64).wrapping_rem(U256::from(1u64)), U256::from(0u64));
-    assert_eq!(U256::from(10u64).wrapping_rem(U256::from(3u64)), U256::from(1u64));
+    assert_eq!(
+        U256::from(10u64).wrapping_rem(U256::from(1u64)),
+        U256::from(0u64)
+    );
+    assert_eq!(
+        U256::from(10u64).wrapping_rem(U256::from(3u64)),
+        U256::from(1u64)
+    );
 }
 
 #[test]
@@ -1119,10 +1164,16 @@ fn test_u256_from_fixed_array() {
         0, 123,
     ];
     let num: U256 = U256::from_big_endian(&ary);
-    assert_eq!(num, U256::from(core::u64::MAX).wrapping_add(U256::from(1 + 123)));
+    assert_eq!(
+        num,
+        U256::from(core::u64::MAX).wrapping_add(U256::from(1 + 123))
+    );
 
     let a_ref: &U256 = &U256::from_big_endian(&ary);
-    assert_eq!(a_ref, &(U256::from(core::u64::MAX).wrapping_add(U256::from(1 + 123))));
+    assert_eq!(
+        a_ref,
+        &(U256::from(core::u64::MAX).wrapping_add(U256::from(1 + 123)))
+    );
 }
 
 #[test]
