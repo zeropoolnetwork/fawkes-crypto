@@ -406,8 +406,7 @@ fn uint256_arithmetic_test() {
         "452312848583266388373324160190187140051835877600158453279131187530910662446",
     )
     .unwrap();
-    println!("{:x}", a);
-    println!("{:x}", b);
+
     assert_eq!(a.wrapping_not(), b);
     assert_eq!(a, b.wrapping_not());
 }
@@ -469,41 +468,6 @@ fn uint256_pow() {
 #[should_panic]
 fn uint256_pow_overflow_panic() {
     U256::from(2).wrapping_pow(U256::from(0x100));
-}
-
-#[test]
-fn should_format_and_debug_correctly() {
-    let test = |x: usize, hex: &'static str, display: &'static str| {
-        assert_eq!(format!("{}", U256::from(x)), display);
-        // TODO: proper impl for Debug so we get this to pass:  assert_eq!(format!("{:?}", U256::from(x)), format!("0x{}", hex));
-        assert_eq!(format!("{:?}", U256::from(x)), display);
-        assert_eq!(format!("{:x}", U256::from(x)), hex);
-        assert_eq!(format!("{:#x}", U256::from(x)), format!("0x{}", hex));
-    };
-
-    test(0x1, "1", "1");
-    test(0xf, "f", "15");
-    test(0x10, "10", "16");
-    test(0xff, "ff", "255");
-    test(0x100, "100", "256");
-    test(0xfff, "fff", "4095");
-    test(0x1000, "1000", "4096");
-}
-
-#[test]
-pub fn display_u256() {
-    let expected = "115792089237316195423570985008687907853269984665640564039457584007913129639935";
-    let value = U256::MAX;
-    assert_eq!(format!("{}", value), expected);
-    assert_eq!(format!("{:?}", value), expected);
-}
-
-#[test]
-pub fn display_u512() {
-    let expected = "13407807929942597099574024998205846127479365820592393377723561443721764030073546976801874298166903427690031858186486050853753882811946569946433649006084095";
-    let value = U512::MAX;
-    assert_eq!(format!("{}", value), expected);
-    assert_eq!(format!("{:?}", value), expected);
 }
 
 #[test]
@@ -685,17 +649,6 @@ fn uint256_rem() {
 fn uint256_from_str() {
     assert_eq!(U256::from_str("10").unwrap(), U256::from(10u64));
     assert_eq!(U256::from_str("1024").unwrap(), U256::from(1024u64));
-}
-
-#[test]
-fn display_uint() {
-    let s = "12345678987654321023456789";
-    assert_eq!(format!("{}", U256::from_str(s).unwrap()), s);
-}
-
-#[test]
-fn display_uint_zero() {
-    assert_eq!(format!("{}", U256::from(0)), "0");
 }
 
 #[test]
@@ -1055,18 +1008,6 @@ fn u256_multi_muls2() {
     let x1septima_right: U256 =
         "3842819999549834008672227788404135925100853984878767509766273086046265625".into();
     assert_eq!(x1septima_right, x1septima);
-}
-
-#[test]
-fn example() {
-    let mut val: U256 = 1023.into();
-    for _ in 0..200 {
-        val = val.wrapping_mul(U256::from(2))
-    }
-    assert_eq!(
-        &format!("{}", val),
-        "1643897619276947051879427220465009342380213662639797070513307648"
-    );
 }
 
 #[test]

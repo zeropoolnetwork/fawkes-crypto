@@ -15,7 +15,7 @@ macro_rules! construct_uint {
 
 				#[repr(C)]
 				$(#[$attr])*
-				#[derive(Copy, Clone, Default)]
+				#[derive(Copy, Clone, Default, Debug)]
 				#[cfg_attr(feature = "borsh_support", derive(BorshSerialize, BorshDeserialize))]
 				pub struct $name (pub [u64; $n_words]);
 
