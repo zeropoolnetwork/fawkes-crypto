@@ -1,6 +1,7 @@
 #[macro_use]
 pub(crate) mod macros;
 
+#[cfg(feature = "borsh_support")]
 use crate::borsh::{BorshDeserialize, BorshSerialize};
 #[cfg(feature = "serde_support")]
 use crate::serde::{Deserialize, Deserializer, Serialize, Serializer};

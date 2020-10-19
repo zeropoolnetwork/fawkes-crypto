@@ -8,16 +8,18 @@ pub mod core;
 pub mod engines;
 pub mod native;
 
-
+#[cfg(feature = "borsh_support")]
 pub extern crate borsh;
-pub use borsh::{BorshSerialize, BorshDeserialize};
+#[cfg(feature = "borsh_support")]
+pub use borsh::{BorshDeserialize, BorshSerialize};
 
+#[cfg(feature = "serde_support")]
 pub extern crate serde;
-pub use serde::{Serialize, Deserialize};
+#[cfg(feature = "serde_support")]
+pub use serde::{Deserialize, Serialize};
 
 pub extern crate ff_uint;
 pub extern crate rand;
-
 
 pub extern crate typenum;
 

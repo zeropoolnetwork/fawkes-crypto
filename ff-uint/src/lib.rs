@@ -1,3 +1,4 @@
+#[cfg(feature = "borsh_support")]
 #[doc(hidden)]
 pub use borsh;
 #[doc(hidden)]
@@ -10,6 +11,7 @@ pub use crunchy::unroll;
 pub use rand;
 #[doc(hidden)]
 pub use rustc_hex;
+#[cfg(feature = "serde_support")]
 #[doc(hidden)]
 pub use serde;
 #[doc(hidden)]
