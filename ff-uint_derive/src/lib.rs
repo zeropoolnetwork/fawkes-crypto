@@ -635,27 +635,6 @@ fn prime_field_impl(
 
     let top_limb_index = limbs - 1;
 
-    #[cfg(feature = "borsh_support")]
-    let borsh = quote! {
-        impl ::borsh::ser::BorshSerialize for #name {
-            fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-                let uint = self.to_uint();
-                uint.serialize(writer)
-            }
-        }
-
-        impl ::borsh::de::BorshDeserialize for #name {
-            fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-                let uint = <<#name as PrimeFieldParams>::Inner as ::borsh::de::BorshDeserialize>::deserialize(buf)?;
-                Self::from_uint(uint)
-                    .ok_or(std::io::Error::from(std::io::ErrorKind::InvalidData))
-            }
-        }
-    };
-
-    #[cfg(not(feature = "borsh_support"))]
-    let borsh = quote! {};
-
     quote! {
         impl ::std::marker::Copy for #name { }
 
@@ -703,7 +682,22 @@ fn prime_field_impl(
             }
         }
 
-        #borsh
+        #[cfg(feature = "borsh_support")]
+        impl ::borsh::ser::BorshSerialize for #name {
+            fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+                let uint = self.to_uint();
+                uint.serialize(writer)
+            }
+        }
+
+        #[cfg(feature = "borsh_support")]
+        impl ::borsh::de::BorshDeserialize for #name {
+            fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
+                let uint = <<#name as PrimeFieldParams>::Inner as ::borsh::de::BorshDeserialize>::deserialize(buf)?;
+                Self::from_uint(uint)
+                    .ok_or(std::io::Error::from(std::io::ErrorKind::InvalidData))
+            }
+        }
 
         /// Elements are ordered lexicographically.
         impl Ord for #name {
