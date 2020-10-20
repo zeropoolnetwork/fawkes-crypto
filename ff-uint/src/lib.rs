@@ -21,7 +21,7 @@ mod uint;
 mod ff;
 mod num;
 
-pub mod seedbox;
+pub extern crate seedbox;
 
 pub use ff::traits::*;
 pub use ff::*;

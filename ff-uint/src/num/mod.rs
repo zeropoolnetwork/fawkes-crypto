@@ -6,8 +6,8 @@ use crate::serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::{PrimeField, Uint};
 use ref_cast::RefCast;
 
-use crate::rand::Rng;
 use std::convert::TryInto;
+use crate::seedbox::{SeedboxBlake2, SeedBox, SeedBoxGen};
 
 #[repr(transparent)]
 #[derive(Clone, Copy, RefCast)]
@@ -224,6 +224,25 @@ impl<Fp: PrimeField> BorshDeserialize for Num<Fp> {
     }
 }
 
+impl<Fp: PrimeField> SeedBoxGen<Num<Fp>> for SeedboxBlake2 {
+    fn gen(&mut self) -> Num<Fp> {
+        let mut n = Fp::Inner::ZERO;
+        let shave = 0xffffffffffffffffu64 >> Fp::REPR_SHAVE_BITS;
+        let len = Fp::Inner::NUM_WORDS;
+        loop {
+            {
+                let p = n.as_inner_mut().as_mut();
+                self.fill_limbs(p);
+                p[len-1] &= shave;
+            }
+            match Num::from_mont_uint(NumRepr(n)) {
+                Some(n) => return n,
+                _ => {}
+            }
+        }
+    }
+}
+
 impl<Fp: PrimeField> Num<Fp> {
     pub const ZERO: Self = Num(Fp::ZERO);
     pub const ONE: Self = Num(Fp::ONE);
@@ -240,11 +259,6 @@ impl<Fp: PrimeField> Num<Fp> {
 
     pub fn double(self) -> Self {
         Self(self.0.double())
-    }
-
-    pub fn from_seed(blob: &[u8]) -> Self {
-        let mut rng = crate::seedbox::SeedboxBlake2::new_with_salt(blob);
-        rng.gen()
     }
 
     pub fn square(self) -> Self {

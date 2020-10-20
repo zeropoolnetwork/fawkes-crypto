@@ -6,7 +6,7 @@ use syn::{
     PathSegment, Type,
 };
 
-#[proc_macro_derive(Signal, attributes(Value))]
+#[proc_macro_derive(Signal, attributes(Field, Value))]
 pub fn signal_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast = syn::parse(input).unwrap();
     expand(&ast, "Signal").into()
@@ -62,24 +62,26 @@ fn expand(input: &DeriveInput, _: &str) -> TokenStream {
     )
     .expect("attribute should be a type");
 
+    let field_path = parse_str::<Path>(&fetch_attr("Field", &input.attrs).unwrap_or(String::from("Fr"))).expect("attribute should be a path");
+
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let body = match input.data {
         Data::Struct(ref data_struct) => match data_struct.fields {
             Fields::Unnamed(ref fields) => {
                 let field_vec = unnamed_to_vec(fields);
-                tuple_impl(&field_vec)
+                tuple_impl(&field_vec, &field_path)
             }
             Fields::Named(ref fields) => {
                 let field_vec = named_to_vec(fields);
-                struct_impl(&field_vec)
+                struct_impl(&field_vec, &field_path)
             }
-            Fields::Unit => struct_impl(&[]),
+            Fields::Unit => struct_impl(&[], &field_path),
         },
         _ => panic!("Only structs can derive a constructor"),
     };
 
     quote! {
-        impl #impl_generics Signal<Fr> for #input_type#ty_generics #where_clause {
+        impl #impl_generics Signal<#field_path> for #input_type#ty_generics #where_clause {
             type Value = #value_type;
 
             #body
@@ -112,7 +114,7 @@ fn get_typename(t: &Type) -> &Ident {
     }
 }
 
-fn tuple_impl(fields: &[&Field]) -> TokenStream {
+fn tuple_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
     let var_typenames = get_field_types(&fields)
         .iter()
         .map(|&t| get_typename(t))
@@ -130,15 +132,15 @@ fn tuple_impl(fields: &[&Field]) -> TokenStream {
             Some(Self::Value{#(#var_ids:self.#var_ids.as_const()?),*})
         }
 
-        fn switch(&self, bit: &CBool<Fr>, if_else: &Self) -> Self {
+        fn switch(&self, bit: &CBool<#field_path>, if_else: &Self) -> Self {
             Self( #(self. #var_ids .switch(bit, &if_else. #var_ids)),* )
         }
 
-        fn get_cs(&self) -> &RCS<Fr> {
+        fn get_cs(&self) -> &RCS<#field_path> {
             self.0.get_cs()
         }
 
-        fn from_const(cs:&RCS<Fr>, value: &Self::Value) -> Self {
+        fn from_const(cs:&RCS<#field_path>, value: &Self::Value) -> Self {
             Self(#(#var_typenames::from_const(cs, &value.#var_ids)),*)
         }
 
@@ -154,19 +156,19 @@ fn tuple_impl(fields: &[&Field]) -> TokenStream {
             #(self. #var_ids .assert_eq(&other. #var_ids);)*
         }
 
-        fn is_eq(&self, other: &Self) -> CBool<Fr> {
+        fn is_eq(&self, other: &Self) -> CBool<#field_path> {
             let mut acc = self.derive_const(&true);
             #(acc &= self. #var_ids .is_eq(&other. #var_ids);)*
             acc
         }
 
-        fn alloc(cs:&RCS<Fr>, value:Option<&Self::Value>) -> Self {
+        fn alloc(cs:&RCS<#field_path>, value:Option<&Self::Value>) -> Self {
             Self(#(#var_typenames::alloc(cs, value.map(|v| &v.#var_ids))),*)
         }
     }
 }
 
-fn struct_impl(fields: &[&Field]) -> TokenStream {
+fn struct_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
     let var_names: &Vec<Ident> = &field_idents(fields).iter().map(|f| (**f).clone()).collect();
 
     let var_name_first = var_names[0].clone();
@@ -184,15 +186,15 @@ fn struct_impl(fields: &[&Field]) -> TokenStream {
             Some(Self::Value {#(#var_names: self.#var_names.as_const()?),*})
         }
 
-        fn switch(&self, bit: &CBool<Fr>, if_else: &Self) -> Self {
+        fn switch(&self, bit: &CBool<#field_path>, if_else: &Self) -> Self {
             Self {#(#var_names: self.#var_names.switch(bit, &if_else.#var_names)),*}
         }
 
-        fn get_cs(&self) -> &RCS<Fr> {
+        fn get_cs(&self) -> &RCS<#field_path> {
             self.#var_name_first.get_cs()
         }
 
-        fn from_const(cs:&RCS<Fr>, value: &Self::Value) -> Self {
+        fn from_const(cs:&RCS<#field_path>, value: &Self::Value) -> Self {
             Self {#(#var_names: #var_typenames::from_const(cs, &value.#var_names)),*}
         }
 
@@ -208,13 +210,13 @@ fn struct_impl(fields: &[&Field]) -> TokenStream {
             #(self. #var_names .assert_eq(&other. #var_names);)*
         }
 
-        fn is_eq(&self, other: &Self) -> CBool<Fr> {
+        fn is_eq(&self, other: &Self) -> CBool<#field_path> {
             let mut acc = self.derive_const(&true);
             #(acc &= self. #var_names .is_eq(&other. #var_names);)*
             acc
         }
 
-        fn alloc(cs:&RCS<Fr>, value:Option<&Self::Value>) -> Self {
+        fn alloc(cs:&RCS<#field_path>, value:Option<&Self::Value>) -> Self {
             Self {#(#var_names: #var_typenames::alloc(cs, value.map(|v| &v.#var_names))),*}
         }
 

@@ -3,5 +3,6 @@ members = [
   "fawkes-crypto",
   "fawkes-crypto_derive",
   "ff-uint",
-  "ff-uint_derive"
+  "ff-uint_derive",
+  "seedbox"
 ]

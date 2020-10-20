@@ -204,7 +204,7 @@ fn ll_lookup<V, K: PartialEq + PartialOrd>(cur: &mut Cursor<(V, K)>, n: K) -> Lo
             Some((_, k)) => {
                 if *k == n {
                     return LookupAction::Add;
-                } else if *k < n {
+                } else if *k > n {
                     return LookupAction::Insert;
                 }
             }

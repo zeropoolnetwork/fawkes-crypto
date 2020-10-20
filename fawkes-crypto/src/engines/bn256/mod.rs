@@ -1,7 +1,7 @@
 use crate::{
     constants::SEED_EDWARDS_G,
     engines::U256,
-    ff_uint::{construct_primefield_params, Num},
+    ff_uint::{construct_primefield_params, Num, seedbox::{FromSeed, SeedboxBlake2}},
     native::ecc::{EdwardsPoint, JubJubParams},
 };
 
@@ -56,7 +56,7 @@ impl JubJubBN256 {
         let montgomery_u = Num::from(337401);
 
         let edwards_g = EdwardsPoint::from_scalar_raw(
-            Num::from_seed(SEED_EDWARDS_G),
+        FromSeed::<SeedboxBlake2>::from_seed(SEED_EDWARDS_G),
             montgomery_a,
             montgomery_b,
             montgomery_u,

@@ -1,7 +1,7 @@
 use crate::{
     circuit::{bool::CBool, cs::RCS, num::CNum},
     core::{signal::Signal, sizedvec::SizedVec},
-    ff_uint::{Num, PrimeField},
+    ff_uint::{Num, PrimeField, seedbox::{FromSeed, SeedboxBlake2}},
     native::poseidon::{MerkleProof, PoseidonParams},
     typenum::Unsigned,
 };
@@ -74,8 +74,8 @@ pub fn c_poseidon_with_salt<Fr: PrimeField>(
         "number of inputs should be less than t"
     );
     let cs = inputs[0].get_cs();
-    let mut inputs = inputs.to_vec();
-    inputs.push(CNum::from_const(cs, &Num::from_seed(seed)));
+    let mut inputs = inputs.to_vec(); 
+    inputs.push(CNum::from_const(cs, &FromSeed::<SeedboxBlake2>::from_seed(seed)));
     c_poseidon(&inputs, params)
 }
 

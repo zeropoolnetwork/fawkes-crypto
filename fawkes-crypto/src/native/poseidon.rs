@@ -1,8 +1,7 @@
 use crate::{
     core::sizedvec::SizedVec,
-    ff_uint::seedbox::SeedboxBlake2,
+    ff_uint::seedbox::{SeedboxBlake2, SeedBox, SeedBoxGen, FromSeed},
     ff_uint::{Num, PrimeField},
-    rand::Rng,
     serde::{Deserialize, Serialize},
     typenum::Unsigned,
 };
@@ -89,7 +88,7 @@ pub fn poseidon_with_salt<Fr: PrimeField>(
         "number of inputs should be less than t"
     );
     let mut inputs = inputs.to_vec();
-    inputs.push(Num::from_seed(seed));
+    inputs.push(FromSeed::<SeedboxBlake2>::from_seed(seed));
     poseidon(&inputs, params)
 }
 

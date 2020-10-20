@@ -1,25 +1,19 @@
 [package]
-name = "fawkes-crypto_derive"
-version = "3.0.3"
+name = "seedbox"
+version = "0.1.0"
 authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
-edition = "2018"
-description = "zk-SNARK circuit building framework"
+description = "Library for generating math objects from seeds"
 homepage = "https://github.com/zeropoolnetwork/fawkes-crypto"
+license = "MIT/Apache-2.0"
 repository = "https://github.com/zeropoolnetwork/fawkes-crypto"
-license = "MIT OR Apache-2.0"
-
-
-
-
+edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[lib]
-proc-macro = true
-
 [dependencies]
-proc-macro2 = "1"
-quote = "1"
-syn = { version = "1", features = ["extra-traits"] }
+blake2_rfc = {version="0.0.1", package="blake2-rfc_bellman_edition"}
+byteorder = "1.3.4"
 
+[features]
+default = []
 
