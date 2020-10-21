@@ -8,6 +8,7 @@ pub use concat_idents::concat_idents;
 #[doc(hidden)]
 pub use crunchy::unroll;
 #[doc(hidden)]
+#[cfg(feature = "rand_support")]
 pub use rand;
 #[doc(hidden)]
 pub use rustc_hex;

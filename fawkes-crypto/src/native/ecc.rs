@@ -1,8 +1,10 @@
 use crate::{
     ff_uint::{BitIterBE, Num, PrimeField},
-    rand::Rng,
     serde::{Deserialize, Serialize},
 };
+
+#[cfg(feature = "rand_support")]
+use crate::rand::Rng;
 
 #[derive(Clone, Copy, Debug)]
 pub struct EdwardsPointEx<Fr: PrimeField> {
@@ -85,6 +87,7 @@ impl<Fr: PrimeField> EdwardsPoint<Fr> {
         }
     }
 
+    #[cfg(feature = "rand_support")]
     pub fn rand<R: Rng, J: JubJubParams<Fr = Fr>>(rng: &mut R, params: &J) -> Self {
         loop {
             if let Some(p) = Self::get_for_y(rng.gen(), rng.gen(), params) {

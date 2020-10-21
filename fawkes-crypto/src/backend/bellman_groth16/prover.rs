@@ -1,3 +1,4 @@
+#[cfg(feature = "rand_support")]
 use super::osrng::OsRng;
 use super::*;
 use bellman::{ConstraintSystem, SynthesisError};
@@ -104,6 +105,7 @@ impl<E: Engine> bellman::Circuit<E::BE> for BellmanCS<E> {
     }
 }
 
+#[cfg(feature = "rand_support")]
 pub fn prove<E: Engine, Pub: Signal<E::Fr>, Sec: Signal<E::Fr>, C: Fn(Pub, Sec)>(
     params: &Parameters<E>,
     input_pub: &Pub::Value,

@@ -24,3 +24,4 @@ proc-macro-crate = "0.1.5"
 
 [features]
 borsh_support = []
+rand_support = []

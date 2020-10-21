@@ -35,6 +35,7 @@ pub trait Field:
     const ZERO: Self;
     const ONE: Self;
 
+    #[cfg(feature = "rand_support")]
     fn random<R: rand::Rng + ?Sized>(rng: &mut R) -> Self;
     fn is_zero(&self) -> bool;
 

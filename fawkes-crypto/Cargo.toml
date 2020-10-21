@@ -15,16 +15,16 @@ crate-type = ["rlib"]
 
 [dependencies]
 
-ff-uint = {version="0.1.4", path="../ff-uint"}
+ff-uint = { version = "0.1.4", path = "../ff-uint", default-features = false }
 linked-list = {version="0.0.3", optional=true}
 typenum = "1.12.0"
-rand = "0.7.3"
+rand = { version = "0.7.3", optional = true }
 byteorder = "1"
 serde = { version = "1.0", features = ["derive"], optional = true }
 borsh = { version = "0.7", optional = true }
 fawkes-crypto_derive = {version="3.0.3", path = "../fawkes-crypto_derive"}
 impl-trait-for-tuples = "0.1.3"
-getrandom = "0.2"
+getrandom = { version = "0.2", optional = true }
 
 [dependencies.blake2_rfc]
 version = "0.0.1"
@@ -48,3 +48,4 @@ backend_bellman_groth16=["bellman"]
 heavy_tests=[]
 borsh_support = ["borsh", "ff-uint/borsh_support"]
 serde_support = ["serde", "ff-uint/serde_support"]
+rand_support = ["rand", "getrandom", "ff-uint/rand_support"]

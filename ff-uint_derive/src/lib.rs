@@ -776,6 +776,7 @@ fn prime_field_impl(
             const ONE: #name = #name(Self::R);
 
             /// Computes a uniformly random element using rejection sampling.
+            #[cfg(feature = "rand_support")]
             fn random<R: ::rand::Rng + ?Sized>(rng: &mut R) -> Self {
                 loop {
                     let mut tmp = {

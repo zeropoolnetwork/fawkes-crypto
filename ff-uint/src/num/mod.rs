@@ -8,8 +8,10 @@ use crate::serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::{PrimeField, Uint};
 use ref_cast::RefCast;
 
+use crate::seedbox::{SeedBox, SeedBoxGen, SeedboxBlake2};
+#[cfg(feature = "rand_support")]
+use crate::rand::Rng;
 use std::convert::TryInto;
-use crate::seedbox::{SeedboxBlake2, SeedBox, SeedBoxGen};
 
 #[repr(transparent)]
 #[derive(Clone, Copy, RefCast)]
@@ -53,6 +55,7 @@ impl<U: Uint> NumRepr<U> {
     }
 }
 
+#[cfg(feature = "rand_support")]
 impl<U: Uint> crate::rand::distributions::Distribution<NumRepr<U>>
     for crate::rand::distributions::Standard
 {
@@ -253,7 +256,7 @@ impl<U: Uint> std::convert::From<&'static str> for NumRepr<U> {
 }
 
 // num ops for PrimeField
-
+#[cfg(feature = "rand_support")]
 impl<Fp: PrimeField> crate::rand::distributions::Distribution<Num<Fp>>
     for crate::rand::distributions::Standard
 {

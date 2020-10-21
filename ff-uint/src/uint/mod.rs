@@ -350,6 +350,7 @@ macro_rules! construct_uint {
 					}
 				}
 
+                #[cfg(features = "rand_support")]
 				impl $crate::rand::distributions::Distribution<$name> for $crate::rand::distributions::Standard {
 					#[inline]
 					fn sample<R: $crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> $name {
@@ -416,6 +417,7 @@ macro_rules! construct_uint {
 					const NUM_WORDS : usize = Self::NUM_WORDS;
 					const WORD_BITS : usize = Self::WORD_BITS;
 
+                    #[cfg(feature = "rand_support")]
 					#[inline]
 					fn random<R: rand::Rng + ?Sized>(rng: &mut R) -> Self {
 						rng.gen()

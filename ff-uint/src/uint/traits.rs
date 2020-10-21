@@ -58,6 +58,7 @@ pub trait Uint:
         self.bit(0)
     }
 
+    #[cfg(feature = "rand_support")]
     fn random<R: rand::Rng + ?Sized>(rng: &mut R) -> Self;
 
     fn into_inner(self) -> Self::Inner;
