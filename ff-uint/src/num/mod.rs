@@ -1,13 +1,17 @@
 #[macro_use]
 pub(crate) mod macros;
 
+#[cfg(feature = "borsh_support")]
 use crate::borsh::{BorshDeserialize, BorshSerialize};
+#[cfg(feature = "serde_support")]
 use crate::serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::{PrimeField, Uint};
 use ref_cast::RefCast;
 
+use crate::seedbox::{SeedBox, SeedBoxGen, SeedboxBlake2};
+#[cfg(feature = "rand_support")]
+use crate::rand::Rng;
 use std::convert::TryInto;
-use crate::seedbox::{SeedboxBlake2, SeedBox, SeedBoxGen};
 
 #[repr(transparent)]
 #[derive(Clone, Copy, RefCast)]
@@ -51,6 +55,7 @@ impl<U: Uint> NumRepr<U> {
     }
 }
 
+#[cfg(feature = "rand_support")]
 impl<U: Uint> crate::rand::distributions::Distribution<NumRepr<U>>
     for crate::rand::distributions::Standard
 {
@@ -60,24 +65,28 @@ impl<U: Uint> crate::rand::distributions::Distribution<NumRepr<U>>
     }
 }
 
+#[cfg(feature = "borsh_support")]
 impl<U: Uint> BorshSerialize for NumRepr<U> {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
         self.0.serialize(writer)
     }
 }
 
+#[cfg(feature = "borsh_support")]
 impl<U: Uint> BorshDeserialize for NumRepr<U> {
     fn deserialize(buf: &mut &[u8]) -> Result<Self, std::io::Error> {
         Ok(Self(U::deserialize(buf)?))
     }
 }
 
+#[cfg(feature = "borsh_support")]
 impl<U: Uint> Serialize for NumRepr<U> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         Serialize::serialize(&self.to_string(), serializer)
     }
 }
 
+#[cfg(feature = "borsh_support")]
 impl<'de, U: Uint> Deserialize<'de> for NumRepr<U> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         std::str::FromStr::from_str(&<String as Deserialize>::deserialize(deserializer)?)
@@ -171,19 +180,64 @@ impl<U: Uint> std::hash::Hash for NumRepr<U> {
 
 impl<U: Uint> std::fmt::Debug for NumRepr<U> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        std::fmt::Debug::fmt(&self.0, f)
+        std::fmt::Display::fmt(&self, f)
     }
 }
 
 impl<U: Uint> std::fmt::Display for NumRepr<U> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self.0, f)
+        if self.is_zero() {
+            return std::write!(f, "0");
+        }
+
+        // error: constant expression depends on a generic parameter
+        // let mut buf = [0_u8; U::NUM_WORDS * 20];
+
+        let mut buf = vec![0u8; U::NUM_WORDS * 20];
+        let mut i = buf.len() - 1;
+        let mut current = self.0;
+        let ten = U::from_u64(10);
+        loop {
+            let t = current.wrapping_rem(ten);
+            let digit = t.low_u64() as u8;
+            buf[i] = digit + b'0';
+            current = current.wrapping_div(ten);
+            if current.is_zero() {
+                break;
+            }
+            i -= 1;
+        }
+
+        // sequence of `'0'..'9'` chars is guaranteed to be a valid UTF8 string
+        let s = unsafe { std::str::from_utf8_unchecked(&buf[i..]) };
+        f.write_str(s)
     }
 }
 
 impl<U: Uint> std::fmt::LowerHex for NumRepr<U> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        std::fmt::LowerHex::fmt(&self.0, f)
+        if f.alternate() {
+            std::write!(f, "0x")?;
+        }
+        // special case.
+        if self.is_zero() {
+            return std::write!(f, "0");
+        }
+
+        let mut latch = false;
+        for ch in self.0.as_inner().as_ref().iter().rev() {
+            for x in 0..16 {
+                let nibble = (ch & (15u64 << ((15 - x) * 4) as u64)) >> (((15 - x) * 4) as u64);
+                if !latch {
+                    latch = nibble != 0;
+                }
+
+                if latch {
+                    std::write!(f, "{:x}", nibble)?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 
@@ -202,7 +256,7 @@ impl<U: Uint> std::convert::From<&'static str> for NumRepr<U> {
 }
 
 // num ops for PrimeField
-
+#[cfg(feature = "rand_support")]
 impl<Fp: PrimeField> crate::rand::distributions::Distribution<Num<Fp>>
     for crate::rand::distributions::Standard
 {
@@ -212,12 +266,14 @@ impl<Fp: PrimeField> crate::rand::distributions::Distribution<Num<Fp>>
     }
 }
 
+#[cfg(feature = "borsh_support")]
 impl<Fp: PrimeField> BorshSerialize for Num<Fp> {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
         self.0.serialize(writer)
     }
 }
 
+#[cfg(feature = "borsh_support")]
 impl<Fp: PrimeField> BorshDeserialize for Num<Fp> {
     fn deserialize(buf: &mut &[u8]) -> Result<Self, std::io::Error> {
         Ok(Self(Fp::deserialize(buf)?))
@@ -382,12 +438,14 @@ impl<Fp: PrimeField> std::convert::From<&'static str> for Num<Fp> {
     }
 }
 
+#[cfg(feature = "serde_support")]
 impl<Fp: PrimeField> Serialize for Num<Fp> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         Serialize::serialize(&self.to_string(), serializer)
     }
 }
 
+#[cfg(feature = "serde_support")]
 impl<'de, Fp: PrimeField> Deserialize<'de> for Num<Fp> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let bn = <NumRepr<Fp::Inner> as Deserialize>::deserialize(deserializer)?;

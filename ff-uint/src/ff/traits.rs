@@ -1,3 +1,4 @@
+use crate::traits::Borsh;
 use crate::Uint;
 use crate::{BitIterBE, BitIteratorBE};
 
@@ -34,6 +35,7 @@ pub trait Field:
     const ZERO: Self;
     const ONE: Self;
 
+    #[cfg(feature = "rand_support")]
     fn random<R: rand::Rng + ?Sized>(rng: &mut R) -> Self;
     fn is_zero(&self) -> bool;
 
@@ -73,12 +75,7 @@ pub trait SqrtField: Field {
 }
 
 pub trait PrimeField:
-    PrimeFieldParams
-    + SqrtField
-    + std::str::FromStr
-    + From<&'static str>
-    + crate::borsh::BorshSerialize
-    + crate::borsh::BorshDeserialize
+    PrimeFieldParams + SqrtField + std::str::FromStr + From<&'static str> + Borsh
 {
     fn from_uint(v: Self::Inner) -> Option<Self>;
     fn from_mont_uint(v: Self::Inner) -> Option<Self>;
@@ -104,7 +101,9 @@ pub trait PrimeField:
         match self.to_uint().to_other::<Fq::Inner>() {
             Some(u) => Fq::from_uint_unchecked(u.wrapping_rem(Fq::MODULUS)),
             None => {
-                let u = self.to_uint().wrapping_rem(<Fq as PrimeFieldParams>::MODULUS.to_other().unwrap());
+                let u = self
+                    .to_uint()
+                    .wrapping_rem(<Fq as PrimeFieldParams>::MODULUS.to_other().unwrap());
                 Fq::from_uint_unchecked(u.to_other().unwrap())
             }
         }

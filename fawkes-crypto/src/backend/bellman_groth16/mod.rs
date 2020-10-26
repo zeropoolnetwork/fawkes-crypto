@@ -9,8 +9,10 @@ use bellman::pairing::{CurveAffine, RawEncodable};
 use std::io::Cursor;
 
 pub mod engines;
+#[cfg(feature = "rand_support")]
 pub mod osrng;
 pub mod prover;
+#[cfg(feature = "rand_support")]
 pub mod setup;
 pub mod verifier;
 
@@ -185,8 +187,8 @@ mod bellman_groth16_test {
     use crate::engines::bn256::Fr;
     use crate::native::poseidon::{poseidon_merkle_proof_root, MerkleProof, PoseidonParams};
     use crate::typenum::U32;
+    use crate::rand::{thread_rng, Rng};
     use ff_uint::PrimeField;
-    use rand::{thread_rng, Rng};
 
     #[test]
     fn test_circuit_poseidon_merkle_root() {

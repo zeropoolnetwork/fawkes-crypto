@@ -4,9 +4,9 @@
 #![deny(intra_doc_link_resolution_failure)]
 #![allow(unused_imports)]
 
-
 pub use ff_uint_derive::*;
 
+#[cfg(feature = "rand_support")]
 use rand_core::RngCore;
 use std::error::Error;
 use std::fmt;

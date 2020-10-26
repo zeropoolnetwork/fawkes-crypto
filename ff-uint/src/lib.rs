@@ -1,3 +1,4 @@
+#[cfg(feature = "borsh_support")]
 #[doc(hidden)]
 pub use borsh;
 #[doc(hidden)]
@@ -7,9 +8,11 @@ pub use concat_idents::concat_idents;
 #[doc(hidden)]
 pub use crunchy::unroll;
 #[doc(hidden)]
+#[cfg(feature = "rand_support")]
 pub use rand;
 #[doc(hidden)]
 pub use rustc_hex;
+#[cfg(feature = "serde_support")]
 #[doc(hidden)]
 pub use serde;
 #[doc(hidden)]
@@ -20,6 +23,7 @@ mod uint;
 #[macro_use]
 mod ff;
 mod num;
+mod traits;
 
 pub extern crate seedbox;
 
