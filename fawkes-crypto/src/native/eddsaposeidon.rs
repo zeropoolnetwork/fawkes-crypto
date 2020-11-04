@@ -1,10 +1,10 @@
 use crate::{
     borsh::{BorshDeserialize, BorshSerialize},
-    constants::{PERSONALIZATION, SEED_EDDSA_POSEIDON},
+    constants::{PERSONALIZATION},
     ff_uint::{Num, NumRepr, PrimeField},
     native::{
         ecc::{EdwardsPoint, JubJubParams},
-        poseidon::{poseidon_with_salt, PoseidonParams},
+        poseidon::{poseidon, PoseidonParams},
     },
 };
 use blake2_rfc::blake2s::Blake2s;
@@ -24,7 +24,7 @@ fn hash_ram<F: PrimeField>(
     m: Num<F>,
     poseidon_params: &PoseidonParams<F>,
 ) -> Num<F> {
-    poseidon_with_salt(&[r, a, m], SEED_EDDSA_POSEIDON, poseidon_params)
+    poseidon(&[r, a, m], poseidon_params)
 }
 
 pub fn eddsaposeidon_sign<Fr: PrimeField, J: JubJubParams<Fr = Fr>>(

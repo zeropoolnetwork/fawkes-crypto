@@ -1,6 +1,6 @@
 use crate::{
     core::sizedvec::SizedVec,
-    ff_uint::seedbox::{SeedboxBlake2, SeedBox, SeedBoxGen, FromSeed},
+    ff_uint::seedbox::{SeedboxBlake2, SeedBox, SeedBoxGen},
     ff_uint::{Num, PrimeField},
     serde::{Deserialize, Serialize},
     typenum::Unsigned,
@@ -19,6 +19,20 @@ impl<Fr: PrimeField> PoseidonParams<Fr> {
     pub fn new(t: usize, f: usize, p: usize) -> Self {
         let mut seedbox = SeedboxBlake2::new_with_salt(
             format!("fawkes_poseidon(t={},f={},p={})", t, f, p).as_bytes(),
+        );
+
+        let c = (0..f + p)
+            .map(|_| (0..t).map(|_| seedbox.gen()).collect())
+            .collect();
+        let m = (0..t)
+            .map(|_| (0..t).map(|_| seedbox.gen()).collect())
+            .collect();
+        PoseidonParams { c, m, t, f, p }
+    }
+
+    pub fn new_with_salt(t: usize, f: usize, p: usize, salt:&str) -> Self {
+        let mut seedbox = SeedboxBlake2::new_with_salt(
+            format!("fawkes_poseidon(t={},f={},p={},salt={})", t, f, p, salt).as_bytes(),
         );
 
         let c = (0..f + p)
@@ -54,7 +68,7 @@ pub fn poseidon<Fr: PrimeField>(inputs: &[Num<Fr>], params: &PoseidonParams<Fr>)
     let mut state = vec![Num::ZERO; params.t];
     let n_inputs = inputs.len();
     assert!(
-        n_inputs <= params.t,
+        n_inputs < params.t,
         "number of inputs should be less or equal than t"
     );
     assert!(n_inputs > 0, "number of inputs should be positive nonzero");
@@ -76,21 +90,6 @@ pub fn poseidon<Fr: PrimeField>(inputs: &[Num<Fr>], params: &PoseidonParams<Fr>)
     state[0]
 }
 
-pub fn poseidon_with_salt<Fr: PrimeField>(
-    inputs: &[Num<Fr>],
-    seed: &[u8],
-    params: &PoseidonParams<Fr>,
-) -> Num<Fr> {
-    let n_inputs = inputs.len();
-    assert!(n_inputs > 0, "number of inputs should be positive nonzero");
-    assert!(
-        n_inputs < params.t,
-        "number of inputs should be less than t"
-    );
-    let mut inputs = inputs.to_vec();
-    inputs.push(FromSeed::<SeedboxBlake2>::from_seed(seed));
-    poseidon(&inputs, params)
-}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(bound(serialize = "", deserialize = ""))]

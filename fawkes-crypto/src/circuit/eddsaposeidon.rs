@@ -4,9 +4,8 @@ use crate::{
         bool::CBool,
         ecc::CEdwardsPoint,
         num::CNum,
-        poseidon::c_poseidon_with_salt,
+        poseidon::c_poseidon,
     },
-    constants::SEED_EDDSA_POSEIDON,
     core::signal::Signal,
     ff_uint::{Num, PrimeField},
     native::{ecc::JubJubParams, poseidon::PoseidonParams},
@@ -28,9 +27,8 @@ pub fn c_eddsaposeidon_verify<Fr: PrimeField, J: JubJubParams<Fr = Fr>>(
 
     let p_a = CEdwardsPoint::subgroup_decompress(a, jubjub_params);
     let p_r = CEdwardsPoint::subgroup_decompress(r, jubjub_params);
-    let h = c_poseidon_with_salt(
+    let h = c_poseidon(
         &[r.clone(), a.clone(), m.clone()],
-        SEED_EDDSA_POSEIDON,
         poseidon_params,
     );
     let h_bits = c_into_bits_le_strict(&h);

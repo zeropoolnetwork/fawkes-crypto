@@ -1,7 +1,7 @@
 use crate::{
     circuit::{bool::CBool, cs::RCS, num::CNum},
     core::{signal::Signal, sizedvec::SizedVec},
-    ff_uint::{Num, PrimeField, seedbox::{FromSeed, SeedboxBlake2}},
+    ff_uint::{Num, PrimeField},
     native::poseidon::{MerkleProof, PoseidonParams},
     typenum::Unsigned,
 };
@@ -38,8 +38,8 @@ fn mix<Fr: PrimeField>(state: &mut [CNum<Fr>], params: &PoseidonParams<Fr>) {
 pub fn c_poseidon<Fr: PrimeField>(inputs: &[CNum<Fr>], params: &PoseidonParams<Fr>) -> CNum<Fr> {
     let n_inputs = inputs.len();
     assert!(
-        n_inputs <= params.t,
-        "number of inputs should be less or equal than t"
+        n_inputs < params.t,
+        "number of inputs should be less than t"
     );
     assert!(n_inputs > 0, "number of inputs should be positive nonzero");
     let cs = inputs[0].get_cs();
@@ -62,22 +62,6 @@ pub fn c_poseidon<Fr: PrimeField>(inputs: &[CNum<Fr>], params: &PoseidonParams<F
     state[0].clone()
 }
 
-pub fn c_poseidon_with_salt<Fr: PrimeField>(
-    inputs: &[CNum<Fr>],
-    seed: &[u8],
-    params: &PoseidonParams<Fr>,
-) -> CNum<Fr> {
-    let n_inputs = inputs.len();
-    assert!(n_inputs > 0, "number of inputs should be positive nonzero");
-    assert!(
-        n_inputs < params.t,
-        "number of inputs should be less than t"
-    );
-    let cs = inputs[0].get_cs();
-    let mut inputs = inputs.to_vec(); 
-    inputs.push(CNum::from_const(cs, &FromSeed::<SeedboxBlake2>::from_seed(seed)));
-    c_poseidon(&inputs, params)
-}
 
 pub fn c_poseidon_merkle_proof_root<Fr: PrimeField, L: Unsigned>(
     leaf: &CNum<Fr>,
