@@ -350,7 +350,7 @@ macro_rules! construct_uint {
 					}
 				}
 
-                #[cfg(features = "rand_support")]
+                #[cfg(feature = "rand_support")]
 				impl $crate::rand::distributions::Distribution<$name> for $crate::rand::distributions::Standard {
 					#[inline]
 					fn sample<R: $crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> $name {
