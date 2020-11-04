@@ -6,9 +6,6 @@ use crate::{
     typenum::Unsigned,
 };
 
-#[cfg(feature = "rand_support")]
-use crate::rand::Rng;
-
 #[derive(Debug, Clone)]
 pub struct PoseidonParams<Fr: PrimeField> {
     pub c: Vec<Vec<Num<Fr>>>,
