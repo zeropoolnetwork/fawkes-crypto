@@ -10,11 +10,13 @@ macro_rules! construct_uint {
 			mod wrapped_mod {
 				use $crate::unroll;
 				use $crate::Uint;
+				#[cfg(feature = "borsh_support")]
 				use $crate::borsh::{BorshSerialize, BorshDeserialize};
 
 				#[repr(C)]
 				$(#[$attr])*
-				#[derive(Copy, Clone, Default, BorshSerialize, BorshDeserialize)]
+				#[derive(Copy, Clone, Default, Debug)]
+				#[cfg_attr(feature = "borsh_support", derive(BorshSerialize, BorshDeserialize))]
 				pub struct $name (pub [u64; $n_words]);
 
 				#[inline]
@@ -348,69 +350,7 @@ macro_rules! construct_uint {
 					}
 				}
 
-				impl std::fmt::Debug for $name {
-					fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-						std::fmt::Display::fmt(self, f)
-					}
-				}
-
-				impl std::fmt::Display for $name {
-					fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-						if self.is_zero() {
-							return std::write!(f, "0");
-						}
-
-						let mut buf = [0_u8; $n_words*20];
-						let mut i = buf.len() - 1;
-						let mut current = *self;
-						let ten = uint_from_u64(10);
-						loop {
-							let t = current.wrapping_rem(ten);
-							let digit = t.low_u64() as u8;
-							buf[i] = digit + b'0';
-							current = current.wrapping_div(ten);
-							if current.is_zero() {
-								break;
-							}
-							i -= 1;
-						}
-
-						// sequence of `'0'..'9'` chars is guaranteed to be a valid UTF8 string
-						let s = unsafe {
-							std::str::from_utf8_unchecked(&buf[i..])
-						};
-						f.write_str(s)
-					}
-				}
-
-				impl std::fmt::LowerHex for $name {
-					fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-						let &$name(ref data) = self;
-						if f.alternate() {
-							std::write!(f, "0x")?;
-						}
-						// special case.
-						if self.is_zero() {
-							return std::write!(f, "0");
-						}
-
-						let mut latch = false;
-						for ch in data.iter().rev() {
-							for x in 0..16 {
-								let nibble = (ch & (15u64 << ((15 - x) * 4) as u64)) >> (((15 - x) * 4) as u64);
-								if !latch {
-									latch = nibble != 0;
-								}
-
-								if latch {
-									std::write!(f, "{:x}", nibble)?;
-								}
-							}
-						}
-						Ok(())
-					}
-				}
-
+                #[cfg(features = "rand_support")]
 				impl $crate::rand::distributions::Distribution<$name> for $crate::rand::distributions::Standard {
 					#[inline]
 					fn sample<R: $crate::rand::Rng + ?Sized>(&self, rng: &mut R) -> $name {
@@ -477,6 +417,7 @@ macro_rules! construct_uint {
 					const NUM_WORDS : usize = Self::NUM_WORDS;
 					const WORD_BITS : usize = Self::WORD_BITS;
 
+                    #[cfg(feature = "rand_support")]
 					#[inline]
 					fn random<R: rand::Rng + ?Sized>(rng: &mut R) -> Self {
 						rng.gen()

@@ -21,3 +21,7 @@ proc-macro2 = "1"
 quote = "1"
 syn = { version = "1", features = ["full"] }
 proc-macro-crate = "0.1.5"
+
+[features]
+borsh_support = []
+rand_support = []

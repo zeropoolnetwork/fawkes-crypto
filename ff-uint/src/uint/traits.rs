@@ -30,13 +30,9 @@ pub trait Uint:
     + std::convert::TryInto<i64>
     + std::convert::TryInto<i128>
     + std::hash::Hash
-    + std::fmt::Debug
-    + std::fmt::Display
     + std::str::FromStr
-    + std::fmt::LowerHex
     + From<&'static str>
-    + crate::borsh::BorshSerialize
-    + crate::borsh::BorshDeserialize
+    + crate::traits::Borsh
 {
     type Inner: AsMut<[u64]> + AsRef<[u64]> + Copy + Clone + Default + Sized;
 
@@ -62,6 +58,7 @@ pub trait Uint:
         self.bit(0)
     }
 
+    #[cfg(feature = "rand_support")]
     fn random<R: rand::Rng + ?Sized>(rng: &mut R) -> Self;
 
     fn into_inner(self) -> Self::Inner;

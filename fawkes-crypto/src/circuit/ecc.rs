@@ -272,7 +272,7 @@ impl<Fr: PrimeField> CMontgomeryPoint<Fr> {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "rand_support"))]
 mod ecc_test {
     use super::*;
     use crate::{

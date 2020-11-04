@@ -682,6 +682,7 @@ fn prime_field_impl(
             }
         }
 
+        #[cfg(feature = "borsh_support")]
         impl ::borsh::ser::BorshSerialize for #name {
             fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
                 let uint = self.to_uint();
@@ -689,6 +690,7 @@ fn prime_field_impl(
             }
         }
 
+        #[cfg(feature = "borsh_support")]
         impl ::borsh::de::BorshDeserialize for #name {
             fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
                 let uint = <<#name as PrimeFieldParams>::Inner as ::borsh::de::BorshDeserialize>::deserialize(buf)?;
@@ -714,7 +716,7 @@ fn prime_field_impl(
 
         impl ::std::fmt::Display for #name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-                write!(f, "{}({})", stringify!(#name), self.to_uint())
+                write!(f, "{}({:?})", stringify!(#name), self.to_uint())
             }
         }
 
@@ -774,6 +776,7 @@ fn prime_field_impl(
             const ONE: #name = #name(Self::R);
 
             /// Computes a uniformly random element using rejection sampling.
+            #[cfg(feature = "rand_support")]
             fn random<R: ::rand::Rng + ?Sized>(rng: &mut R) -> Self {
                 loop {
                     let mut tmp = {

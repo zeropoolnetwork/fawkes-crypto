@@ -99,7 +99,7 @@ pub fn c_poseidon_merkle_tree_root<Fr: PrimeField>(
     state[0].clone()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "rand_support"))]
 mod poseidon_test {
     use super::*;
     use crate::{
