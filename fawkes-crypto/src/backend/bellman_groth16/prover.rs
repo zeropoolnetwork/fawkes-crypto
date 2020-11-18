@@ -2,6 +2,13 @@
 use super::osrng::OsRng;
 use super::*;
 use bellman::{ConstraintSystem, SynthesisError};
+
+#[cfg(feature = "serde_support")]
+use serde::{Serialize, Deserialize};
+#[cfg(feature = "borsh_support")]
+use borsh::{BorshSerialize, BorshDeserialize};
+
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct Proof<E: Engine> {
     a: G1Point<E>,
     b: G2Point<E>,
@@ -102,6 +109,30 @@ impl<E: Engine> bellman::Circuit<E::BE> for BellmanCS<E> {
             );
         }
         Ok(())
+    }
+}
+
+#[cfg(feature = "borsh_support")]
+impl<E: Engine> BorshSerialize for Proof<E> {
+    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        BorshSerialize::serialize(&self.a, writer)?;
+        BorshSerialize::serialize(&self.b, writer)?;
+        BorshSerialize::serialize(&self.c, writer)
+    }
+}
+
+#[cfg(feature = "borsh_support")]
+impl<E: Engine> BorshDeserialize for Proof<E> {
+    fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
+        let a = BorshDeserialize::deserialize(buf)?;
+        let b = BorshDeserialize::deserialize(buf)?;
+        let c = BorshDeserialize::deserialize(buf)?;
+
+        Ok(Self {
+            a,
+            b,
+            c,
+        })
     }
 }
 
