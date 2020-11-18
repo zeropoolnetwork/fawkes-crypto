@@ -9,8 +9,6 @@ use crate::{PrimeField, Uint};
 use ref_cast::RefCast;
 
 use crate::seedbox::{SeedBox, SeedBoxGen, SeedboxBlake2};
-#[cfg(feature = "rand_support")]
-use crate::rand::Rng;
 use std::convert::TryInto;
 
 #[repr(transparent)]

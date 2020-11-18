@@ -1,7 +1,7 @@
 use crate::{
     circuit::cs::{CS, RCS},
     core::signal::Signal,
-    ff_uint::{Num, NumRepr, PrimeField},
+    ff_uint::{Num, PrimeField},
 };
 
 #[cfg(feature = "borsh_support")]
