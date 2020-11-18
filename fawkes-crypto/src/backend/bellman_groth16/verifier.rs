@@ -1,6 +1,12 @@
+#[cfg(feature = "borsh_suppoort")]
+use borsh::{BorshSerialize, BorshDeserialize};
+#[cfg(feature = "serde_support")]
+use serde::{Serialize, Deserialize};
+
 use super::prover::Proof;
 use super::*;
 
+#[derive(Serialize, Deserialize)]
 pub struct VK<E: Engine> {
     alpha: G1Point<E>,
     beta: G2Point<E>,
@@ -31,6 +37,36 @@ impl<E: Engine> VK<E> {
             delta: G2Point::from_bellman(&vk.delta_g2),
             ic: vk.ic.iter().map(|e| G1Point::from_bellman(e)).collect(),
         }
+    }
+}
+
+#[cfg(feature = "borsh_support")]
+impl<E: Engine> BorshSerialize for VK<E> {
+    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        BorshSerialize::serialize(&self.alpha, writer)?;
+        BorshSerialize::serialize(&self.beta, writer)?;
+        BorshSerialize::serialize(&self.gamma, writer)?;
+        BorshSerialize::serialize(&self.delta, writer)?;
+        BorshSerialize::serialize(&self.ic, writer)
+    }
+}
+
+#[cfg(feature = "borsh_support")]
+impl<E: Engine> BorshDeserialize for VK<E> {
+    fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
+        let alpha = BorshDeserialize::deserialize(buf)?;
+        let beta = BorshDeserialize::deserialize(buf)?;
+        let gamma = BorshDeserialize::deserialize(buf)?;
+        let delta = BorshDeserialize::deserialize(buf)?;
+        let ic = BorshDeserialize::deserialize(buf)?;
+
+        Ok(Self {
+            alpha,
+            beta,
+            gamma,
+            delta,
+            ic,
+        })
     }
 }
 

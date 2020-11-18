@@ -1,9 +1,13 @@
 use crate::{
-    borsh::{BorshDeserialize, BorshSerialize},
     circuit::cs::{CS, RCS},
     core::signal::Signal,
-    ff_uint::{Num, NumRepr, PrimeField},
+    ff_uint::{Num, PrimeField},
 };
+
+#[cfg(feature = "borsh_support")]
+use borsh::{BorshSerialize, BorshDeserialize};
+#[cfg(feature = "serde_support")]
+use serde::{Serialize, Deserialize};
 
 use bellman::pairing::{CurveAffine, RawEncodable};
 use std::io::Cursor;
@@ -67,38 +71,43 @@ impl<E: Engine> Parameters<E> {
     }
 }
 
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct G1Point<E: Engine>(Num<E::Fq>, Num<E::Fq>);
 
+#[cfg(feature = "borsh_support")]
 impl<E: Engine> BorshSerialize for G1Point<E> {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-        self.0.serialize(writer)?;
-        self.1.serialize(writer)
+        BorshSerialize::serialize(&self.0, writer)?;
+        BorshSerialize::serialize(&self.1, writer)
     }
 }
 
+#[cfg(feature = "borsh_support")]
 impl<E: Engine> BorshDeserialize for G1Point<E> {
     fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-        let x = Num::deserialize(buf)?;
-        let y = Num::deserialize(buf)?;
+        let x = BorshDeserialize::deserialize(buf)?;
+        let y = BorshDeserialize::deserialize(buf)?;
         Ok(Self(x, y))
     }
 }
 
+#[cfg(feature = "borsh_support")]
 impl<E: Engine> BorshSerialize for G2Point<E> {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-        self.0 .0.serialize(writer)?;
-        self.0 .1.serialize(writer)?;
-        self.1 .0.serialize(writer)?;
-        self.1 .1.serialize(writer)
+        BorshSerialize::serialize(&self.0.0, writer)?;
+        BorshSerialize::serialize(&self.0.1, writer)?;
+        BorshSerialize::serialize(&self.1.0, writer)?;
+        BorshSerialize::serialize(&self.1.1, writer)
     }
 }
 
+#[cfg(feature = "borsh_support")]
 impl<E: Engine> BorshDeserialize for G2Point<E> {
     fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-        let x_re = Num::deserialize(buf)?;
-        let x_im = Num::deserialize(buf)?;
-        let y_re = Num::deserialize(buf)?;
-        let y_im = Num::deserialize(buf)?;
+        let x_re = BorshDeserialize::deserialize(buf)?;
+        let x_im = BorshDeserialize::deserialize(buf)?;
+        let y_re = BorshDeserialize::deserialize(buf)?;
+        let y_im = BorshDeserialize::deserialize(buf)?;
         Ok(Self((x_re, x_im), (y_re, y_im)))
     }
 }
@@ -112,8 +121,8 @@ impl<E: Engine> G1Point<E> {
                 <E::BE as bellman::pairing::Engine>::G1Affine::zero().into_raw_uncompressed_le();
             {
                 let mut cur = Cursor::new(buf.as_mut());
-                self.0.to_mont_uint().serialize(&mut cur).unwrap();
-                self.1.to_mont_uint().serialize(&mut cur).unwrap();
+                BorshSerialize::serialize(&self.0.to_mont_uint(), &mut cur).unwrap();
+                BorshSerialize::serialize(&self.1.to_mont_uint(), &mut cur).unwrap();
             }
             <E::BE as bellman::pairing::Engine>::G1Affine::from_raw_uncompressed_le(&buf, false)
                 .unwrap()
@@ -126,14 +135,15 @@ impl<E: Engine> G1Point<E> {
         } else {
             let buf = g1.into_raw_uncompressed_le();
             let mut cur = buf.as_ref();
-            let x = Num::from_mont_uint_unchecked(NumRepr::deserialize(&mut cur).unwrap());
-            let y = Num::from_mont_uint_unchecked(NumRepr::deserialize(&mut cur).unwrap());
+            let x = Num::from_mont_uint_unchecked(BorshDeserialize::deserialize(&mut cur).unwrap());
+            let y = Num::from_mont_uint_unchecked(BorshDeserialize::deserialize(&mut cur).unwrap());
             Self(x, y)
         }
     }
 }
 
 // Complex components are listed in LE notation, X+IY
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct G2Point<E: Engine>((Num<E::Fq>, Num<E::Fq>), (Num<E::Fq>, Num<E::Fq>));
 
 impl<E: Engine> G2Point<E> {
@@ -149,10 +159,10 @@ impl<E: Engine> G2Point<E> {
                 <E::BE as bellman::pairing::Engine>::G2Affine::zero().into_raw_uncompressed_le();
             {
                 let mut cur = Cursor::new(buf.as_mut());
-                self.0 .0.to_mont_uint().serialize(&mut cur).unwrap();
-                self.0 .1.to_mont_uint().serialize(&mut cur).unwrap();
-                self.1 .0.to_mont_uint().serialize(&mut cur).unwrap();
-                self.1 .1.to_mont_uint().serialize(&mut cur).unwrap();
+                BorshSerialize::serialize(&self.0.0.to_mont_uint(), &mut cur).unwrap();
+                BorshSerialize::serialize(&self.0.1.to_mont_uint(), &mut cur).unwrap();
+                BorshSerialize::serialize(&self.1.0.to_mont_uint(), &mut cur).unwrap();
+                BorshSerialize::serialize(&self.1.1.to_mont_uint(), &mut cur).unwrap();
             }
             <E::BE as bellman::pairing::Engine>::G2Affine::from_raw_uncompressed_le(&buf, false)
                 .unwrap()
@@ -165,10 +175,10 @@ impl<E: Engine> G2Point<E> {
         } else {
             let buf = g2.into_raw_uncompressed_le();
             let mut cur = buf.as_ref();
-            let x_re = Num::from_mont_uint_unchecked(NumRepr::deserialize(&mut cur).unwrap());
-            let x_im = Num::from_mont_uint_unchecked(NumRepr::deserialize(&mut cur).unwrap());
-            let y_re = Num::from_mont_uint_unchecked(NumRepr::deserialize(&mut cur).unwrap());
-            let y_im = Num::from_mont_uint_unchecked(NumRepr::deserialize(&mut cur).unwrap());
+            let x_re = Num::from_mont_uint_unchecked(BorshDeserialize::deserialize(&mut cur).unwrap());
+            let x_im = Num::from_mont_uint_unchecked(BorshDeserialize::deserialize(&mut cur).unwrap());
+            let y_re = Num::from_mont_uint_unchecked(BorshDeserialize::deserialize(&mut cur).unwrap());
+            let y_im = Num::from_mont_uint_unchecked(BorshDeserialize::deserialize(&mut cur).unwrap());
             Self((x_re, x_im), (y_re, y_im))
         }
     }
