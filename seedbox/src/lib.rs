@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use blake2_rfc::blake2s::Blake2s;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 

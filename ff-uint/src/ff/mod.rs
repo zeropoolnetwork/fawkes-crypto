@@ -8,9 +8,6 @@ pub use ff_uint_derive::*;
 
 #[cfg(feature = "rand_support")]
 use rand_core::RngCore;
-use std::error::Error;
-use std::fmt;
-use std::io::{self, Read, Write};
 
 pub mod traits;
 

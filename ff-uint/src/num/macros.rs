@@ -10,7 +10,7 @@ macro_rules! impl_num_overflowing_binop{
     };
 
 	(impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident<$other:ty> for $name: ty, $method:ident, $overflowing_op: ident) => {
-		impl <$($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for $name {
+		impl <$($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<$other> for $name {
 			type Output = $name;
 
             #[inline]
@@ -21,7 +21,7 @@ macro_rules! impl_num_overflowing_binop{
             }
         }
 
-		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime $other> for $name {
+		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<&'macro_lifetime $other> for $name {
 			type Output = $name;
 
             #[inline]
@@ -32,7 +32,7 @@ macro_rules! impl_num_overflowing_binop{
             }
         }
 
-		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for &'macro_lifetime $name {
+		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<$other> for &'macro_lifetime $name {
 			type Output = $name;
 
             #[inline]
@@ -43,7 +43,7 @@ macro_rules! impl_num_overflowing_binop{
             }
         }
 
-		impl<'macro_lifetime_a, 'macro_lifetime_b, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime_a $other> for &'macro_lifetime_b $name {
+		impl<'macro_lifetime_a, 'macro_lifetime_b, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<&'macro_lifetime_a $other> for &'macro_lifetime_b $name {
 			type Output = $name;
 
             #[inline]
@@ -61,7 +61,7 @@ macro_rules! impl_num_overflowing_binop{
 macro_rules! impl_num_overflowing_binop_primitive{
 
 	(impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident<$other:ty> for $name: ty, $method:ident, $overflowing_op: ident) => {
-		impl <$($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for $name {
+		impl <$($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<$other> for $name {
 			type Output = $name;
 
             #[inline]
@@ -72,7 +72,7 @@ macro_rules! impl_num_overflowing_binop_primitive{
             }
         }
 
-		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime $other> for $name {
+		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<&'macro_lifetime $other> for $name {
 			type Output = $name;
 
             #[inline]
@@ -83,7 +83,7 @@ macro_rules! impl_num_overflowing_binop_primitive{
             }
         }
 
-		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for &'macro_lifetime $name {
+		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<$other> for &'macro_lifetime $name {
 			type Output = $name;
 
             #[inline]
@@ -94,7 +94,7 @@ macro_rules! impl_num_overflowing_binop_primitive{
             }
         }
 
-		impl<'macro_lifetime_a, 'macro_lifetime_b, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime_a $other> for &'macro_lifetime_b $name {
+		impl<'macro_lifetime_a, 'macro_lifetime_b, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<&'macro_lifetime_a $other> for &'macro_lifetime_b $name {
 			type Output = $name;
 
             #[inline]
@@ -111,7 +111,7 @@ macro_rules! impl_num_overflowing_binop_primitive{
 #[doc(hidden)]
 macro_rules! impl_num_overflowing_unop {
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident for $name: ty, $method:ident, $overflowing_op: ident) => {
-        impl <$($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op for $name {
+        impl <$($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op for $name {
             type Output = $name;
             #[inline]
             fn $method(self) -> $name {
@@ -121,7 +121,7 @@ macro_rules! impl_num_overflowing_unop {
             }
         }
 
-        impl <'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op for &'macro_lifetime $name {
+        impl <'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op for &'macro_lifetime $name {
             type Output = $name;
             #[inline]
             fn $method(self) -> $name {
@@ -141,7 +141,7 @@ macro_rules! impl_num_overflowing_assignop{
     };
 
 	(impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident<$other:ty> for $name: ty, $method:ident, $overflowing_op: ident) => {
-		impl<$($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for $name {
+		impl<$($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<$other> for $name {
             #[inline]
 			fn $method(&mut self, other: $other) {
                 let (res, overflow) = self.0.$overflowing_op(other.0);
@@ -150,7 +150,7 @@ macro_rules! impl_num_overflowing_assignop{
             }
         }
 
-		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime $other> for $name {
+		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<&'macro_lifetime $other> for $name {
             #[inline]
 			fn $method(&mut self, other: &'macro_lifetime $other) {
                 let (res, overflow) = self.0.$overflowing_op(other.0);
@@ -169,7 +169,7 @@ macro_rules! impl_num_overflowing_assignop_primitive{
     };
 
 	(impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident<$other:ty> for $name: ty, $method:ident, $overflowing_op: ident) => {
-		impl<$($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for $name {
+		impl<$($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<$other> for $name {
             #[inline]
 			fn $method(&mut self, other: $other) {
                 let (res, overflow) = self.0.$overflowing_op(other);
@@ -178,7 +178,7 @@ macro_rules! impl_num_overflowing_assignop_primitive{
             }
         }
 
-		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime $other> for $name {
+		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<&'macro_lifetime $other> for $name {
             #[inline]
 			fn $method(&mut self, other: &'macro_lifetime $other) {
                 let (res, overflow) = self.0.$overflowing_op(*other);
@@ -233,11 +233,11 @@ macro_rules! impl_fnum_map_from_signed {
 #[doc(hidden)]
 macro_rules! impl_num_try_from_for_primitive {
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> TryFrom<$from:ty> for $to: ty) => {
-		impl<$($imp_l, )*$($imp_i : $imp_p),+> std::convert::TryFrom<$from> for $to {
+		impl<$($imp_l, )*$($imp_i : $imp_p),+> core::convert::TryFrom<$from> for $to {
 			type Error = &'static str;
 
 			#[inline]
-			fn try_from(u: $from) -> std::result::Result<$to, &'static str> {
+			fn try_from(u: $from) -> core::result::Result<$to, &'static str> {
                 match u.0.try_into() {
                     Ok(v)=>Ok(v),
                     _=> Err(concat!("integer overflow when casting to ", stringify!($to)))
@@ -252,11 +252,11 @@ macro_rules! impl_num_try_from_for_primitive {
 #[doc(hidden)]
 macro_rules! impl_fnum_try_from_for_primitive {
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> TryFrom<$from:ty> for $to: ty) => {
-		impl<$($imp_l, )*$($imp_i : $imp_p),+> std::convert::TryFrom<$from> for $to {
+		impl<$($imp_l, )*$($imp_i : $imp_p),+> core::convert::TryFrom<$from> for $to {
 			type Error = &'static str;
 
 			#[inline]
-			fn try_from(u: $from) -> std::result::Result<$to, &'static str> {
+			fn try_from(u: $from) -> core::result::Result<$to, &'static str> {
                 match u.to_uint().try_into() {
                     Ok(v)=>Ok(v),
                     _=> Err(concat!("integer overflow when casting to ", stringify!($to)))
@@ -271,11 +271,11 @@ macro_rules! impl_fnum_try_from_for_primitive {
 #[doc(hidden)]
 macro_rules! impl_fnum_try_from_for_primitive_signed {
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> TryFrom<$from:ty> for $to: ty) => {
-		impl<$($imp_l, )*$($imp_i : $imp_p),+> std::convert::TryFrom<$from> for $to {
+		impl<$($imp_l, )*$($imp_i : $imp_p),+> core::convert::TryFrom<$from> for $to {
 			type Error = &'static str;
 
 			#[inline]
-			fn try_from(u: $from) -> std::result::Result<$to, &'static str> {
+			fn try_from(u: $from) -> core::result::Result<$to, &'static str> {
                 let u = u.to_uint();
                 match u.try_into() {
                     Ok(v)=>Ok(v),
@@ -298,7 +298,7 @@ macro_rules! impl_num_wrapping_binop{
     };
 
 	(impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident<$other:ty> for $name: ty, $method:ident, $wrapping_op: ident) => {
-		impl <$($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for $name {
+		impl <$($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<$other> for $name {
 			type Output = $name;
 
             #[inline]
@@ -307,7 +307,7 @@ macro_rules! impl_num_wrapping_binop{
             }
         }
 
-		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime $other> for $name {
+		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<&'macro_lifetime $other> for $name {
 			type Output = $name;
 
             #[inline]
@@ -316,7 +316,7 @@ macro_rules! impl_num_wrapping_binop{
             }
         }
 
-		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for &'macro_lifetime $name {
+		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<$other> for &'macro_lifetime $name {
 			type Output = $name;
 
             #[inline]
@@ -325,7 +325,7 @@ macro_rules! impl_num_wrapping_binop{
             }
         }
 
-		impl<'macro_lifetime_a, 'macro_lifetime_b, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime_a $other> for &'macro_lifetime_b $name {
+		impl<'macro_lifetime_a, 'macro_lifetime_b, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<&'macro_lifetime_a $other> for &'macro_lifetime_b $name {
 			type Output = $name;
 
             #[inline]
@@ -340,7 +340,7 @@ macro_rules! impl_num_wrapping_binop{
 #[doc(hidden)]
 macro_rules! impl_num_wrapping_unop {
     (impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident for $name: ty, $method:ident, $wrapping_op: ident) => {
-        impl <$($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op for $name {
+        impl <$($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op for $name {
             type Output = $name;
             #[inline]
             fn $method(self) -> $name {
@@ -348,7 +348,7 @@ macro_rules! impl_num_wrapping_unop {
             }
         }
 
-        impl <'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op for &'macro_lifetime $name {
+        impl <'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op for &'macro_lifetime $name {
             type Output = $name;
             #[inline]
             fn $method(self) -> $name {
@@ -366,14 +366,14 @@ macro_rules! impl_num_wrapping_assignop{
     };
 
 	(impl <$($imp_l:lifetime, )*$($imp_i:ident : $imp_p:path),+> $op: ident<$other:ty> for $name: ty, $method:ident, $wrapping_op: ident) => {
-		impl<$($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<$other> for $name {
+		impl<$($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<$other> for $name {
             #[inline]
 			fn $method(&mut self, other: $other) {
                 self.0 = self.0.$wrapping_op(other.0);
             }
         }
 
-		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> std::ops::$op<&'macro_lifetime $other> for $name {
+		impl<'macro_lifetime, $($imp_l, )*$($imp_i : $imp_p),+> core::ops::$op<&'macro_lifetime $other> for $name {
             #[inline]
 			fn $method(&mut self, other: &'macro_lifetime $other) {
                 self.0 = self.0.$wrapping_op(other.0);

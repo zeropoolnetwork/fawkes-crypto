@@ -285,11 +285,11 @@ macro_rules! construct_uint {
 				$crate::impl_map_from!($name, isize, i64);
 
 
-				impl std::convert::TryFrom<$name> for bool {
+				impl core::convert::TryFrom<$name> for bool {
 					type Error = &'static str;
 
 					#[inline]
-					fn try_from(u: $name) -> std::result::Result<bool, &'static str> {
+					fn try_from(u: $name) -> core::result::Result<bool, &'static str> {
 						let $name(arr) = u;
 						if !u.fits_word() || arr[0] > 2 {
 							Err("integer overflow when casting to bool",)
@@ -314,21 +314,21 @@ macro_rules! construct_uint {
 
 				$crate::impl_typecast_128!($name, $n_words);
 
-				impl std::cmp::Ord for $name {
+				impl core::cmp::Ord for $name {
 					#[inline]
-					fn cmp(&self, other: &$name) -> std::cmp::Ordering {
+					fn cmp(&self, other: &$name) -> core::cmp::Ordering {
 						self.wrapping_cmp(other)
 					}
 				}
 
-				impl std::cmp::PartialOrd for $name {
+				impl core::cmp::PartialOrd for $name {
 					#[inline]
-					fn partial_cmp(&self, other: &$name) -> Option<std::cmp::Ordering> {
+					fn partial_cmp(&self, other: &$name) -> Option<core::cmp::Ordering> {
 						Some(self.cmp(other))
 					}
 				}
 
-				impl std::cmp::PartialEq for $name {
+				impl core::cmp::PartialEq for $name {
 					#[inline]
 					fn eq(&self, other: &$name) -> bool {
 						let &$name(ref a) = self;
@@ -342,10 +342,10 @@ macro_rules! construct_uint {
 					}
 				}
 
-				impl std::cmp::Eq for $name {}
+				impl core::cmp::Eq for $name {}
 
-				impl std::hash::Hash for $name {
-					fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+				impl core::hash::Hash for $name {
+					fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
 						self.as_inner().as_ref().hash(state);
 					}
 				}
@@ -358,10 +358,10 @@ macro_rules! construct_uint {
 					}
 				}
 
-				impl std::str::FromStr for $name {
+				impl core::str::FromStr for $name {
 					type Err = &'static str;
 
-					fn from_str(value: &str) -> std::result::Result<$name, Self::Err> {
+					fn from_str(value: &str) -> core::result::Result<$name, Self::Err> {
 						if !value.bytes().all(|b| b >= 48 && b <= 57) {
 							return Err("Invalid character")
 						}
@@ -382,13 +382,13 @@ macro_rules! construct_uint {
 					}
 				}
 
-				impl std::convert::From<&'static str> for $name {
+				impl core::convert::From<&'static str> for $name {
 					fn from(s: &'static str) -> Self {
 						s.parse().unwrap()
 					}
 				}
 
-				impl std::convert::From<u64> for $name {
+				impl core::convert::From<u64> for $name {
 					fn from(value: u64) -> $name {
 						let mut ret = [0; $n_words];
 						ret[0] = value;
@@ -396,7 +396,7 @@ macro_rules! construct_uint {
 					}
 				}
 
-				impl std::convert::From<i64> for $name {
+				impl core::convert::From<i64> for $name {
 					fn from(value: i64) -> $name {
 						match value >= 0 {
 							true => From::from(value as u64),
@@ -516,7 +516,7 @@ macro_rules! construct_uint {
 					/// Panics if `other` is zero.
 					#[inline]
 					fn div_mod(mut self, mut other: Self) -> (Self, Self) {
-						use std::cmp::Ordering;
+						use core::cmp::Ordering;
 
 						let my_bits = self.bits();
 						let your_bits = other.bits();
@@ -744,17 +744,17 @@ macro_rules! construct_uint {
 					}
 
 					#[inline]
-					fn wrapping_cmp(&self, other: &$name) -> std::cmp::Ordering {
+					fn wrapping_cmp(&self, other: &$name) -> core::cmp::Ordering {
 						let &$name(ref a) = self;
 						let &$name(ref b) = other;
 						let mut i = $n_words;
 
 						for i in (0 .. $n_words).rev() {
-							if a[i] < b[i] { return std::cmp::Ordering::Less; }
-							if a[i] > b[i] { return std::cmp::Ordering::Greater; }
+							if a[i] < b[i] { return core::cmp::Ordering::Less; }
+							if a[i] > b[i] { return core::cmp::Ordering::Greater; }
 						}
 
-						std::cmp::Ordering::Equal
+						core::cmp::Ordering::Equal
 					}
 
 

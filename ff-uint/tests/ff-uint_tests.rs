@@ -152,6 +152,8 @@ fn ff_neg_overflow() {
     );
 }
 
+// FIXME: Use hashbrown for tests
+#[cfg(feature = "std")]
 #[test]
 fn hash_impl_is_the_same_as_for_a_slice() {
     use core::hash::{Hash, Hasher as _};

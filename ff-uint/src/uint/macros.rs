@@ -12,7 +12,7 @@ macro_rules! uint_overflowing_binop {
         let ret_ptr = &mut ret as *mut [u64; $n_words] as *mut u64;
         let mut carry = 0u64;
         $crate::static_assertions::const_assert!(
-            std::isize::MAX as usize / std::mem::size_of::<u64>() > $n_words
+            core::isize::MAX as usize / core::mem::size_of::<u64>() > $n_words
         );
 
         // `unroll!` is recursive, but doesn’t use `$crate::unroll`, so we need to ensure that it
@@ -20,7 +20,7 @@ macro_rules! uint_overflowing_binop {
         use $crate::unroll;
         unroll! {
             for i in 0..$n_words {
-                use std::ptr;
+                use core::ptr;
 
                 if carry != 0 {
                     let (res1, overflow1) = ($fn)(me[i], you[i]);
@@ -113,7 +113,7 @@ macro_rules! uint_overflowing_mul {
             $crate::uint_full_mul_reg!($name, $n_words, $self_expr, $other);
 
         // The safety of this is enforced by the compiler
-        let ret: [[u64; $n_words]; 2] = unsafe { std::mem::transmute(ret) };
+        let ret: [[u64; $n_words]; 2] = unsafe { core::mem::transmute(ret) };
 
         // The compiler WILL NOT inline this if you remove this annotation.
         #[inline(always)]
@@ -198,11 +198,11 @@ macro_rules! impl_map_from {
 #[doc(hidden)]
 macro_rules! impl_try_from_for_primitive {
     ($from:ident, $to:ty) => {
-        impl std::convert::TryFrom<$from> for $to {
+        impl core::convert::TryFrom<$from> for $to {
             type Error = &'static str;
 
             #[inline]
-            fn try_from(u: $from) -> std::result::Result<$to, &'static str> {
+            fn try_from(u: $from) -> core::result::Result<$to, &'static str> {
                 let $from(arr) = u;
                 if !u.fits_word() || arr[0] > <$to>::max_value() as u64 {
                     Err(concat!(
@@ -245,21 +245,21 @@ macro_rules! impl_typecast_128 {
             }
         }
 
-        impl std::convert::TryFrom<$name> for u128 {
+        impl core::convert::TryFrom<$name> for u128 {
             type Error = &'static str;
 
             #[inline]
-            fn try_from(u: $name) -> std::result::Result<u128, &'static str> {
+            fn try_from(u: $name) -> core::result::Result<u128, &'static str> {
                 let $name(arr) = u;
                 Ok(arr[0] as u128)
             }
         }
 
-        impl std::convert::TryFrom<$name> for i128 {
+        impl core::convert::TryFrom<$name> for i128 {
             type Error = &'static str;
 
             #[inline]
-            fn try_from(u: $name) -> std::result::Result<i128, &'static str> {
+            fn try_from(u: $name) -> core::result::Result<i128, &'static str> {
                 Ok(u128::from(u))
             }
         }
@@ -290,11 +290,11 @@ macro_rules! impl_typecast_128 {
             }
         }
 
-        impl std::convert::TryFrom<$name> for u128 {
+        impl core::convert::TryFrom<$name> for u128 {
             type Error = &'static str;
 
             #[inline]
-            fn try_from(u: $name) -> std::result::Result<u128, &'static str> {
+            fn try_from(u: $name) -> core::result::Result<u128, &'static str> {
                 let $name(arr) = u;
                 for i in 2..$n_words {
                     if arr[i] != 0 {
@@ -305,11 +305,11 @@ macro_rules! impl_typecast_128 {
             }
         }
 
-        impl std::convert::TryFrom<$name> for i128 {
+        impl core::convert::TryFrom<$name> for i128 {
             type Error = &'static str;
 
             #[inline]
-            fn try_from(u: $name) -> std::result::Result<i128, &'static str> {
+            fn try_from(u: $name) -> core::result::Result<i128, &'static str> {
                 let err_str = "integer overflow when casting to i128";
                 let i = u128::try_from(u).map_err(|_| err_str)?;
                 if i > i128::max_value() as u128 {

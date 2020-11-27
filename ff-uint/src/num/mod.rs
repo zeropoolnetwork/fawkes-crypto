@@ -6,10 +6,13 @@ use crate::borsh::{BorshDeserialize, BorshSerialize};
 #[cfg(feature = "serde_support")]
 use crate::serde::{Deserialize, Deserializer, Serialize, Serializer};
 use crate::{PrimeField, Uint};
+#[cfg(not(feature = "std"))]
+use alloc::vec;
+
 use ref_cast::RefCast;
 
 use crate::seedbox::{SeedBox, SeedBoxGen, SeedboxBlake2};
-use std::convert::TryInto;
+use core::convert::TryInto;
 
 #[repr(transparent)]
 #[derive(Clone, Copy, RefCast)]
@@ -65,14 +68,14 @@ impl<U: Uint> crate::rand::distributions::Distribution<NumRepr<U>>
 
 #[cfg(feature = "borsh_support")]
 impl<U: Uint> BorshSerialize for NumRepr<U> {
-    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
+    fn serialize<W: borsh::lib::Write>(&self, writer: &mut W) -> Result<(), borsh::error::Error> {
         self.0.serialize(writer)
     }
 }
 
 #[cfg(feature = "borsh_support")]
 impl<U: Uint> BorshDeserialize for NumRepr<U> {
-    fn deserialize(buf: &mut &[u8]) -> Result<Self, std::io::Error> {
+    fn deserialize(buf: &mut &[u8]) -> Result<Self, borsh::error::Error> {
         Ok(Self(U::deserialize(buf)?))
     }
 }
@@ -87,7 +90,7 @@ impl<U: Uint> Serialize for NumRepr<U> {
 #[cfg(feature = "borsh_support")]
 impl<'de, U: Uint> Deserialize<'de> for NumRepr<U> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        std::str::FromStr::from_str(&<String as Deserialize>::deserialize(deserializer)?)
+        core::str::FromStr::from_str(&<String as Deserialize>::deserialize(deserializer)?)
             .map_err(|_| crate::serde::de::Error::custom("Wrong number format"))
     }
 }
@@ -147,45 +150,45 @@ impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i32);
 impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i64);
 impl_num_try_from_for_primitive!(impl<U:Uint> TryFrom<NumRepr<U>> for i128);
 
-impl<U: Uint> std::cmp::Ord for NumRepr<U> {
+impl<U: Uint> core::cmp::Ord for NumRepr<U> {
     #[inline]
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.0.wrapping_cmp(&other.0)
     }
 }
 
-impl<U: Uint> std::cmp::PartialOrd for NumRepr<U> {
+impl<U: Uint> core::cmp::PartialOrd for NumRepr<U> {
     #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<U: Uint> std::cmp::PartialEq for NumRepr<U> {
+impl<U: Uint> core::cmp::PartialEq for NumRepr<U> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.0.eq(&other.0)
     }
 }
 
-impl<U: Uint> std::cmp::Eq for NumRepr<U> {}
+impl<U: Uint> core::cmp::Eq for NumRepr<U> {}
 
-impl<U: Uint> std::hash::Hash for NumRepr<U> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+impl<U: Uint> core::hash::Hash for NumRepr<U> {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.0.hash(state);
     }
 }
 
-impl<U: Uint> std::fmt::Debug for NumRepr<U> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self, f)
+impl<U: Uint> core::fmt::Debug for NumRepr<U> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        core::fmt::Display::fmt(&self, f)
     }
 }
 
-impl<U: Uint> std::fmt::Display for NumRepr<U> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl<U: Uint> core::fmt::Display for NumRepr<U> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         if self.is_zero() {
-            return std::write!(f, "0");
+            return core::write!(f, "0");
         }
 
         // error: constant expression depends on a generic parameter
@@ -207,19 +210,19 @@ impl<U: Uint> std::fmt::Display for NumRepr<U> {
         }
 
         // sequence of `'0'..'9'` chars is guaranteed to be a valid UTF8 string
-        let s = unsafe { std::str::from_utf8_unchecked(&buf[i..]) };
+        let s = unsafe { core::str::from_utf8_unchecked(&buf[i..]) };
         f.write_str(s)
     }
 }
 
-impl<U: Uint> std::fmt::LowerHex for NumRepr<U> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl<U: Uint> core::fmt::LowerHex for NumRepr<U> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         if f.alternate() {
-            std::write!(f, "0x")?;
+            core::write!(f, "0x")?;
         }
         // special case.
         if self.is_zero() {
-            return std::write!(f, "0");
+            return core::write!(f, "0");
         }
 
         let mut latch = false;
@@ -231,7 +234,7 @@ impl<U: Uint> std::fmt::LowerHex for NumRepr<U> {
                 }
 
                 if latch {
-                    std::write!(f, "{:x}", nibble)?;
+                    core::write!(f, "{:x}", nibble)?;
                 }
             }
         }
@@ -239,15 +242,15 @@ impl<U: Uint> std::fmt::LowerHex for NumRepr<U> {
     }
 }
 
-impl<U: Uint> std::str::FromStr for NumRepr<U> {
-    type Err = <U as std::str::FromStr>::Err;
+impl<U: Uint> core::str::FromStr for NumRepr<U> {
+    type Err = <U as core::str::FromStr>::Err;
 
-    fn from_str(value: &str) -> std::result::Result<NumRepr<U>, Self::Err> {
+    fn from_str(value: &str) -> core::result::Result<NumRepr<U>, Self::Err> {
         Ok(<NumRepr<U>>::new(U::from_str(value)?))
     }
 }
 
-impl<U: Uint> std::convert::From<&'static str> for NumRepr<U> {
+impl<U: Uint> core::convert::From<&'static str> for NumRepr<U> {
     fn from(s: &'static str) -> Self {
         <NumRepr<U>>::new(U::from(s))
     }
@@ -401,36 +404,36 @@ impl_num_wrapping_assignop!(impl <U:PrimeField> SubAssign for Num<U>, sub_assign
 impl_num_wrapping_assignop!(impl <U:PrimeField> MulAssign for Num<U>, mul_assign, wrapping_mul);
 impl_num_wrapping_assignop!(impl <U:PrimeField> DivAssign for Num<U>, div_assign, wrapping_div);
 
-impl<Fp: PrimeField> std::cmp::PartialEq for Num<Fp> {
+impl<Fp: PrimeField> core::cmp::PartialEq for Num<Fp> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.0.eq(&other.0)
     }
 }
 
-impl<Fp: PrimeField> std::cmp::Eq for Num<Fp> {}
+impl<Fp: PrimeField> core::cmp::Eq for Num<Fp> {}
 
-impl<Fp: PrimeField> std::fmt::Debug for Num<Fp> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        std::fmt::Debug::fmt(&self.0, f)
+impl<Fp: PrimeField> core::fmt::Debug for Num<Fp> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        core::fmt::Debug::fmt(&self.0, f)
     }
 }
 
-impl<Fp: PrimeField> std::fmt::Display for Num<Fp> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        std::fmt::Display::fmt(&self.0, f)
+impl<Fp: PrimeField> core::fmt::Display for Num<Fp> {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        core::fmt::Display::fmt(&self.0, f)
     }
 }
 
-impl<Fp: PrimeField> std::str::FromStr for Num<Fp> {
-    type Err = <Fp as std::str::FromStr>::Err;
+impl<Fp: PrimeField> core::str::FromStr for Num<Fp> {
+    type Err = <Fp as core::str::FromStr>::Err;
 
-    fn from_str(value: &str) -> std::result::Result<Num<Fp>, Self::Err> {
+    fn from_str(value: &str) -> core::result::Result<Num<Fp>, Self::Err> {
         Ok(<Num<Fp>>::new(Fp::from_str(value)?))
     }
 }
 
-impl<Fp: PrimeField> std::convert::From<&'static str> for Num<Fp> {
+impl<Fp: PrimeField> core::convert::From<&'static str> for Num<Fp> {
     fn from(s: &'static str) -> Self {
         <Num<Fp>>::new(Fp::from(s))
     }
@@ -472,11 +475,11 @@ impl_fnum_map_from_signed!(impl<Fp:PrimeField> From<i32> for Num<Fp>);
 impl_fnum_map_from_signed!(impl<Fp:PrimeField> From<i64> for Num<Fp>);
 impl_fnum_map_from_signed!(impl<Fp:PrimeField> From<i128> for Num<Fp>);
 
-impl<Fp: PrimeField> std::convert::TryFrom<Num<Fp>> for bool {
+impl<Fp: PrimeField> core::convert::TryFrom<Num<Fp>> for bool {
     type Error = &'static str;
 
     #[inline]
-    fn try_from(u: Num<Fp>) -> std::result::Result<bool, &'static str> {
+    fn try_from(u: Num<Fp>) -> core::result::Result<bool, &'static str> {
         match u.to_uint().try_into() {
             Ok(v) => Ok(v),
             _ => Err(concat!("integer overflow when casting to bool")),

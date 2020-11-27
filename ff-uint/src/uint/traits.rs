@@ -1,12 +1,15 @@
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+
 pub trait Uint:
     Sized
     + Clone
     + Copy
     + Default
-    + std::cmp::PartialEq
-    + std::cmp::Eq
-    + std::cmp::PartialOrd
-    + std::cmp::Ord
+    + core::cmp::PartialEq
+    + core::cmp::Eq
+    + core::cmp::PartialOrd
+    + core::cmp::Ord
     + From<bool>
     + From<u8>
     + From<u16>
@@ -18,19 +21,19 @@ pub trait Uint:
     + From<i32>
     + From<i64>
     + From<i128>
-    + std::convert::TryInto<bool>
-    + std::convert::TryInto<u8>
-    + std::convert::TryInto<u16>
-    + std::convert::TryInto<u32>
-    + std::convert::TryInto<u64>
-    + std::convert::TryInto<u128>
-    + std::convert::TryInto<i8>
-    + std::convert::TryInto<i16>
-    + std::convert::TryInto<i32>
-    + std::convert::TryInto<i64>
-    + std::convert::TryInto<i128>
-    + std::hash::Hash
-    + std::str::FromStr
+    + core::convert::TryInto<bool>
+    + core::convert::TryInto<u8>
+    + core::convert::TryInto<u16>
+    + core::convert::TryInto<u32>
+    + core::convert::TryInto<u64>
+    + core::convert::TryInto<u128>
+    + core::convert::TryInto<i8>
+    + core::convert::TryInto<i16>
+    + core::convert::TryInto<i32>
+    + core::convert::TryInto<i64>
+    + core::convert::TryInto<i128>
+    + core::hash::Hash
+    + core::str::FromStr
     + From<&'static str>
     + crate::traits::Borsh
 {
@@ -134,7 +137,7 @@ pub trait Uint:
         let self_inner = self.as_inner().as_ref();
         let self_inner_len = self_inner.len();
 
-        let both_min = std::cmp::min(res_inner_len, self_inner_len);
+        let both_min = core::cmp::min(res_inner_len, self_inner_len);
 
         res_inner[..both_min].copy_from_slice(&self_inner[..both_min]);
 
@@ -145,7 +148,7 @@ pub trait Uint:
         }
     }
 
-    fn wrapping_cmp(&self, other: &Self) -> std::cmp::Ordering;
+    fn wrapping_cmp(&self, other: &Self) -> core::cmp::Ordering;
 
     #[inline]
     fn unchecked_pow(self, other: Self) -> Self {

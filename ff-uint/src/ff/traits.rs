@@ -27,10 +27,10 @@ pub trait Field:
     + Clone
     + Copy
     + Default
-    + std::cmp::PartialEq
-    + std::cmp::Eq
-    + std::fmt::Debug
-    + std::fmt::Display
+    + core::cmp::PartialEq
+    + core::cmp::Eq
+    + core::fmt::Debug
+    + core::fmt::Display
 {
     const ZERO: Self;
     const ONE: Self;
@@ -75,7 +75,7 @@ pub trait SqrtField: Field {
 }
 
 pub trait PrimeField:
-    PrimeFieldParams + SqrtField + std::str::FromStr + From<&'static str> + Borsh
+    PrimeFieldParams + SqrtField + core::str::FromStr + From<&'static str> + Borsh
 {
     fn from_uint(v: Self::Inner) -> Option<Self>;
     fn from_mont_uint(v: Self::Inner) -> Option<Self>;
