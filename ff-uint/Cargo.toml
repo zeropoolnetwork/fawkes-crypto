@@ -25,14 +25,14 @@ concat-idents = "1.0.0"
 borsh = { git = "https://github.com/zeropoolnetwork/borsh.git", branch = "feature/no-std", optional = true, default-features = false }
 serde = { version = "1.0", optional = true, default-features = false }
 ref-cast = "1.0"
-seedbox = {version="0.1", path = "../seedbox"}
+seedbox = { version = "0.1", path = "../seedbox", default-features = false }
 
 [features]
 default = ["borsh_support", "serde_support", "std"]
 borsh_support = ["borsh", "ff-uint_derive/borsh_support"]
 serde_support = ["serde"]
 rand_support = ["rand_core", "rand", "ff-uint_derive/rand_support"]
-std = ["borsh/std", "serde/std", "serde/alloc"]
+std = ["borsh/std", "serde/std", "serde/alloc", "seedbox/std"]
 
 [[test]]
 name = "ff-uint_tests"

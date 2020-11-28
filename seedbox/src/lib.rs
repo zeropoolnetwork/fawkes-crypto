@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use blake2_rfc::blake2s::Blake2s;
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, ByteOrder};
 
 pub const PERSONALIZATION: &'static [u8; 8] = b"__fawkes";
 
@@ -17,10 +17,9 @@ impl SeedboxBlake2 {
         self.n_limb = 0;
         let mut h = Blake2s::with_params(32, &[], &[], PERSONALIZATION);
         let mut n_iter_bin = [0u8; 8];
-        n_iter_bin
-            .as_mut()
-            .write_u64::<LittleEndian>(self.n_iter)
-            .unwrap();
+
+        LittleEndian::write_u64(&mut n_iter_bin, self.n_iter);
+
         self.n_iter += 1;
         h.update(n_iter_bin.as_ref());
         if self.salt.is_some() {
@@ -84,7 +83,7 @@ impl SeedBox for SeedboxBlake2 {
 
         dest.iter_mut().for_each(|f| {
             self.fill_bytes(&mut b);
-            *f = b.as_ref().read_u64::<LittleEndian>().unwrap()
+            *f = LittleEndian::read_u64(&b);
         });
     }
 }
