@@ -80,17 +80,18 @@ impl<U: Uint> BorshDeserialize for NumRepr<U> {
     }
 }
 
-#[cfg(feature = "borsh_support")]
+#[cfg(feature = "serde_support")]
 impl<U: Uint> Serialize for NumRepr<U> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use alloc::string::ToString;
         Serialize::serialize(&self.to_string(), serializer)
     }
 }
 
-#[cfg(feature = "borsh_support")]
+#[cfg(feature = "serde_support")]
 impl<'de, U: Uint> Deserialize<'de> for NumRepr<U> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        core::str::FromStr::from_str(&<String as Deserialize>::deserialize(deserializer)?)
+        core::str::FromStr::from_str(&<alloc::string::String as Deserialize>::deserialize(deserializer)?)
             .map_err(|_| crate::serde::de::Error::custom("Wrong number format"))
     }
 }
@@ -269,14 +270,14 @@ impl<Fp: PrimeField> crate::rand::distributions::Distribution<Num<Fp>>
 
 #[cfg(feature = "borsh_support")]
 impl<Fp: PrimeField> BorshSerialize for Num<Fp> {
-    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
+    fn serialize<W: borsh::lib::Write>(&self, writer: &mut W) -> Result<(), borsh::error::Error> {
         self.0.serialize(writer)
     }
 }
 
 #[cfg(feature = "borsh_support")]
 impl<Fp: PrimeField> BorshDeserialize for Num<Fp> {
-    fn deserialize(buf: &mut &[u8]) -> Result<Self, std::io::Error> {
+    fn deserialize(buf: &mut &[u8]) -> Result<Self, borsh::error::Error> {
         Ok(Self(Fp::deserialize(buf)?))
     }
 }
@@ -442,6 +443,7 @@ impl<Fp: PrimeField> core::convert::From<&'static str> for Num<Fp> {
 #[cfg(feature = "serde_support")]
 impl<Fp: PrimeField> Serialize for Num<Fp> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use alloc::string::ToString;
         Serialize::serialize(&self.to_string(), serializer)
     }
 }

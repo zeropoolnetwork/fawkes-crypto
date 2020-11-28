@@ -22,8 +22,8 @@ arbitrary = { version = "0.4", optional = true }
 ff-uint_derive = { version = "0.1.4", path = "../ff-uint_derive" }
 rand_core = { version = "0.5", optional = true }
 concat-idents = "1.0.0"
-borsh = { git = "https://github.com/zeropoolnetwork/borsh.git", branch = "feature/no-std", optional = true }
-serde = { version = "1.0", optional = true }
+borsh = { git = "https://github.com/zeropoolnetwork/borsh.git", branch = "feature/no-std", optional = true, default-features = false }
+serde = { version = "1.0", optional = true, default-features = false }
 ref-cast = "1.0"
 seedbox = {version="0.1", path = "../seedbox"}
 
@@ -32,7 +32,7 @@ default = ["borsh_support", "serde_support", "std"]
 borsh_support = ["borsh", "ff-uint_derive/borsh_support"]
 serde_support = ["serde"]
 rand_support = ["rand_core", "rand", "ff-uint_derive/rand_support"]
-std = []
+std = ["borsh/std", "serde/std", "serde/alloc"]
 
 [[test]]
 name = "ff-uint_tests"
