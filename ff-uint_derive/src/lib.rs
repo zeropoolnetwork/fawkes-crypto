@@ -684,7 +684,7 @@ fn prime_field_impl(
 
         #[cfg(feature = "borsh_support")]
         impl ::borsh::ser::BorshSerialize for #name {
-            fn serialize<W: borsh::lib::Write>(&self, writer: &mut W) -> borsh::error::Result<()> {
+            fn serialize<W: ::borsh::maybestd::io::Write>(&self, writer: &mut W) -> ::borsh::maybestd::io::Result<()> {
                 let uint = self.to_uint();
                 uint.serialize(writer)
             }
@@ -692,10 +692,10 @@ fn prime_field_impl(
 
         #[cfg(feature = "borsh_support")]
         impl ::borsh::de::BorshDeserialize for #name {
-            fn deserialize(buf: &mut &[u8]) -> borsh::error::Result<Self> {
+            fn deserialize(buf: &mut &[u8]) -> ::borsh::maybestd::io::Result<Self> {
                 let uint = <<#name as PrimeFieldParams>::Inner as ::borsh::de::BorshDeserialize>::deserialize(buf)?;
                 Self::from_uint(uint)
-                    .ok_or(borsh::error::Error::from(borsh::error::ErrorKind::InvalidData))
+                    .ok_or(::borsh::maybestd::io::Error::from(::borsh::maybestd::io::ErrorKind::InvalidData))
             }
         }
 

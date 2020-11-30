@@ -68,14 +68,14 @@ impl<U: Uint> crate::rand::distributions::Distribution<NumRepr<U>>
 
 #[cfg(feature = "borsh_support")]
 impl<U: Uint> BorshSerialize for NumRepr<U> {
-    fn serialize<W: borsh::lib::Write>(&self, writer: &mut W) -> Result<(), borsh::error::Error> {
+    fn serialize<W: borsh::maybestd::io::Write>(&self, writer: &mut W) -> Result<(), borsh::maybestd::io::Error> {
         self.0.serialize(writer)
     }
 }
 
 #[cfg(feature = "borsh_support")]
 impl<U: Uint> BorshDeserialize for NumRepr<U> {
-    fn deserialize(buf: &mut &[u8]) -> Result<Self, borsh::error::Error> {
+    fn deserialize(buf: &mut &[u8]) -> Result<Self, borsh::maybestd::io::Error> {
         Ok(Self(U::deserialize(buf)?))
     }
 }
@@ -270,14 +270,14 @@ impl<Fp: PrimeField> crate::rand::distributions::Distribution<Num<Fp>>
 
 #[cfg(feature = "borsh_support")]
 impl<Fp: PrimeField> BorshSerialize for Num<Fp> {
-    fn serialize<W: borsh::lib::Write>(&self, writer: &mut W) -> Result<(), borsh::error::Error> {
+    fn serialize<W: borsh::maybestd::io::Write>(&self, writer: &mut W) -> Result<(), borsh::maybestd::io::Error> {
         self.0.serialize(writer)
     }
 }
 
 #[cfg(feature = "borsh_support")]
 impl<Fp: PrimeField> BorshDeserialize for Num<Fp> {
-    fn deserialize(buf: &mut &[u8]) -> Result<Self, borsh::error::Error> {
+    fn deserialize(buf: &mut &[u8]) -> Result<Self, borsh::maybestd::io::Error> {
         Ok(Self(Fp::deserialize(buf)?))
     }
 }
