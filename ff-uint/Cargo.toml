@@ -22,7 +22,7 @@ arbitrary = { version = "0.4", optional = true }
 ff-uint_derive = { version = "0.1.4", path = "../ff-uint_derive" }
 rand_core = { version = "0.5", optional = true }
 concat-idents = "1.0.0"
-borsh = { git = "https://github.com/zeropoolnetwork/borsh.git", branch = "feature/no-std", optional = true, default-features = false }
+borsh = { git = "https://github.com/zeropoolnetwork/borsh.git", rev = "62e6da830c4dab6ea0f876ad88e0ef6f777e25a6", optional = true, default-features = false }
 serde = { version = "1.0", optional = true, default-features = false }
 ref-cast = "1.0"
 seedbox = { version = "0.1", path = "../seedbox", default-features = false }

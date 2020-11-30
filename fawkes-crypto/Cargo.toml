@@ -21,7 +21,7 @@ typenum = "1.12.0"
 rand = { version = "0.7.3", optional = true }
 byteorder = "1"
 serde = { version = "1.0", features = ["derive"], optional = true }
-borsh = { git = "https://github.com/zeropoolnetwork/borsh.git", branch = "feature/no-std", optional = true }
+borsh = { git = "https://github.com/zeropoolnetwork/borsh.git", rev = "62e6da830c4dab6ea0f876ad88e0ef6f777e25a6", optional = true }
 fawkes-crypto_derive = {version="3.0.3", path = "../fawkes-crypto_derive"}
 impl-trait-for-tuples = "0.1.3"
 getrandom = { version = "0.2", optional = true }

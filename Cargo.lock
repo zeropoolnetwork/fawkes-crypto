@@ -37,15 +37,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
-name = "bare-io"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dec6ec4815d7aacd0be4ec053ef9e2883b22f79b29f9bd2ef3f79003e3ee7c9d"
-dependencies = [
- "memchr",
-]
-
-[[package]]
 name = "bit-vec"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -64,28 +55,28 @@ dependencies = [
 
 [[package]]
 name = "borsh"
-version = "0.7.2"
-source = "git+https://github.com/zeropoolnetwork/borsh.git?branch=feature/no-std#f07aa8d6a934db2499d99b9468a0b8383dc1697a"
+version = "0.8.0"
+source = "git+https://github.com/zeropoolnetwork/borsh.git?rev=62e6da830c4dab6ea0f876ad88e0ef6f777e25a6#62e6da830c4dab6ea0f876ad88e0ef6f777e25a6"
 dependencies = [
- "bare-io",
  "borsh-derive",
  "hashbrown",
 ]
 
 [[package]]
 name = "borsh-derive"
-version = "0.7.2"
-source = "git+https://github.com/zeropoolnetwork/borsh.git?branch=feature/no-std#f07aa8d6a934db2499d99b9468a0b8383dc1697a"
+version = "0.8.0"
+source = "git+https://github.com/zeropoolnetwork/borsh.git?rev=62e6da830c4dab6ea0f876ad88e0ef6f777e25a6#62e6da830c4dab6ea0f876ad88e0ef6f777e25a6"
 dependencies = [
  "borsh-derive-internal",
  "borsh-schema-derive-internal",
+ "proc-macro-crate",
  "syn 1.0.41",
 ]
 
 [[package]]
 name = "borsh-derive-internal"
-version = "0.7.2"
-source = "git+https://github.com/zeropoolnetwork/borsh.git?branch=feature/no-std#f07aa8d6a934db2499d99b9468a0b8383dc1697a"
+version = "0.8.0"
+source = "git+https://github.com/zeropoolnetwork/borsh.git?rev=62e6da830c4dab6ea0f876ad88e0ef6f777e25a6#62e6da830c4dab6ea0f876ad88e0ef6f777e25a6"
 dependencies = [
  "proc-macro2 1.0.22",
  "quote 1.0.7",
@@ -94,10 +85,9 @@ dependencies = [
 
 [[package]]
 name = "borsh-schema-derive-internal"
-version = "0.7.2"
-source = "git+https://github.com/zeropoolnetwork/borsh.git?branch=feature/no-std#f07aa8d6a934db2499d99b9468a0b8383dc1697a"
+version = "0.8.0"
+source = "git+https://github.com/zeropoolnetwork/borsh.git?rev=62e6da830c4dab6ea0f876ad88e0ef6f777e25a6#62e6da830c4dab6ea0f876ad88e0ef6f777e25a6"
 dependencies = [
- "hashbrown",
  "proc-macro2 1.0.22",
  "quote 1.0.7",
  "syn 1.0.41",
