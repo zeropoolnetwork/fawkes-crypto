@@ -150,7 +150,8 @@ fn biguint_to_real_u64_vec(mut v: BigUint, limbs: usize) -> Vec<u64> {
     let mut ret = vec![];
 
     while v > BigUint::zero() {
-        ret.push((&v % &m).to_u64().unwrap());
+        let t: BigUint = &v % &m;
+        ret.push(t.to_u64().unwrap());
         v = v >> 64;
     }
 

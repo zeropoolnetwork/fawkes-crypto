@@ -213,7 +213,7 @@ dependencies = [
 name = "ff-uint_derive"
 version = "0.1.4"
 dependencies = [
- "num-bigint",
+ "num-bigint 0.3.1",
  "num-integer",
  "num-traits",
  "proc-macro-crate",
@@ -240,7 +240,7 @@ version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1d245b4e76c5b36bb7721ea15b7fbc61bebf0c5d2890eaf49fe1e2a3eed36db9"
 dependencies = [
- "num-bigint",
+ "num-bigint 0.2.6",
  "num-integer",
  "num-traits",
  "proc-macro2 0.4.30",
@@ -352,6 +352,17 @@ name = "num-bigint"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "090c7f9998ee0ff65aa5b723e4009f7b217707f1fb5ea551329cc4d6231fb304"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e9a41747ae4633fce5adffb4d2e81ffc5e89593cb19917f8fb2cc5ff76507bf"
 dependencies = [
  "autocfg",
  "num-integer",
