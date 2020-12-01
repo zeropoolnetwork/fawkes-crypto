@@ -12,6 +12,7 @@ macro_rules! construct_uint {
 				use $crate::Uint;
 				#[cfg(feature = "borsh_support")]
 				use $crate::borsh::{BorshSerialize, BorshDeserialize};
+				use $crate::maybestd::{vec, vec::Vec};
 
 				#[repr(C)]
 				$(#[$attr])*

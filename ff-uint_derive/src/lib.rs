@@ -684,19 +684,19 @@ fn prime_field_impl(
         }
 
         #[cfg(feature = "borsh_support")]
-        impl ::borsh::ser::BorshSerialize for #name {
-            fn serialize<W: ::borsh::maybestd::io::Write>(&self, writer: &mut W) -> ::borsh::maybestd::io::Result<()> {
+        impl #cratename::borsh::ser::BorshSerialize for #name {
+            fn serialize<W: #cratename::borsh::maybestd::io::Write>(&self, writer: &mut W) -> #cratename::borsh::maybestd::io::Result<()> {
                 let uint = self.to_uint();
                 uint.serialize(writer)
             }
         }
 
         #[cfg(feature = "borsh_support")]
-        impl ::borsh::de::BorshDeserialize for #name {
-            fn deserialize(buf: &mut &[u8]) -> ::borsh::maybestd::io::Result<Self> {
-                let uint = <<#name as PrimeFieldParams>::Inner as ::borsh::de::BorshDeserialize>::deserialize(buf)?;
+        impl #cratename::borsh::de::BorshDeserialize for #name {
+            fn deserialize(buf: &mut &[u8]) -> #cratename::borsh::maybestd::io::Result<Self> {
+                let uint = <<#name as PrimeFieldParams>::Inner as #cratename::borsh::de::BorshDeserialize>::deserialize(buf)?;
                 Self::from_uint(uint)
-                    .ok_or(::borsh::maybestd::io::Error::from(::borsh::maybestd::io::ErrorKind::InvalidData))
+                    .ok_or(#cratename::borsh::maybestd::io::Error::from(#cratename::borsh::maybestd::io::ErrorKind::InvalidData))
             }
         }
 

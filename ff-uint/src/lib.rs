@@ -40,3 +40,17 @@ pub use ff::*;
 pub use num::*;
 pub use uint::macros::*;
 pub use uint::traits::*;
+
+#[cfg(feature = "std")]
+pub mod maybestd {
+    pub use std::{
+        borrow, string, vec, format, boxed, rc, sync
+    };
+}
+
+#[cfg(not(feature = "std"))]
+pub mod maybestd {
+    pub use alloc::{
+        borrow, string, vec, format, boxed, rc, sync
+    };
+}
