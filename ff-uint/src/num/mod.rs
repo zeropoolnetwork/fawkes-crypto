@@ -83,6 +83,7 @@ impl<U: Uint> BorshDeserialize for NumRepr<U> {
 #[cfg(feature = "serde_support")]
 impl<U: Uint> Serialize for NumRepr<U> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        #[cfg(not(feature = "std"))]
         use crate::maybestd::string::ToString;
         Serialize::serialize(&self.to_string(), serializer)
     }
@@ -443,6 +444,7 @@ impl<Fp: PrimeField> core::convert::From<&'static str> for Num<Fp> {
 #[cfg(feature = "serde_support")]
 impl<Fp: PrimeField> Serialize for Num<Fp> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        #[cfg(not(feature = "std"))]
         use crate::maybestd::string::ToString;
         Serialize::serialize(&self.to_string(), serializer)
     }
