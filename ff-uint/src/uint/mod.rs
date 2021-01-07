@@ -420,7 +420,7 @@ macro_rules! construct_uint {
 
                     #[cfg(feature = "rand_support")]
 					#[inline]
-					fn random<R: rand::Rng + ?Sized>(rng: &mut R) -> Self {
+					fn random<R: $crate::rand::Rng + ?Sized>(rng: &mut R) -> Self {
 						rng.gen()
 					}
 
