@@ -778,7 +778,7 @@ fn prime_field_impl(
 
             /// Computes a uniformly random element using rejection sampling.
             #[cfg(feature = "rand_support")]
-            fn random<R: ::rand::Rng + ?Sized>(rng: &mut R) -> Self {
+            fn random<R: ::#cratename::rand::Rng + ?Sized>(rng: &mut R) -> Self {
                 loop {
                     let mut tmp = {
                         let mut repr = [0u64; #limbs];
