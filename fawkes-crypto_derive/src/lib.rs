@@ -2,8 +2,7 @@ extern crate proc_macro;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
-    parse_str, Data, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed, Ident, Path,
-    PathSegment, Type,
+    parse_str, Data, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed, Ident, Path, Type,
 };
 
 #[proc_macro_derive(Signal, attributes(Field, Value))]
@@ -98,27 +97,10 @@ fn get_field_types<'a>(fields: &'a [&'a Field]) -> Vec<&'a Type> {
     get_field_types_iter(fields).collect()
 }
 
-fn get_typename(t: &Type) -> &Ident {
-    if let Type::Path(t) = t {
-        let Path {
-            leading_colon: _,
-            segments: t,
-        } = &t.path;
-        let PathSegment {
-            ident: i,
-            arguments: _,
-        } = &t[0];
-        i
-    } else {
-        panic!("wrong type path")
-    }
-}
+
 
 fn tuple_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
-    let var_typenames = get_field_types(&fields)
-        .iter()
-        .map(|&t| get_typename(t))
-        .collect::<Vec<_>>();
+    let var_typenames = get_field_types(&fields);
     let var_ids = (0..fields.len())
         .map(|i| syn::Index::from(i))
         .collect::<Vec<_>>();
@@ -141,7 +123,7 @@ fn tuple_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
         }
 
         fn from_const(cs:&RCS<#field_path>, value: &Self::Value) -> Self {
-            Self(#(#var_typenames::from_const(cs, &value.#var_ids)),*)
+            Self(#(<#var_typenames>::from_const(cs, &value.#var_ids)),*)
         }
 
         fn assert_const(&self, value: &Self::Value) {
@@ -163,7 +145,7 @@ fn tuple_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
         }
 
         fn alloc(cs:&RCS<#field_path>, value:Option<&Self::Value>) -> Self {
-            Self(#(#var_typenames::alloc(cs, value.map(|v| &v.#var_ids))),*)
+            Self(#(<#var_typenames>::alloc(cs, value.map(|v| &v.#var_ids))),*)
         }
     }
 }
@@ -172,10 +154,7 @@ fn struct_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
     let var_names: &Vec<Ident> = &field_idents(fields).iter().map(|f| (**f).clone()).collect();
 
     let var_name_first = var_names[0].clone();
-    let var_typenames = get_field_types(&fields)
-        .iter()
-        .map(|&t| get_typename(t))
-        .collect::<Vec<_>>();
+    let var_typenames = get_field_types(&fields);
 
     quote! {
         fn get_value(&self) -> Option<Self::Value> {
@@ -195,7 +174,7 @@ fn struct_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
         }
 
         fn from_const(cs:&RCS<#field_path>, value: &Self::Value) -> Self {
-            Self {#(#var_names: #var_typenames::from_const(cs, &value.#var_names)),*}
+            Self {#(#var_names: <#var_typenames>::from_const(cs, &value.#var_names)),*}
         }
 
         fn assert_const(&self, value: &Self::Value) {
@@ -217,7 +196,7 @@ fn struct_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
         }
 
         fn alloc(cs:&RCS<#field_path>, value:Option<&Self::Value>) -> Self {
-            Self {#(#var_names: #var_typenames::alloc(cs, value.map(|v| &v.#var_names))),*}
+            Self {#(#var_names: <#var_typenames>::alloc(cs, value.map(|v| &v.#var_names))),*}
         }
 
 
