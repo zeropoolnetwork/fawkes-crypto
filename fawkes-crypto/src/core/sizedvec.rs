@@ -4,12 +4,16 @@ use std::{
     ops::{Index, IndexMut},
     slice::SliceIndex,
     slice::{Iter, IterMut},
+    self
 };
 
-use crate::{
-    serde::{Deserialize, Deserializer, Serialize, Serializer},
-    typenum::Unsigned,
-};
+use crate::typenum::Unsigned;
+
+#[cfg(feature = "borsh_support")]
+use crate::borsh::{BorshSerialize, BorshDeserialize};
+
+#[cfg(feature = "serde_support")]
+use crate::serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[derive(Debug, Clone)]
 pub struct SizedVec<T: Sized, L: Unsigned>(Vec<T>, PhantomData<L>);
@@ -35,17 +39,38 @@ impl<T, L: Unsigned> SizedVec<T, L> {
     }
 }
 
+#[cfg(feature = "serde_support")]
 impl<T: Serialize, L: Unsigned> Serialize for SizedVec<T, L> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         self.0.serialize(serializer)
     }
 }
 
+#[cfg(feature = "serde_support")]
 impl<'de, T: Deserialize<'de>, L: Unsigned> Deserialize<'de> for SizedVec<T, L> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<SizedVec<T, L>, D::Error> {
         Vec::<T>::deserialize(deserializer).map(|v| SizedVec::<T, L>(v, PhantomData))
     }
 }
+
+
+#[cfg(feature = "borsh_support")]
+impl<T: BorshSerialize, L: Unsigned> BorshSerialize for SizedVec<T, L> {
+    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<(), std::io::Error> {
+        for i in 0..L::USIZE {
+            self.0[i].serialize(writer)?;
+        }
+        Ok(())
+    }
+}
+
+#[cfg(feature = "borsh_support")]
+impl<T: BorshDeserialize, L: Unsigned> BorshDeserialize for SizedVec<T, L> {
+    fn deserialize(buf: &mut &[u8]) -> Result<Self, std::io::Error> {
+        (0..L::USIZE).map(|_| T::deserialize(buf)).collect()
+    }
+}
+
 
 impl<T, L: Unsigned> FromIterator<T> for SizedVec<T, L> {
     #[inline]
