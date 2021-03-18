@@ -1,6 +1,6 @@
 [package]
 name = "fawkes-crypto"
-version = "3.0.3"
+version = "3.0.4"
 authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
 description = "zk-SNARK circuit building framework"
 readme = "README.md"
@@ -15,14 +15,14 @@ crate-type = ["rlib"]
 
 [dependencies]
 
-ff-uint = { version = "0.1.4", path = "../ff-uint", default-features = false }
+ff-uint = { version = "0.1.5", path = "../ff-uint", default-features = false }
 linked-list = {version="0.0.3", optional=true}
 typenum = "1.12.0"
 rand = { version = "0.7.3", optional = true }
 byteorder = "1"
 serde = { version = "1.0", features = ["derive"], optional = true }
-borsh = { git = "https://github.com/zeropoolnetwork/borsh.git", rev = "62e6da830c4dab6ea0f876ad88e0ef6f777e25a6", optional = true }
-fawkes-crypto_derive = {version="3.0.3", path = "../fawkes-crypto_derive"}
+borsh = { version = "0.8.2", optional = true }
+fawkes-crypto_derive = {version="3.0.4", path = "../fawkes-crypto_derive"}
 impl-trait-for-tuples = "0.1.3"
 getrandom = { version = "0.2", optional = true }
 
