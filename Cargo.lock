@@ -580,7 +580,7 @@ checksum = "3e75f6a532d0fd9f7f13144f392b6ad56a32696bfcd9c78f797f16bbb6f072d6"
 
 [[package]]
 name = "seedbox"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "blake2-rfc_bellman_edition",
  "byteorder",
