@@ -50,10 +50,10 @@ pub fn c_into_bits_le<Fr: PrimeField>(signal: &CNum<Fr>, limit: usize) -> Vec<CB
 // return true if s1 > s2
 // assuming log2(s1) <= limit, log2(s2) <= limit
 // TODO: optimize for constant cases
-pub fn c_comp<Fr: PrimeField>(s1:CNum<Fr>, s2:CNum<Fr>, limit:usize) -> CBool<Fr> {
+pub fn c_comp<Fr: PrimeField>(s1:&CNum<Fr>, s2:&CNum<Fr>, limit:usize) -> CBool<Fr> {
     let t = (NumRepr::ONE << (limit as u32)) - NumRepr::ONE;
     let t = Num::from_mont_uint_unchecked(t);
-    let n = &s1 - &s2 + t;
+    let n = t + s1 - s2;
     c_into_bits_le(&n, limit+1)[limit].clone()
 }
 
