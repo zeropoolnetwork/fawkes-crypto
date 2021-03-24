@@ -25,6 +25,10 @@ impl<Fr: PrimeField> CBool<Fr> {
         self.0.clone()
     }
 
+    pub fn as_num(&self) -> &CNum<Fr> {
+        &self.0
+    }
+
     pub fn capacity(&self) -> usize {
         0
     }
