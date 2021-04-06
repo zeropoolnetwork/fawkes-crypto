@@ -8,6 +8,7 @@ use num_integer::Integer;
 use num_traits::{One, ToPrimitive, Zero};
 use proc_macro::TokenStream;
 use proc_macro_crate::crate_name;
+use proc_macro2::Span;
 use quote::quote;
 use quote::TokenStreamExt;
 use std::str::FromStr;
@@ -40,7 +41,7 @@ pub fn construct_primefield_params(input: TokenStream) -> TokenStream {
 
     let cratename = Ident::new(
         &crate_name("ff_uint").unwrap_or("ff_uint".to_string()),
-        syn::export::Span::call_site(),
+        Span::call_site(),
     );
 
     if let Some((_, name, _)) = &impl_block.trait_ {
@@ -94,7 +95,7 @@ pub fn construct_primefield_params(input: TokenStream) -> TokenStream {
 
     let module_name = Ident::new(
         &format!("__generated_{}", struct_def.ident),
-        syn::export::Span::call_site(),
+        Span::call_site(),
     );
     let prime_field_impl = prime_field_impl(&cratename, &self_ty, &repr_ty, limbs);
 
