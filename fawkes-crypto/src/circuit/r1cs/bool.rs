@@ -113,6 +113,7 @@ impl<Fr: PrimeField> Not for CBool<Fr> {
 
 forward_unop_ex!(impl<Fr:PrimeField> Not for CBool<Fr>, not);
 
+#[allow(clippy::suspicious_op_assign_impl)]
 impl<'l, Fr: PrimeField> BitAndAssign<&'l CBool<Fr>> for CBool<Fr> {
     #[inline]
     fn bitand_assign(&mut self, other: &'l CBool<Fr>) {
