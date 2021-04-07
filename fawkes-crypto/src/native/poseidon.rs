@@ -3,7 +3,6 @@ use crate::{
     ff_uint::seedbox::{SeedboxBlake2, SeedBox, SeedBoxGen},
     ff_uint::{Num, PrimeField},
     serde::{Deserialize, Serialize},
-    typenum::Unsigned,
 };
 
 #[derive(Debug, Clone)]
@@ -93,12 +92,12 @@ pub fn poseidon<Fr: PrimeField>(inputs: &[Num<Fr>], params: &PoseidonParams<Fr>)
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(bound(serialize = "", deserialize = ""))]
-pub struct MerkleProof<Fr: PrimeField, L: Unsigned> {
+pub struct MerkleProof<Fr: PrimeField, const L: usize> {
     pub sibling: SizedVec<Num<Fr>, L>,
     pub path: SizedVec<bool, L>,
 }
 
-pub fn poseidon_merkle_proof_root<Fr: PrimeField, L: Unsigned>(
+pub fn poseidon_merkle_proof_root<Fr: PrimeField, const L: usize>(
     leaf: Num<Fr>,
     proof: &MerkleProof<Fr, L>,
     params: &PoseidonParams<Fr>,
