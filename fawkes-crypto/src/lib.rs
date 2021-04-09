@@ -22,4 +22,6 @@ pub extern crate ff_uint;
 #[cfg(feature = "rand_support")]
 pub extern crate rand;
 
+pub extern crate typenum;
+
 pub extern crate fawkes_crypto_derive;

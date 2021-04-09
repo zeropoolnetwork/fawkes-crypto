@@ -17,20 +17,20 @@ Also you may check the rollup [here](https://github.com/snjax/fawkes-rollup).
 ```rust
 #[derive(Clone, Signal)]
 #[Value="MerkleProof<CS::F, L>"]
-pub struct CMerkleProof<'a, CS: ConstraintSystem, const L: usize> {
+pub struct CMerkleProof<'a, CS:ConstraintSystem, L:Unsigned> {
     pub sibling: SizedVec<CNum<'a, CS>, L>,
     pub path: SizedVec<CBool<'a, CS>, L>
 }
 
 
-pub fn c_poseidon_merkle_proof_root<'a, CS: ConstraintSystem, const L: usize>(
-    leaf:  &CNum<'a, CS>,
-    proof: &CMerkleProof<'a, CS, L>,
-    params: &PoseidonParams<CS::F>
+pub fn c_poseidon_merkle_proof_root<'a, CS:ConstraintSystem, L:Unsigned>(
+    leaf:&CNum<'a, CS>, 
+    proof:&CMerkleProof<'a, CS, L>,
+    params:&PoseidonParams<CS::F>
 ) -> CNum<'a, CS> {
     let mut root = leaf.clone();
     for (p, s) in proof.path.iter().zip(proof.sibling.iter()) {
-        let first = s.switch(p, &root);
+        let first = s.switch(p, &root); 
         let second = &root + s - &first;
         root = c_poseidon( [first, second].as_ref(), params);
     }

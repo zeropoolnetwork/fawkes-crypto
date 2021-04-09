@@ -2,6 +2,7 @@ use crate::{
     circuit::{bool::CBool, cs::RCS},
     core::sizedvec::SizedVec,
     ff_uint::PrimeField,
+    typenum::Unsigned,
 };
 use impl_trait_for_tuples::impl_for_tuples;
 
@@ -41,7 +42,7 @@ pub trait Signal<Fr: PrimeField>: Sized + Clone {
     }
 }
 
-impl<Fr: PrimeField, T: Signal<Fr>, const L: usize> Signal<Fr> for SizedVec<T, L> {
+impl<Fr: PrimeField, T: Signal<Fr>, L: Unsigned> Signal<Fr> for SizedVec<T, L> {
     type Value = SizedVec<T::Value, L>;
 
     fn get_value(&self) -> Option<Self::Value> {
@@ -70,7 +71,7 @@ impl<Fr: PrimeField, T: Signal<Fr>, const L: usize> Signal<Fr> for SizedVec<T, L
     fn alloc(cs: &RCS<Fr>, value: Option<&Self::Value>) -> Self {
         match value {
             Some(value) => value.iter().map(|v| T::alloc(cs, Some(v))).collect(),
-            _ => (0..L).map(|_| T::alloc(cs, None)).collect(),
+            _ => (0..L::USIZE).map(|_| T::alloc(cs, None)).collect(),
         }
     }
 
@@ -92,7 +93,7 @@ impl<Fr: PrimeField, T: Signal<Fr>, const L: usize> Signal<Fr> for SizedVec<T, L
 
     fn is_eq(&self, other: &Self) -> CBool<Fr> {
         let mut acc = self.derive_const(&true);
-        for i in 0..L {
+        for i in 0..L::USIZE {
             acc &= self[i].is_eq(&other[i]);
         }
         acc

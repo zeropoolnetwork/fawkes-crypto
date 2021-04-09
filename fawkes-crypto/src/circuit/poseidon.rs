@@ -3,11 +3,12 @@ use crate::{
     core::{signal::Signal, sizedvec::SizedVec},
     ff_uint::{Num, PrimeField},
     native::poseidon::{MerkleProof, PoseidonParams},
+    typenum::Unsigned,
 };
 
 #[derive(Clone, Signal)]
 #[Value = "MerkleProof<Fr, L>"]
-pub struct CMerkleProof<Fr: PrimeField, const L: usize> {
+pub struct CMerkleProof<Fr: PrimeField, L: Unsigned> {
     pub sibling: SizedVec<CNum<Fr>, L>,
     pub path: SizedVec<CBool<Fr>, L>,
 }
@@ -62,7 +63,7 @@ pub fn c_poseidon<Fr: PrimeField>(inputs: &[CNum<Fr>], params: &PoseidonParams<F
 }
 
 
-pub fn c_poseidon_merkle_proof_root<Fr: PrimeField, const L: usize>(
+pub fn c_poseidon_merkle_proof_root<Fr: PrimeField, L: Unsigned>(
     leaf: &CNum<Fr>,
     proof: &CMerkleProof<Fr, L>,
     params: &PoseidonParams<Fr>,
@@ -107,13 +108,13 @@ mod poseidon_test {
         engines::bn256::Fr,
         native::poseidon::{poseidon, poseidon_merkle_proof_root, MerkleProof},
         rand::{thread_rng, Rng},
+        typenum::{U3, U32},
     };
     use std::time::Instant;
 
     #[test]
     fn test_circuit_poseidon() {
         const N_INPUTS: usize = 3;
-
         let mut rng = thread_rng();
         let poseidon_params = PoseidonParams::<Fr>::new(N_INPUTS + 1, 8, 54);
 
@@ -121,7 +122,7 @@ mod poseidon_test {
 
         let data = (0..N_INPUTS)
             .map(|_| rng.gen())
-            .collect::<SizedVec<_, N_INPUTS>>();
+            .collect::<SizedVec<_, U3>>();
         let inputs = SizedVec::alloc(cs, Some(&data));
 
         let mut n_constraints = cs.borrow().num_constraints();
@@ -147,10 +148,10 @@ mod poseidon_test {
         let leaf = rng.gen();
         let sibling = (0..PROOF_LENGTH)
             .map(|_| rng.gen())
-            .collect::<SizedVec<_, PROOF_LENGTH>>();
+            .collect::<SizedVec<_, U32>>();
         let path = (0..PROOF_LENGTH)
             .map(|_| rng.gen())
-            .collect::<SizedVec<bool, PROOF_LENGTH>>();
+            .collect::<SizedVec<bool, U32>>();
 
         let signal_leaf = CNum::alloc(cs, Some(&leaf));
         let signal_sibling = SizedVec::alloc(cs, Some(&sibling));

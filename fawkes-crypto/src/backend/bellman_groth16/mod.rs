@@ -196,6 +196,7 @@ mod bellman_groth16_test {
     use crate::core::sizedvec::SizedVec;
     use crate::engines::bn256::Fr;
     use crate::native::poseidon::{poseidon_merkle_proof_root, MerkleProof, PoseidonParams};
+    use crate::typenum::U32;
     use crate::rand::{thread_rng, Rng};
     use ff_uint::PrimeField;
 
