@@ -424,6 +424,7 @@ impl<'l, Fr: PrimeField> Div<&'l Num<Fr>> for CNum<Fr> {
     }
 }
 
+#[allow(clippy::suspicious_arithmetic_impl)]
 impl<'l, Fr: PrimeField> Div<&'l CNum<Fr>> for Num<Fr> {
     type Output = CNum<Fr>;
 
