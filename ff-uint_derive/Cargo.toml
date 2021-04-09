@@ -19,7 +19,7 @@ num-traits = {version = "0.2.11", default-features=false}
 num-integer = {version = "0.1.42", default-features=false}
 proc-macro2 = "1"
 quote = "1"
-syn = { version = "=1.0.41", features = ["full"] }
+syn = { version = "1.0.68", features = ["full"] }
 proc-macro-crate = "0.1.5"
 
 [features]
