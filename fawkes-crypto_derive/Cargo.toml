@@ -1,6 +1,6 @@
 [package]
 name = "fawkes-crypto_derive"
-version = "3.1.1"
+version = "3.1.2"
 authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
 edition = "2018"
 description = "zk-SNARK circuit building framework"
@@ -20,6 +20,6 @@ proc-macro = true
 [dependencies]
 proc-macro2 = "1"
 quote = "1"
-syn = { version = "1.0.68", features = ["extra-traits"] }
+syn = { version = "1.0.69", features = ["extra-traits"] }
 
 

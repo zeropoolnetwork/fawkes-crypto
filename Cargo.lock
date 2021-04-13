@@ -150,7 +150,7 @@ dependencies = [
 
 [[package]]
 name = "fawkes-crypto"
-version = "3.1.1"
+version = "3.1.2"
 dependencies = [
  "blake2-rfc_bellman_edition",
  "borsh",
@@ -192,7 +192,7 @@ dependencies = [
 
 [[package]]
 name = "fawkes-crypto_derive"
-version = "3.1.1"
+version = "3.1.2"
 dependencies = [
  "proc-macro2 1.0.26",
  "quote 1.0.9",
@@ -201,7 +201,7 @@ dependencies = [
 
 [[package]]
 name = "ff-uint"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "arbitrary",
  "borsh",
@@ -221,7 +221,7 @@ dependencies = [
 
 [[package]]
 name = "ff-uint_derive"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "num-bigint 0.3.2",
  "num-integer",
