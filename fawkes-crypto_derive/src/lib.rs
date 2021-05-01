@@ -1,9 +1,10 @@
 extern crate proc_macro;
-use proc_macro2::TokenStream;
+use proc_macro2::{TokenStream, Span};
 use quote::quote;
 use syn::{
     parse_str, Data, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed, Ident, Path, Type, Variant
 };
+
 
 #[proc_macro_derive(Signal, attributes(Field, Value))]
 pub fn signal_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -210,51 +211,72 @@ fn struct_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
 fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
     let variant_names: Vec<Ident> = variants.iter().map(|v| v.ident.clone()).collect();
 
-    let field_names: Vec<Vec<Ident>> = variants
+    // original field names
+    let field_names: Vec<Vec<TokenStream>> = variants
         .iter()
-        .map(|v| {
-            if v.fields.is_empty() {
+        .map(|variant| {
+            if variant.fields.is_empty() {
                 panic!("Variants cannot be empty");
             }
 
-            v.fields
+            variant.fields
                 .iter()
-                .map(|f| f.ident.clone().unwrap())
+                .enumerate()
+                .map(|(i, f)| f.ident
+                    .clone()
+                    .map(|ident| quote!(#ident))
+                    .unwrap_or_else(|| {
+                        let i = syn::Index::from(i);
+                        quote!(#i)
+                    })
+                )
                 .collect()
         })
         .collect();
 
+    let field_names_str: Vec<Vec<String>> = field_names
+        .iter()
+        .map(|fields| {
+            fields.iter().map(|field| field.to_string()).collect()
+        })
+        .collect();
+
+    // prefixed field names (for referencing tuple members)
+    let field_names_re: Vec<Vec<Ident>> = field_names_str.iter()
+        .map(|fields| fields.iter().map(|field| Ident::new(&format!("__first_{}", field), Span::call_site())).collect())
+        .collect();
+
     // for destructuring the second argument
-    let other_field_names: Vec<Vec<Ident>> = field_names.iter().map(|fields| {
-        fields.iter().map(|field: &Ident| {
-            Ident::new(&format!("__other_{}", field), field.span())
-        }).collect::<Vec<Ident>>()
+    let other_field_names: Vec<Vec<Ident>> = field_names_str.iter().map(|fields| {
+        fields.iter().map(|field| {
+            Ident::new(&format!("__second_{}", field), Span::call_site())
+        }).collect()
     }).collect();
 
-    let first_field_names = field_names.iter().map(|names| names[0].clone());
+    let first_field_names = field_names_re.iter().map(|names| names[0].clone());
 
     quote! {
         fn get_value(&self) -> Option<Self::Value> {
             match self {
-                #(Self::#variant_names { #(#field_names),* } => {
-                    Some(Self::Value::#variant_names {#(#field_names: #field_names.get_value()?),*})
+                #(Self::#variant_names { #(#field_names: #field_names_re),* } => {
+                    Some(Self::Value::#variant_names {#(#field_names: #field_names_re.get_value()?),*})
                 }),*
             }
         }
 
         fn as_const(&self) -> Option<Self::Value> {
             match self {
-                #(Self::#variant_names { #(#field_names),* } => {
-                    Some(Self::Value::#variant_names {#(#field_names: #field_names.as_const()?),*})
+                #(Self::#variant_names { #(#field_names: #field_names_re),* } => {
+                    Some(Self::Value::#variant_names {#(#field_names: #field_names_re.as_const()?),*})
                 }),*
             }
         }
 
         fn switch(&self, bit: &CBool<#field_path>, if_else: &Self) -> Self {
             match self {
-                #(Self::#variant_names { #(#field_names),* } => {
+                #(Self::#variant_names { #(#field_names: #field_names_re),* } => {
                     if let Self::#variant_names { #(#field_names: #other_field_names),* } = if_else {
-                        Self::#variant_names {#(#field_names: #field_names.switch(bit, #other_field_names)),*}
+                        Self::#variant_names {#(#field_names: #field_names_re.switch(bit, #other_field_names)),*}
                     } else {
                         panic!("Signal::switch: variants do not match");
                     }
@@ -264,7 +286,7 @@ fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
 
         fn get_cs(&self) -> &RCS<#field_path> {
             match self {
-                #(Self::#variant_names { #(#field_names),* } => {
+                #(Self::#variant_names { #(#field_names: #field_names_re),* } => {
                     #first_field_names.get_cs()
                 }),*
             }
@@ -272,17 +294,17 @@ fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
 
         fn from_const(cs:&RCS<#field_path>, value: &Self::Value) -> Self {
             match value {
-                #(Self::Value::#variant_names { #(#field_names),* } => {
-                    Self::#variant_names {#(#field_names: Signal::from_const(cs, #field_names)),*}
+                #(Self::Value::#variant_names { #(#field_names: #field_names_re),* } => {
+                    Self::#variant_names {#(#field_names: Signal::from_const(cs, #field_names_re)),*}
                 }),*
             }
         }
 
         fn assert_const(&self, value: &Self::Value) {
             match self {
-                #(Self::#variant_names { #(#field_names),* } => {
+                #(Self::#variant_names { #(#field_names: #field_names_re),* } => {
                     if let Self::Value::#variant_names { #(#field_names: #other_field_names),* } = value {
-                        #(#field_names.assert_const(#other_field_names);)*
+                        #(#field_names_re.assert_const(#other_field_names);)*
                     } else {
                         panic!("Signal::assert_const: variants do not match");
                     }
@@ -292,17 +314,17 @@ fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
 
         fn inputize(&self) {
             match self {
-                #(Self::#variant_names { #(#field_names),* } => {
-                    #(#field_names.inputize();)*
+                #(Self::#variant_names { #(#field_names: #field_names_re),* } => {
+                    #(#field_names_re.inputize();)*
                 }),*
             }
         }
 
         fn assert_eq(&self, other: &Self) {
             match self {
-                #(Self::#variant_names { #(#field_names),* } => {
+                #(Self::#variant_names { #(#field_names: #field_names_re),* } => {
                     if let Self::#variant_names { #(#field_names: #other_field_names),* } = other {
-                        #(#field_names.assert_eq(#other_field_names);)*
+                        #(#field_names_re.assert_eq(#other_field_names);)*
                     } else {
                         panic!("Signal::assert_eq: variants do not match");
                     }
@@ -314,9 +336,9 @@ fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
             let mut acc = self.derive_const(&true);
 
             match self {
-                #(Self::#variant_names { #(#field_names),* } => {
+                #(Self::#variant_names { #(#field_names: #field_names_re),* } => {
                     if let Self::#variant_names { #(#field_names: #other_field_names),* } = other {
-                        #(acc &= #field_names.is_eq(#other_field_names);)*
+                        #(acc &= #field_names_re.is_eq(#other_field_names);)*
                     }
                 }),*
             }
@@ -327,8 +349,8 @@ fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
         fn alloc(cs: &RCS<#field_path>, value: Option<&Self::Value>) -> Self {
             if let Some(value) = value {
                 match value {
-                    #(Self::Value::#variant_names { #(#field_names),* } => {
-                        Self::#variant_names { #(#field_names: Signal::alloc(cs, Some(#field_names))),* }
+                    #(Self::Value::#variant_names { #(#field_names: #field_names_re),* } => {
+                        Self::#variant_names { #(#field_names: Signal::alloc(cs, Some(#field_names_re))),* }
                     }),*
                 }
             } else {
