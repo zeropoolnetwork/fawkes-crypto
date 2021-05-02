@@ -43,7 +43,7 @@ pub struct SetupCS<Fr: PrimeField> {
 }
 
 impl<Fr: PrimeField> SetupCS<Fr> {
-    fn new(tracking: bool) -> Self {
+    pub fn new(tracking: bool) -> Self {
         Self {
             values: vec![Some(Num::ONE)],
             gates: vec![],
@@ -52,7 +52,7 @@ impl<Fr: PrimeField> SetupCS<Fr> {
         }
     }
 
-    fn rc_new(tracking: bool) -> RCS<Fr> {
+    pub fn rc_new(tracking: bool) -> RCS<Self> {
         Rc::new(RefCell::new(Self::new(tracking)))
     }
 }

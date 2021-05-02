@@ -3,7 +3,7 @@ use ff_uint::NumRepr;
 use crate::{
     circuit::{bool::CBool, num::CNum, cs::CS},
     core::signal::Signal,
-    ff_uint::{BitIterLE, Num, PrimeField},
+    ff_uint::{BitIterLE, Num, PrimeFieldParams},
 };
 
 pub fn c_into_bits_le<C: CS>(signal: &CNum<C>, limit: usize) -> Vec<CBool<C>> {
