@@ -6,7 +6,7 @@ use crate::{
 use linked_list::LinkedList;
 use std::{cell::RefCell, rc::Rc};
 
-pub type RCS<C: CS> = Rc<RefCell<C>>;
+pub type RCS<C> = Rc<RefCell<C>>;
 
 #[derive(Clone, Debug)]
 pub struct LC<C: CS>(pub LinkedList<(Num<C::Fr>, usize)>);

@@ -135,7 +135,7 @@ impl<C: CS> CEdwardsPoint<C> {
                     let mut base = c_base;
 
                     for i in 0..nwindows {
-                        let table = gen_table(&base, params);
+                        let table = gen_table::<C, J>(&base, params);
                         let res = c_mux3(&all_bits[3 * i..3 * (i + 1)], &table);
                         let p = CMontgomeryPoint {
                             x: res[0].clone(),

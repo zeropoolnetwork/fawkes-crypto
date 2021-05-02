@@ -137,13 +137,13 @@ impl<E: Engine> BorshDeserialize for Proof<E> {
 }
 
 #[cfg(feature = "rand_support")]
-pub fn prove<E: Engine, Pub: Signal<E::Fr>, Sec: Signal<E::Fr>, C: Fn(Pub, Sec)>(
+pub fn prove<E: Engine, Pub: Signal<SetupCS<E::Fr>>, Sec: Signal<SetupCS<E::Fr>>, C: Fn(Pub, Sec)>(
     params: &Parameters<E>,
     input_pub: &Pub::Value,
     input_sec: &Sec::Value,
     circuit: C,
 ) -> (Vec<Num<E::Fr>>, Proof<E>) {
-    let ref rcs = CS::rc_new(false);
+    let ref rcs = SetupCS::rc_new(false);
     let signal_pub = Pub::alloc(rcs, Some(input_pub));
     signal_pub.inputize();
     let signal_sec = Sec::alloc(rcs, Some(input_sec));

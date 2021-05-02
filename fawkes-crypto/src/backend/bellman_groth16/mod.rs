@@ -1,5 +1,5 @@
 use crate::{
-    circuit::cs::{CS, RCS},
+    circuit::cs::{RCS, SetupCS},
     core::signal::Signal,
     ff_uint::{Num, PrimeField},
 };
@@ -27,7 +27,7 @@ pub trait Engine {
 }
 
 #[repr(transparent)]
-struct BellmanCS<E: Engine>(RCS<E::Fr>);
+struct BellmanCS<E: Engine>(RCS<SetupCS<E::Fr>>);
 
 pub fn num_to_bellman_fp<Fx: PrimeField, Fy: bellman::pairing::ff::PrimeField>(
     from: Num<Fx>,
