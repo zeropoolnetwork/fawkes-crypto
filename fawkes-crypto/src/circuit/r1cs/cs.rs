@@ -6,7 +6,7 @@ use crate::{
 use linked_list::LinkedList;
 use std::{cell::RefCell, rc::Rc};
 
-pub type RCS<Fr> = Rc<RefCell<CS<Fr>>>;
+pub type RCS<Fr: PrimeField> = Rc<RefCell<dyn CS<Fr = Fr>>>;
 
 #[derive(Clone, Debug)]
 pub struct LC<Fr: PrimeField>(pub LinkedList<(Num<Fr>, usize)>);
@@ -24,20 +24,26 @@ pub struct Gate<Fr: PrimeField>(
     pub Vec<(Num<Fr>, usize)>,
 );
 
+pub trait CS {
+    type Fr: PrimeField;
+
+    fn num_constraints(&self) -> usize;
+    // a*b === c
+    fn enforce(&self, a: &CNum<Self::Fr>, b: &CNum<Self::Fr>, c: &CNum<Self::Fr>);
+    fn enforce_pub(&self, n: &CNum<Self::Fr>);
+    fn alloc(&self, cs: &RCS<Self::Fr>, value: Option<&Num<Self::Fr>>) -> CNum<Self::Fr>;
+}
+
 #[derive(Clone, Debug)]
-pub struct CS<Fr: PrimeField> {
+pub struct SetupCS<Fr: PrimeField> {
     pub values: Vec<Option<Num<Fr>>>,
     pub gates: Vec<Gate<Fr>>,
     pub tracking: bool,
     pub public: Vec<usize>,
 }
 
-impl<Fr: PrimeField> CS<Fr> {
-    pub fn num_constraints(&self) -> usize {
-        self.gates.len()
-    }
-
-    pub fn new(tracking: bool) -> Self {
+impl<Fr: PrimeField> SetupCS<Fr> {
+    fn new(tracking: bool) -> Self {
         Self {
             values: vec![Some(Num::ONE)],
             gates: vec![],
@@ -46,12 +52,20 @@ impl<Fr: PrimeField> CS<Fr> {
         }
     }
 
-    pub fn rc_new(tracking: bool) -> RCS<Fr> {
+    fn rc_new(tracking: bool) -> RCS<Fr> {
         Rc::new(RefCell::new(Self::new(tracking)))
+    }
+}
+
+impl<Fr: PrimeField> CS for SetupCS<Fr> {
+    type Fr = Fr;
+
+    fn num_constraints(&self) -> usize {
+        self.gates.len()
     }
 
     // a*b === c
-    pub fn enforce(a: &CNum<Fr>, b: &CNum<Fr>, c: &CNum<Fr>) {
+    fn enforce(&self, a: &CNum<Fr>, b: &CNum<Fr>, c: &CNum<Fr>) {
         let mut rcs = a.get_cs().borrow_mut();
         if rcs.tracking {
             match (a.value, b.value, c.value) {
@@ -65,7 +79,7 @@ impl<Fr: PrimeField> CS<Fr> {
             .push(Gate(a.lc.to_vec(), b.lc.to_vec(), c.lc.to_vec()))
     }
 
-    pub fn enforce_pub(n: &CNum<Fr>) {
+    fn enforce_pub(&self, n: &CNum<Fr>) {
         let mut rcs = n.get_cs().borrow_mut();
         let n_vars = rcs.values.len();
         let v = n_vars;
@@ -78,7 +92,7 @@ impl<Fr: PrimeField> CS<Fr> {
         ));
     }
 
-    pub fn alloc(cs: &RCS<Fr>, value: Option<&Num<Fr>>) -> CNum<Fr> {
+    fn alloc(&self, cs: &RCS<Fr>, value: Option<&Num<Fr>>) -> CNum<Fr> {
         let mut rcs = cs.borrow_mut();
         let n_vars = rcs.values.len();
         let v = n_vars;
