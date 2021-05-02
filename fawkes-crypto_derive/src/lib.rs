@@ -62,7 +62,7 @@ fn expand(input: &DeriveInput, _: &str) -> TokenStream {
     )
     .expect("attribute should be a type");
 
-    let field_path = parse_str::<Path>(&fetch_attr("Field", &input.attrs).unwrap_or(String::from("Fr"))).expect("attribute should be a path");
+    let field_path = parse_str::<Path>(&fetch_attr("Field", &input.attrs).unwrap_or(String::from("C"))).expect("attribute should be a path");
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let body = match input.data {
