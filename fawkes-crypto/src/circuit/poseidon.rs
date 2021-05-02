@@ -102,7 +102,7 @@ pub fn c_poseidon_merkle_tree_root<C: CS>(
 mod poseidon_test {
     use super::*;
     use crate::{
-        circuit::cs::CS,
+        circuit::cs::SetupCS,
         core::signal::Signal,
         engines::bn256::Fr,
         native::poseidon::{poseidon, poseidon_merkle_proof_root, MerkleProof},
@@ -117,7 +117,7 @@ mod poseidon_test {
         let mut rng = thread_rng();
         let poseidon_params = PoseidonParams::<Fr>::new(N_INPUTS + 1, 8, 54);
 
-        let ref mut cs = CS::rc_new(true);
+        let ref mut cs = SetupCS::rc_new(true);
 
         let data = (0..N_INPUTS)
             .map(|_| rng.gen())
@@ -142,7 +142,7 @@ mod poseidon_test {
         let mut rng = thread_rng();
         let poseidon_params = PoseidonParams::<Fr>::new(3, 8, 53);
 
-        let ref mut cs = CS::rc_new(true);
+        let ref mut cs = SetupCS::rc_new(true);
 
         let leaf = rng.gen();
         let sibling = (0..PROOF_LENGTH)
