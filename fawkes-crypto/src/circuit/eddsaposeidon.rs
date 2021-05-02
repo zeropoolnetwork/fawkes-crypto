@@ -5,22 +5,23 @@ use crate::{
         ecc::CEdwardsPoint,
         num::CNum,
         poseidon::c_poseidon,
+        cs::CS,
     },
     core::signal::Signal,
-    ff_uint::{Num, PrimeField},
+    ff_uint::Num,
     native::{ecc::JubJubParams, poseidon::PoseidonParams},
 };
 
-pub fn c_eddsaposeidon_verify<Fr: PrimeField, J: JubJubParams<Fr = Fr>>(
-    s: &CNum<Fr>,
-    r: &CNum<Fr>,
-    a: &CNum<Fr>,
-    m: &CNum<Fr>,
-    poseidon_params: &PoseidonParams<Fr>,
+pub fn c_eddsaposeidon_verify<C: CS, J: JubJubParams<Fr = C::Fr>>(
+    s: &CNum<C>,
+    r: &CNum<C>,
+    a: &CNum<C>,
+    m: &CNum<C>,
+    poseidon_params: &PoseidonParams<C::Fr>,
     jubjub_params: &J,
-) -> CBool<Fr> {
+) -> CBool<C> {
     assert!(
-        Num::<Fr>::MODULUS_BITS > Num::<J::Fs>::MODULUS_BITS,
+        Num::<C::Fr>::MODULUS_BITS > Num::<J::Fs>::MODULUS_BITS,
         "jubjub field should be lesser than snark field"
     );
     let cs = s.get_cs();

@@ -1,28 +1,28 @@
 use crate::{
-    circuit::{bool::CBool, cs::RCS, num::CNum},
+    circuit::{bool::CBool, cs::{CS, RCS}, num::CNum},
     core::{signal::Signal, sizedvec::SizedVec},
-    ff_uint::{Num, PrimeField},
+    ff_uint::Num,
     native::poseidon::{MerkleProof, PoseidonParams},
 };
 
 #[derive(Clone, Signal)]
-#[Value = "MerkleProof<Fr, L>"]
-pub struct CMerkleProof<Fr: PrimeField, const L: usize> {
-    pub sibling: SizedVec<CNum<Fr>, L>,
-    pub path: SizedVec<CBool<Fr>, L>,
+#[Value = "MerkleProof<C::Fr, L>"]
+pub struct CMerkleProof<C: CS, const L: usize> {
+    pub sibling: SizedVec<CNum<C>, L>,
+    pub path: SizedVec<CBool<C>, L>,
 }
 
-fn ark<Fr: PrimeField>(state: &mut [CNum<Fr>], c: &[Num<Fr>]) {
+fn ark<C: CS>(state: &mut [CNum<C>], c: &[Num<C::Fr>]) {
     state.iter_mut().zip(c.iter()).for_each(|(e, c)| *e += c);
 }
 
-fn sigma<Fr: PrimeField>(a: &CNum<Fr>) -> CNum<Fr> {
+fn sigma<C: CS>(a: &CNum<C>) -> CNum<C> {
     let a_sq = a * a;
     let a_quad = &a_sq * &a_sq;
     a_quad * a
 }
 
-fn mix<Fr: PrimeField>(state: &mut [CNum<Fr>], params: &PoseidonParams<Fr>) {
+fn mix<C: CS>(state: &mut [CNum<C>], params: &PoseidonParams<C::Fr>) {
     let statelen = state.len();
     let cs = state[0].get_cs();
     let mut new_state = vec![CNum::from_const(cs, &Num::ZERO); statelen];
@@ -34,7 +34,7 @@ fn mix<Fr: PrimeField>(state: &mut [CNum<Fr>], params: &PoseidonParams<Fr>) {
     state.clone_from_slice(&new_state);
 }
 
-pub fn c_poseidon<Fr: PrimeField>(inputs: &[CNum<Fr>], params: &PoseidonParams<Fr>) -> CNum<Fr> {
+pub fn c_poseidon<C: CS>(inputs: &[CNum<C>], params: &PoseidonParams<C::Fr>) -> CNum<C> {
     let n_inputs = inputs.len();
     assert!(
         n_inputs < params.t,
@@ -62,11 +62,11 @@ pub fn c_poseidon<Fr: PrimeField>(inputs: &[CNum<Fr>], params: &PoseidonParams<F
 }
 
 
-pub fn c_poseidon_merkle_proof_root<Fr: PrimeField, const L: usize>(
-    leaf: &CNum<Fr>,
-    proof: &CMerkleProof<Fr, L>,
-    params: &PoseidonParams<Fr>,
-) -> CNum<Fr> {
+pub fn c_poseidon_merkle_proof_root<C: CS, const L: usize>(
+    leaf: &CNum<C>,
+    proof: &CMerkleProof<C, L>,
+    params: &PoseidonParams<C::Fr>,
+) -> CNum<C> {
     let mut root = leaf.clone();
     for (p, s) in proof.path.iter().zip(proof.sibling.iter()) {
         let first = s.switch(p, &root);
@@ -76,10 +76,10 @@ pub fn c_poseidon_merkle_proof_root<Fr: PrimeField, const L: usize>(
     root
 }
 
-pub fn c_poseidon_merkle_tree_root<Fr: PrimeField>(
-    leaf: &[CNum<Fr>],
-    params: &PoseidonParams<Fr>,
-) -> CNum<Fr> {
+pub fn c_poseidon_merkle_tree_root<C: CS>(
+    leaf: &[CNum<C>],
+    params: &PoseidonParams<C::Fr>,
+) -> CNum<C> {
     let leaf_sz = leaf.len();
     assert!(leaf_sz > 0, "should be at least one leaf in the tree");
     let cs = leaf[0].get_cs();

@@ -1,11 +1,11 @@
 use crate::{
-    circuit::{bool::CBool, num::CNum},
-    ff_uint::{Num, PrimeField},
+    circuit::{bool::CBool, num::CNum, cs::CS},
+    ff_uint::{Num},
 };
 
 // this method is described here https://iden3.readthedocs.io/en/latest/iden3_repos/research/publications/zkproof-standards-workshop-2/pedersen-hash/pedersen.html
 
-pub fn c_mux3<Fr: PrimeField>(s: &[CBool<Fr>], c: &[Vec<Num<Fr>>]) -> Vec<CNum<Fr>> {
+pub fn c_mux3<C: CS>(s: &[CBool<C>], c: &[Vec<Num<C::Fr>>]) -> Vec<CNum<C>> {
     assert!(s.len() == 3, "should be 3 bits");
     for i in 0..c.len() {
         assert!(c[i].len() == 8, "should be 8 constants");

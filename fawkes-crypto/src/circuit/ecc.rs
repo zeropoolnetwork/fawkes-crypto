@@ -1,26 +1,26 @@
 use crate::{
-    circuit::{bitify::c_into_bits_le_strict, bool::CBool, cs::RCS, mux::c_mux3, num::CNum},
+    circuit::{bitify::c_into_bits_le_strict, bool::CBool, cs::{CS, RCS}, mux::c_mux3, num::CNum},
     core::signal::Signal,
-    ff_uint::{Num, PrimeField},
+    ff_uint::Num,
     native::ecc::{EdwardsPoint, EdwardsPointEx, JubJubParams, MontgomeryPoint},
 };
 
 #[derive(Clone, Signal)]
-#[Value = "EdwardsPoint<Fr>"]
-pub struct CEdwardsPoint<Fr: PrimeField> {
-    pub x: CNum<Fr>,
-    pub y: CNum<Fr>,
+#[Value = "EdwardsPoint<C::Fr>"]
+pub struct CEdwardsPoint<C: CS> {
+    pub x: CNum<C>,
+    pub y: CNum<C>,
 }
 
 #[derive(Clone, Signal)]
-#[Value = "MontgomeryPoint<Fr>"]
-pub struct CMontgomeryPoint<Fr: PrimeField> {
-    pub x: CNum<Fr>,
-    pub y: CNum<Fr>,
+#[Value = "MontgomeryPoint<C::Fr>"]
+pub struct CMontgomeryPoint<C: CS> {
+    pub x: CNum<C>,
+    pub y: CNum<C>,
 }
 
-impl<Fr: PrimeField> CEdwardsPoint<Fr> {
-    pub fn double<J: JubJubParams<Fr = Fr>>(&self, params: &J) -> Self {
+impl<C: CS> CEdwardsPoint<C> {
+    pub fn double<J: JubJubParams<Fr = C::Fr>>(&self, params: &J) -> Self {
         let v = &self.x * &self.y;
         let v2 = v.square();
         let u = (&self.x + &self.y).square();
@@ -30,11 +30,11 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
         }
     }
 
-    pub fn mul_by_cofactor<J: JubJubParams<Fr = Fr>>(&self, params: &J) -> Self {
+    pub fn mul_by_cofactor<J: JubJubParams<Fr = C::Fr>>(&self, params: &J) -> Self {
         self.double(params).double(params).double(params)
     }
 
-    pub fn add<J: JubJubParams<Fr = Fr>>(&self, p: &Self, params: &J) -> Self {
+    pub fn add<J: JubJubParams<Fr = C::Fr>>(&self, p: &Self, params: &J) -> Self {
         let v1 = &self.x * &p.y;
         let v2 = &p.x * &self.y;
         let v12 = &v1 * &v2;
@@ -45,14 +45,14 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
         }
     }
 
-    pub fn assert_in_curve<J: JubJubParams<Fr = Fr>>(&self, params: &J) {
+    pub fn assert_in_curve<J: JubJubParams<Fr = C::Fr>>(&self, params: &J) {
         let x2 = self.x.square();
         let y2 = self.y.square();
 
         (params.edwards_d() * &x2 * &y2).assert_eq(&(&y2 - &x2 - Num::ONE));
     }
 
-    pub fn assert_in_subgroup<J: JubJubParams<Fr = Fr>>(&self, params: &J) {
+    pub fn assert_in_subgroup<J: JubJubParams<Fr = C::Fr>>(&self, params: &J) {
         let preimage_value = self
             .get_value()
             .map(|p| p.mul(Num::from(8).checked_inv().unwrap(), params));
@@ -64,7 +64,7 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
         (&self.y - &preimage8.y).assert_zero();
     }
 
-    pub fn subgroup_decompress<J: JubJubParams<Fr = Fr>>(x: &CNum<Fr>, params: &J) -> Self {
+    pub fn subgroup_decompress<J: JubJubParams<Fr = C::Fr>>(x: &CNum<C>, params: &J) -> Self {
         let preimage_value = x.get_value().map(|x| {
             EdwardsPoint::subgroup_decompress(x, params)
                 .unwrap_or(params.edwards_g().clone())
@@ -78,18 +78,18 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
     }
 
     // assume nonzero subgroup point
-    pub fn into_montgomery(&self) -> CMontgomeryPoint<Fr> {
+    pub fn into_montgomery(&self) -> CMontgomeryPoint<C> {
         let x = (Num::ONE + &self.y).div_unchecked(&(Num::ONE - &self.y));
         let y = x.div_unchecked(&self.x);
         CMontgomeryPoint { x, y }
     }
 
     // assume subgroup point, bits
-    pub fn mul<J: JubJubParams<Fr = Fr>>(&self, bits: &[CBool<Fr>], params: &J) -> Self {
-        fn gen_table<Fr: PrimeField, J: JubJubParams<Fr = Fr>>(
-            p: &EdwardsPointEx<Fr>,
+    pub fn mul<J: JubJubParams<Fr = C::Fr>>(&self, bits: &[CBool<C>], params: &J) -> Self {
+        fn gen_table<C: CS, J: JubJubParams<Fr = C::Fr>>(
+            p: &EdwardsPointEx<C::Fr>,
             params: &J,
-        ) -> Vec<Vec<Num<Fr>>> {
+        ) -> Vec<Vec<Num<C::Fr>>> {
             let mut x_col = vec![];
             let mut y_col = vec![];
             let mut q = p.clone();
@@ -189,13 +189,13 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
     }
 
     // assuming t!=-1
-    pub fn from_scalar<J: JubJubParams<Fr = Fr>>(t: &CNum<Fr>, params: &J) -> Self {
+    pub fn from_scalar<J: JubJubParams<Fr = C::Fr>>(t: &CNum<C>, params: &J) -> Self {
 
 
-        fn check_and_get_y<Fr: PrimeField, J: JubJubParams<Fr = Fr>>(
-            x: &CNum<Fr>,
+        fn check_and_get_y<C: CS, J: JubJubParams<Fr = C::Fr>>(
+            x: &CNum<C>,
             params: &J,
-        ) -> (CBool<Fr>, CNum<Fr>) {
+        ) -> (CBool<C>, CNum<C>) {
             let g = (x.square() * (x + params.montgomery_a()) + x) / params.montgomery_b();
 
             let preimage_value = g.get_value().map(|g| match g.even_sqrt() {
@@ -235,9 +235,9 @@ impl<Fr: PrimeField> CEdwardsPoint<Fr> {
     }
 }
 
-impl<Fr: PrimeField> CMontgomeryPoint<Fr> {
+impl<C: CS> CMontgomeryPoint<C> {
     // assume self != (0, 0)
-    pub fn double<J: JubJubParams<Fr = Fr>>(&self, params: &J) -> Self {
+    pub fn double<J: JubJubParams<Fr = C::Fr>>(&self, params: &J) -> Self {
         let x2 = self.x.square();
         let l = (Num::from(3) * &x2 + Num::from(2) * params.montgomery_a() * &self.x + Num::ONE)
             .div_unchecked(&(Num::from(2) * params.montgomery_b() * &self.y));
@@ -251,7 +251,7 @@ impl<Fr: PrimeField> CMontgomeryPoint<Fr> {
     }
 
     // assume self != p
-    pub fn add<J: JubJubParams<Fr = Fr>>(&self, p: &Self, params: &J) -> Self {
+    pub fn add<J: JubJubParams<Fr = C::Fr>>(&self, p: &Self, params: &J) -> Self {
         let l = (&p.y - &self.y).div_unchecked(&(&p.x - &self.x));
         let b_l2 = params.montgomery_b() * &l.square();
         let a = params.montgomery_a();
@@ -263,7 +263,7 @@ impl<Fr: PrimeField> CMontgomeryPoint<Fr> {
     }
 
     // assume any nonzero point
-    pub fn into_edwards(&self) -> CEdwardsPoint<Fr> {
+    pub fn into_edwards(&self) -> CEdwardsPoint<C> {
         let y_is_zero = self.y.is_zero();
         CEdwardsPoint {
             x: self.x.div_unchecked(&(&self.y + y_is_zero.to_num())),

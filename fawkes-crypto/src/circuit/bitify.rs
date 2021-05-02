@@ -1,15 +1,15 @@
 use ff_uint::NumRepr;
 
 use crate::{
-    circuit::{bool::CBool, num::CNum},
+    circuit::{bool::CBool, num::CNum, cs::CS},
     core::signal::Signal,
     ff_uint::{BitIterLE, Num, PrimeField},
 };
 
-pub fn c_into_bits_le<Fr: PrimeField>(signal: &CNum<Fr>, limit: usize) -> Vec<CBool<Fr>> {
+pub fn c_into_bits_le<C: CS>(signal: &CNum<C>, limit: usize) -> Vec<CBool<C>> {
     match signal.as_const() {
         Some(value) => {
-            let mut bits = Vec::<CBool<Fr>>::new();
+            let mut bits = Vec::<CBool<C>>::new();
             let mut k = Num::ONE;
             let mut remained_value = value.clone();
             let value_bits = value.bit_iter_le().collect::<Vec<_>>();
@@ -31,12 +31,12 @@ pub fn c_into_bits_le<Fr: PrimeField>(signal: &CNum<Fr>, limit: usize) -> Vec<CB
             let mut bits = vec![signal.derive_const(&false); limit];
             let value_bits = match value {
                 Some(v) => v.bit_iter_le().map(|x| Some(x)).collect::<Vec<_>>(),
-                None => vec![None; Fr::MODULUS_BITS as usize],
+                None => vec![None; C::Fr::MODULUS_BITS as usize],
             };
 
             for i in 1..limit {
                 k = k.double();
-                let s = signal.derive_alloc::<CBool<Fr>>(value_bits[i].as_ref());
+                let s = signal.derive_alloc::<CBool<C>>(value_bits[i].as_ref());
                 remained_signal -= s.to_num() * k;
                 bits[i] = s;
             }
@@ -50,7 +50,7 @@ pub fn c_into_bits_le<Fr: PrimeField>(signal: &CNum<Fr>, limit: usize) -> Vec<CB
 // return true if s1 > s2
 // assuming log2(s1) <= limit, log2(s2) <= limit
 // TODO: optimize for constant cases
-pub fn c_comp<Fr: PrimeField>(s1:&CNum<Fr>, s2:&CNum<Fr>, limit:usize) -> CBool<Fr> {
+pub fn c_comp<C: CS>(s1:&CNum<C>, s2:&CNum<C>, limit:usize) -> CBool<C> {
     let t = (NumRepr::ONE << (limit as u32)) - NumRepr::ONE;
     let t = Num::from_uint(t).unwrap();
     let n = t + s1 - s2;
@@ -58,7 +58,7 @@ pub fn c_comp<Fr: PrimeField>(s1:&CNum<Fr>, s2:&CNum<Fr>, limit:usize) -> CBool<
 }
 
 // return true if signal > ct
-pub fn c_comp_constant<Fr: PrimeField>(signal: &[CBool<Fr>], ct: Num<Fr>) -> CBool<Fr> {
+pub fn c_comp_constant<C: CS>(signal: &[CBool<C>], ct: Num<C::Fr>) -> CBool<C> {
     let siglen = signal.len();
     assert!(siglen > 0, "should be at least one input signal");
     let cs = signal[0].get_cs();
@@ -101,14 +101,14 @@ pub fn c_comp_constant<Fr: PrimeField>(signal: &[CBool<Fr>], ct: Num<Fr>) -> CBo
     acc_bits[nsteps].clone()
 }
 
-pub fn c_into_bits_le_strict<Fr: PrimeField>(signal: &CNum<Fr>) -> Vec<CBool<Fr>> {
-    let bits = c_into_bits_le(signal, Fr::MODULUS_BITS as usize);
+pub fn c_into_bits_le_strict<C: CS>(signal: &CNum<C>) -> Vec<CBool<C>> {
+    let bits = c_into_bits_le(signal, C::Fr::MODULUS_BITS as usize);
     let cmp_res = c_comp_constant(&bits, -Num::ONE);
     cmp_res.assert_const(&false);
     bits
 }
 
-pub fn c_from_bits_le<Fr: PrimeField>(bits: &[CBool<Fr>]) -> CNum<Fr> {
+pub fn c_from_bits_le<C: CS>(bits: &[CBool<C>]) -> CNum<C> {
     assert!(bits.len() > 0, "should be positive number of bits");
     let mut acc = bits[0].to_num();
     let mut k = Num::ONE;
