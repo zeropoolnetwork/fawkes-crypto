@@ -207,7 +207,6 @@ fn struct_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
     }
 }
 
-// TODO: Implement for tuple variants
 fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
     let variant_names: Vec<Ident> = variants.iter().map(|v| v.ident.clone()).collect();
 
