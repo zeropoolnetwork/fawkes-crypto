@@ -140,13 +140,16 @@ impl<Fr: PrimeField>  CS for DebugCS<Fr> {
     // a*b === c
     fn enforce(a: &CNum<Self>, b: &CNum<Self>, c: &CNum<Self>) {
         let mut rcs = a.get_cs().borrow_mut();
-        let a = a.value.expect("a is empty");
-        let b = b.value.expect("b is empty");
-        let c = c.value.expect("c is empty");
-
         rcs.num_gates+=1;
 
-        assert!(a * b == c, "Not satisfied constraint");
+        match (a.value, b.value, c.value) {
+            (Some(a), Some(b), Some(c)) => {
+                assert!(a * b == c, "Not satisfied constraint");
+            },
+            (None, None, None) => {},
+            _ => panic!("Variables value missed")
+        }
+        
     }
 
     fn inputize(n: &CNum<Self>) {

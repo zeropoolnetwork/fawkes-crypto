@@ -63,19 +63,17 @@ fn expand(input: &DeriveInput, _: &str) -> TokenStream {
     .expect("attribute should be a type");
 
     let cs_path = parse_str::<Path>(&fetch_attr("CS", &input.attrs).unwrap_or(String::from("C"))).expect("attribute should be a path");
-    let ignore_list = fetch_attr("Ignore", &input.attrs).unwrap_or(String::from(""))
-        .split_whitespace().map(|e| e.parse::<usize>().unwrap()).collect::<Vec<usize>>();
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let body = match input.data {
         Data::Struct(ref data_struct) => match data_struct.fields {
             Fields::Unnamed(ref fields) => {
                 let field_vec = unnamed_to_vec(fields);
-                tuple_impl(&field_vec, &cs_path, &ignore_list)
+                tuple_impl(&field_vec, &cs_path)
             }
             Fields::Named(ref fields) => {
                 let field_vec = named_to_vec(fields);
-                struct_impl(&field_vec, &cs_path, &ignore_list)
+                struct_impl(&field_vec, &cs_path)
             }
             Fields::Unit => panic!("Unit structs not supported"),
         },
@@ -103,30 +101,14 @@ fn get_field_types<'a>(fields: &'a [&'a Field]) -> Vec<&'a Type> {
     get_field_types_iter(fields).collect()
 }
 
-fn filter_list<C:Clone>(inner:&[C], ignore_list:&[usize]) -> Vec<C> {
-    let mut res = vec![];
-    let inner_len = inner.len();
-    let mut ignore_list_iter = ignore_list.iter();
 
-    let mut cur = 0;
-    while cur < inner_len {
-        let to = ignore_list_iter.next().cloned().unwrap_or(inner_len);
-        for i in cur..to {
-            res.push(inner[i].clone());
-        }
-        cur = to+1;
-    }
-    res
-}
 
-fn tuple_impl(fields: &[&Field], cs_path:&Path, ignore_list:&[usize]) -> TokenStream {
+fn tuple_impl(fields: &[&Field], cs_path:&Path) -> TokenStream {
     let var_typenames = get_field_types(&fields);
     let var_ids = (0..fields.len())
         .map(|i| syn::Index::from(i))
         .collect::<Vec<_>>();
 
-    let var_typenames = filter_list(&var_typenames, ignore_list);
-    let var_ids = filter_list(&var_ids, ignore_list);
 
     let var_id_first = var_ids[0].clone();
 
@@ -175,16 +157,13 @@ fn tuple_impl(fields: &[&Field], cs_path:&Path, ignore_list:&[usize]) -> TokenSt
     }
 }
 
-fn struct_impl(fields: &[&Field], cs_path:&Path, ignore_list:&[usize]) -> TokenStream {
+fn struct_impl(fields: &[&Field], cs_path:&Path) -> TokenStream {
     let var_typenames = get_field_types(&fields);
     let var_names: &Vec<Ident> = &field_idents(fields).iter().map(|f| (**f).clone()).collect();
 
-
-    let var_typenames = filter_list(&var_typenames, ignore_list);
-    let var_names = filter_list(&var_names, ignore_list);
-
     let var_name_first = var_names[0].clone();
     
+
 
     quote! {
         fn get_value(&self) -> Option<Self::Value> {
