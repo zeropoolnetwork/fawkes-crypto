@@ -31,7 +31,7 @@ pub struct CS<Fr: PrimeField> {
 }
 
 impl<Fr: PrimeField> CS<Fr> {
-    pub fn num_constraints(&self) -> usize {
+    pub fn num_gate(&self) -> usize {
         self.gates.len()
     }
 
@@ -93,7 +93,7 @@ impl<Fr: PrimeField> CS<Fr> {
         ))
     }
 
-    pub fn enforce_pub(n: &CNum<Fr>) {
+    pub fn inputize(n: &CNum<Fr>) {
         let v = if n.lc.0 == Num::ONE && n.lc.2 == Num::ZERO {
             n.lc.1
         } else {

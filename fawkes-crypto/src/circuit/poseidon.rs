@@ -102,7 +102,7 @@ pub fn c_poseidon_merkle_tree_root<C: CS>(
 mod poseidon_test {
     use super::*;
     use crate::{
-        circuit::cs::SetupCS,
+        circuit::cs::DebugCS,
         core::signal::Signal,
         engines::bn256::Fr,
         native::poseidon::{poseidon, poseidon_merkle_proof_root, MerkleProof},
@@ -117,16 +117,16 @@ mod poseidon_test {
         let mut rng = thread_rng();
         let poseidon_params = PoseidonParams::<Fr>::new(N_INPUTS + 1, 8, 54);
 
-        let ref mut cs = SetupCS::rc_new(true);
+        let ref mut cs = DebugCS::rc_new();
 
         let data = (0..N_INPUTS)
             .map(|_| rng.gen())
             .collect::<SizedVec<_, N_INPUTS>>();
         let inputs = SizedVec::alloc(cs, Some(&data));
 
-        let mut n_constraints = cs.borrow().num_constraints();
+        let mut n_constraints = cs.borrow().num_gates();
         let res = c_poseidon(inputs.as_slice(), &poseidon_params);
-        n_constraints = cs.borrow().num_constraints() - n_constraints;
+        n_constraints = cs.borrow().num_gates() - n_constraints;
 
         let res2 = poseidon(data.as_slice(), &poseidon_params);
         res.assert_const(&res2);
@@ -142,7 +142,7 @@ mod poseidon_test {
         let mut rng = thread_rng();
         let poseidon_params = PoseidonParams::<Fr>::new(3, 8, 53);
 
-        let ref mut cs = SetupCS::rc_new(true);
+        let ref mut cs = DebugCS::rc_new();
 
         let leaf = rng.gen();
         let sibling = (0..PROOF_LENGTH)
@@ -156,7 +156,7 @@ mod poseidon_test {
         let signal_sibling = SizedVec::alloc(cs, Some(&sibling));
         let signal_path = SizedVec::alloc(cs, Some(&path));
 
-        let mut n_constraints = cs.borrow().num_constraints();
+        let mut n_constraints = cs.borrow().num_gates();
         let ref signal_proof = CMerkleProof {
             sibling: signal_sibling,
             path: signal_path,
@@ -165,7 +165,7 @@ mod poseidon_test {
         let res = c_poseidon_merkle_proof_root(&signal_leaf, &signal_proof, &poseidon_params);
         let elapsed = now.elapsed();
 
-        n_constraints = cs.borrow().num_constraints() - n_constraints;
+        n_constraints = cs.borrow().num_gates() - n_constraints;
 
         let proof = MerkleProof { sibling, path };
         let res2 = poseidon_merkle_proof_root(leaf, &proof, &poseidon_params);

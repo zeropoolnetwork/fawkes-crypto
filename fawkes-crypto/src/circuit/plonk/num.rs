@@ -108,7 +108,7 @@ impl<Fr: PrimeField> Signal<Fr> for CNum<Fr> {
     }
 
     fn inputize(&self) {
-        CS::enforce_pub(&self);
+        CS::inputize(&self);
     }
 
     fn get_value(&self) -> Option<Self::Value> {

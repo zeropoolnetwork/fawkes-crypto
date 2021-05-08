@@ -276,7 +276,7 @@ impl<C: CS> CMontgomeryPoint<C> {
 mod ecc_test {
     use super::*;
     use crate::{
-        circuit::{bitify::c_into_bits_le_strict, cs::SetupCS},
+        circuit::{bitify::c_into_bits_le_strict, cs::DebugCS},
         engines::bn256::{Fr, JubJubBN256},
         rand::{thread_rng, Rng},
     };
@@ -288,7 +288,7 @@ mod ecc_test {
 
         let t = rng.gen();
 
-        let ref mut cs = SetupCS::rc_new(true);
+        let ref mut cs = DebugCS::rc_new();
         let signal_t = CNum::alloc(cs, Some(&t));
 
         let signal_p = CEdwardsPoint::from_scalar(&signal_t, &jubjub_params);
@@ -305,12 +305,12 @@ mod ecc_test {
         let p =
             EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params).mul(Num::from(8), &jubjub_params);
 
-        let ref mut cs = SetupCS::rc_new(true);
+        let ref mut cs = DebugCS::rc_new();
         let signal_x = CNum::alloc(cs, Some(&p.x));
 
-        let mut n_constraints = cs.borrow().num_constraints();
+        let mut n_constraints = cs.borrow().num_gates();
         let res = CEdwardsPoint::subgroup_decompress(&signal_x, &jubjub_params);
-        n_constraints = cs.borrow().num_constraints() - n_constraints;
+        n_constraints = cs.borrow().num_gates() - n_constraints;
 
         res.y.assert_const(&p.y);
 
@@ -329,7 +329,7 @@ mod ecc_test {
 
         let p3 = p1.add(&p2, &jubjub_params);
 
-        let ref mut cs = SetupCS::rc_new(true);
+        let ref mut cs = DebugCS::rc_new();
         let signal_p1 = CEdwardsPoint::alloc(cs, Some(&p1));
         let signal_p2 = CEdwardsPoint::alloc(cs, Some(&p2));
 
@@ -347,7 +347,7 @@ mod ecc_test {
 
         let p3 = p.double();
 
-        let ref mut cs = SetupCS::rc_new(true);
+        let ref mut cs = DebugCS::rc_new();
         let signal_p = CEdwardsPoint::alloc(cs, Some(&p));
 
         let signal_p3 = signal_p.double(&jubjub_params);
@@ -361,7 +361,7 @@ mod ecc_test {
         let jubjub_params = JubJubBN256::new();
         let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
         let mp = p.into_montgomery().unwrap();
-        let ref mut cs = SetupCS::rc_new(true);
+        let ref mut cs = DebugCS::rc_new();
         let signal_p = CEdwardsPoint::alloc(cs, Some(&p));
         let signal_mp = signal_p.into_montgomery();
         signal_mp.assert_const(&mp);
@@ -374,7 +374,7 @@ mod ecc_test {
 
         let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
         let mp = p.into_montgomery().unwrap();
-        let ref mut cs = SetupCS::rc_new(true);
+        let ref mut cs = DebugCS::rc_new();
         let signal_mp = CMontgomeryPoint::alloc(cs, Some(&mp));
         let signal_p = signal_mp.into_edwards();
 
@@ -391,7 +391,7 @@ mod ecc_test {
 
         let p3 = p1.add(&p2, &jubjub_params);
 
-        let ref mut cs = SetupCS::rc_new(true);
+        let ref mut cs = DebugCS::rc_new();
         let signal_p1 = CEdwardsPoint::alloc(cs, Some(&p1));
         let signal_p2 = CEdwardsPoint::alloc(cs, Some(&p2));
 
@@ -412,7 +412,7 @@ mod ecc_test {
         let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
         let p3 = p.double();
 
-        let ref mut cs = SetupCS::rc_new(true);
+        let ref mut cs = DebugCS::rc_new();
         let signal_p = CEdwardsPoint::alloc(cs, Some(&p));
         let signal_mp = signal_p.into_montgomery();
         let signal_mp3 = signal_mp.double(&jubjub_params);
@@ -432,15 +432,15 @@ mod ecc_test {
 
         let p3 = p.mul(n.to_other_reduced(), &jubjub_params);
 
-        let ref mut cs = SetupCS::rc_new(true);
+        let ref mut cs = DebugCS::rc_new();
         let signal_p = CEdwardsPoint::alloc(cs, Some(&p));
         let signal_n = CNum::alloc(cs, Some(&n));
 
         let signal_n_bits = c_into_bits_le_strict(&signal_n);
 
-        let mut n_constraints = cs.borrow().num_constraints();
+        let mut n_constraints = cs.borrow().num_gates();
         let signal_p3 = signal_p.mul(&signal_n_bits, &jubjub_params);
-        n_constraints = cs.borrow().num_constraints() - n_constraints;
+        n_constraints = cs.borrow().num_gates() - n_constraints;
 
         signal_p3.assert_const(&p3);
         println!("edwards_mul constraints = {}", n_constraints);
@@ -457,15 +457,15 @@ mod ecc_test {
 
         let p3 = p.mul(n.to_other_reduced(), &jubjub_params);
 
-        let ref mut cs = SetupCS::rc_new(true);
+        let ref mut cs = DebugCS::rc_new();
         let signal_p = CEdwardsPoint::from_const(cs, &p);
         let signal_n = CNum::alloc(cs, Some(&n));
 
         let signal_n_bits = c_into_bits_le_strict(&signal_n);
 
-        let mut n_constraints = cs.borrow().num_constraints();
+        let mut n_constraints = cs.borrow().num_gates();
         let signal_p3 = signal_p.mul(&signal_n_bits, &jubjub_params);
-        n_constraints = cs.borrow().num_constraints() - n_constraints;
+        n_constraints = cs.borrow().num_gates() - n_constraints;
 
         signal_p3.assert_const(&p3);
 

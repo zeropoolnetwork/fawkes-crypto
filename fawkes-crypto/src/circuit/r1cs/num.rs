@@ -1,12 +1,13 @@
 use crate::{
     circuit::{
         bool::CBool,
-        cs::{CS, LC, RCS},
+        cs::{CS, RCS},
+        lc::{LC, Index}
     },
     core::signal::Signal,
     ff_uint::{Num},
 };
-use linked_list::{Cursor, LinkedList};
+
 use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
@@ -15,7 +16,7 @@ use std::{
 pub struct CNum<C: CS> {
     pub value: Option<Num<C::Fr>>,
     // a*x + b
-    pub lc: LC<C>,
+    pub lc: LC<C::Fr>,
     pub cs: RCS<C>,
 }
 
@@ -98,22 +99,35 @@ impl<C: CS> Signal<C> for CNum<C> {
     type Value = Num<C::Fr>;
 
     fn as_const(&self) -> Option<Self::Value> {
-        if self.lc.0.len() == 0 {
+        let mut rcs = self.get_cs().borrow_mut();
+        
+        if let Some(c) = rcs.const_tracker_before() {
+            if c {
+                return self.get_value()
+            } else {
+                return None;
+            }
+        }
+
+        let res = if self.lc.0.len() == 0 {
             Some(Num::ZERO)
         } else if self.lc.0.len() == 1 {
             let front = self.lc.0.front().unwrap();
-            if front.1 == 0 {
+            if front.1 == Index::Input(0) {
                 Some(front.0)
             } else {
                 None
             }
         } else {
             None
-        }
+        };
+
+        rcs.const_tracker_after(res.is_some());
+        res
     }
 
     fn inputize(&self) {
-        CS::enforce_pub(&self);
+        CS::inputize(&self);
     }
 
     fn get_value(&self) -> Option<Self::Value> {
@@ -122,11 +136,9 @@ impl<C: CS> Signal<C> for CNum<C> {
 
     fn from_const(cs: &RCS<C>, value: &Self::Value) -> Self {
         let value = value.clone();
-        let mut ll = LinkedList::new();
-        ll.push_back((value, 0));
         Self {
             value: Some(value),
-            lc: LC(ll),
+            lc: LC::from_parts(value, Index::Input(0)),
             cs: cs.clone(),
         }
     }
@@ -189,49 +201,13 @@ impl<C: CS> std::ops::Neg for CNum<C> {
 
 forward_unop_ex!(impl<C: CS> Neg for CNum<C>, neg);
 
-#[derive(Eq, PartialEq)]
-enum LookupAction {
-    Add,
-    Insert,
-}
 
-#[inline]
-fn ll_lookup<V, K: PartialEq + PartialOrd>(cur: &mut Cursor<(V, K)>, n: K) -> LookupAction {
-    loop {
-        match cur.peek_next() {
-            Some((_, k)) => {
-                if *k == n {
-                    return LookupAction::Add;
-                } else if *k > n {
-                    return LookupAction::Insert;
-                }
-            }
-            None => {
-                return LookupAction::Insert;
-            }
-        }
-        cur.seek_forward(1);
-    }
-}
 
 impl<'l, C: CS> AddAssign<&'l CNum<C>> for CNum<C> {
     #[inline]
     fn add_assign(&mut self, other: &'l CNum<C>) {
         self.value = self.value.map(|a| other.value.map(|b| a + b)).flatten();
-
-        let mut cur_a_ll = self.lc.0.cursor();
-
-        for (v, k) in other.lc.0.iter() {
-            if ll_lookup(&mut cur_a_ll, *k) == LookupAction::Add {
-                let t = cur_a_ll.peek_next().unwrap();
-                t.0 += *v;
-                if t.0.is_zero() {
-                    cur_a_ll.remove();
-                }
-            } else {
-                cur_a_ll.insert((*v, *k))
-            }
-        }
+        self.lc+=&other.lc;
     }
 }
 
@@ -246,20 +222,7 @@ impl<'l, C: CS> SubAssign<&'l CNum<C>> for CNum<C> {
     #[inline]
     fn sub_assign(&mut self, other: &'l CNum<C>) {
         self.value = self.value.map(|a| other.value.map(|b| a - b)).flatten();
-
-        let mut cur_a_ll = self.lc.0.cursor();
-
-        for (v, k) in other.lc.0.iter() {
-            if ll_lookup(&mut cur_a_ll, *k) == LookupAction::Add {
-                let t = cur_a_ll.peek_next().unwrap();
-                t.0 -= *v;
-                if t.0.is_zero() {
-                    cur_a_ll.remove();
-                }
-            } else {
-                cur_a_ll.insert((-*v, *k))
-            }
-        }
+        self.lc-=&other.lc;
     }
 }
 
@@ -277,9 +240,7 @@ impl<'l, C: CS> MulAssign<&'l Num<C::Fr>> for CNum<C> {
             *self = self.derive_const(&Num::ZERO)
         } else {
             self.value = self.value.map(|v| v * other);
-            for (v, _) in self.lc.0.iter_mut() {
-                *v *= other;
-            }
+            self.lc*=other;
         }
     }
 }

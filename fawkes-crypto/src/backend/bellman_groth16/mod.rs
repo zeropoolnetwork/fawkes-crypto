@@ -1,8 +1,15 @@
 use crate::{
-    circuit::cs::{RCS, SetupCS},
+    circuit::{
+        cs::{RCS, WitnessCS, CS, Gate},
+        lc::{Index}
+    },
     core::signal::Signal,
     ff_uint::{Num, PrimeField},
 };
+
+use bit_vec::BitVec;
+
+use bellman::{ConstraintSystem, SynthesisError};
 
 #[cfg(feature = "borsh_support")]
 use borsh::{BorshSerialize, BorshDeserialize};
@@ -10,7 +17,7 @@ use borsh::{BorshSerialize, BorshDeserialize};
 use serde::{Serialize, Deserialize};
 
 use bellman::pairing::{CurveAffine, RawEncodable};
-use std::io::Cursor;
+use std::{io::Cursor, marker::PhantomData};
 
 pub mod engines;
 #[cfg(feature = "rand_support")]
@@ -27,7 +34,78 @@ pub trait Engine {
 }
 
 #[repr(transparent)]
-struct BellmanCS<E: Engine>(RCS<SetupCS<E::Fr>>);
+struct BellmanCS<E: Engine, Con:CS<Fr=E::Fr>>(RCS<Con>, PhantomData<E>);
+
+impl<E: Engine, Con:CS<Fr=E::Fr>> BellmanCS<E,Con> {
+    fn new(inner:RCS<Con>) -> Self {
+        Self(inner, PhantomData)
+    }
+}
+
+pub fn convert_lc<E: Engine>(
+    lc: &[(Num<E::Fr>, Index)],
+    variables_input: &[bellman::Variable],
+    variables_aux: &[bellman::Variable],    
+) -> bellman::LinearCombination<E::BE> {
+    let mut res = Vec::with_capacity(lc.len());
+
+    for e in lc.iter() {
+        let k = num_to_bellman_fp(e.0);
+        let v = match e.1 {
+            Index::Input(i)=>variables_input[i],
+            Index::Aux(i)=>variables_aux[i]
+        };
+        res.push((v, k));
+    }
+    bellman::LinearCombination::new(res)
+}
+
+impl<E: Engine, Con:CS<Fr=E::Fr>> bellman::Circuit<E::BE> for BellmanCS<E, Con> {
+    fn synthesize<BCS: ConstraintSystem<E::BE>>(
+        self,
+        bellman_cs: &mut BCS,
+    ) -> Result<(), SynthesisError> {
+        let rcs = self.0;
+        let cs = rcs.borrow();
+        let num_input = cs.num_input();
+        let num_aux = cs.num_aux();
+        let num_gates = cs.num_gates();
+
+        let mut variables_input = Vec::with_capacity(num_input);
+        let mut variables_aux = Vec::with_capacity(num_aux);
+
+        variables_input.push(BCS::one());
+        for i in 1..num_input {
+            let v = bellman_cs.alloc_input(
+                || format!("input_{}", i),
+                || cs.get_value(Index::Input(i)).map(num_to_bellman_fp).ok_or(SynthesisError::AssignmentMissing)
+            ).unwrap();
+            variables_input.push(v);
+        }
+
+        for i in 0..num_aux {
+            let v = bellman_cs.alloc(
+                || format!("aux_{}", i),
+                || cs.get_value(Index::Aux(i)).map(num_to_bellman_fp).ok_or(SynthesisError::AssignmentMissing)
+            ).unwrap();
+            variables_aux.push(v);
+        }
+
+        
+        
+        for i in 0..num_gates {
+            let g = cs.get_gate(i);
+            bellman_cs.enforce(
+                || format!("constraint {}", i),
+                |_| convert_lc::<E>(&g.0, &variables_input, &variables_aux),
+                |_| convert_lc::<E>(&g.1, &variables_input, &variables_aux),
+                |_| convert_lc::<E>(&g.2, &variables_input, &variables_aux),
+            );
+        }
+        Ok(())
+    }
+}
+
 
 pub fn num_to_bellman_fp<Fx: PrimeField, Fy: bellman::pairing::ff::PrimeField>(
     from: Num<Fx>,
@@ -63,11 +141,15 @@ pub fn bellman_fp_to_num<Fx: PrimeField, Fy: bellman::pairing::ff::PrimeField>(
     to
 }
 
-pub struct Parameters<E: Engine>(bellman::groth16::Parameters<E::BE>);
+pub struct Parameters<E: Engine>(bellman::groth16::Parameters<E::BE>, Vec<Gate<E::Fr>>, BitVec);
 
 impl<E: Engine> Parameters<E> {
     pub fn get_vk(&self) -> verifier::VK<E> {
         verifier::VK::from_bellman(&self.0.vk)
+    }
+
+    pub fn get_witness_rcs(&self)->RCS<WitnessCS<E::Fr>> {
+        WitnessCS::rc_new(&self.1, &self.2)
     }
 }
 
@@ -197,12 +279,11 @@ mod bellman_groth16_test {
     use crate::engines::bn256::Fr;
     use crate::native::poseidon::{poseidon_merkle_proof_root, MerkleProof, PoseidonParams};
     use crate::rand::{thread_rng, Rng};
-    use ff_uint::PrimeField;
 
     #[test]
     fn test_circuit_poseidon_merkle_root() {
-        fn circuit<Fr: PrimeField>(public: CNum<Fr>, secret: (CNum<Fr>, CMerkleProof<Fr, U32>)) {
-            let poseidon_params = PoseidonParams::<Fr>::new(3, 8, 53);
+        fn circuit<Con:CS>(public: CNum<Con>, secret: (CNum<Con>, CMerkleProof<Con, 32>)) {
+            let poseidon_params = PoseidonParams::<Con::Fr>::new(3, 8, 53);
             let res = c_poseidon_merkle_proof_root(&secret.0, &secret.1, &poseidon_params);
             res.assert_eq(&public);
         }
@@ -214,12 +295,14 @@ mod bellman_groth16_test {
         let leaf = rng.gen();
         let sibling = (0..PROOF_LENGTH)
             .map(|_| rng.gen())
-            .collect::<SizedVec<_, U32>>();
+            .collect::<SizedVec<_, 32>>();
         let path = (0..PROOF_LENGTH)
             .map(|_| rng.gen())
-            .collect::<SizedVec<bool, U32>>();
+            .collect::<SizedVec<bool, 32>>();
         let proof = MerkleProof { sibling, path };
         let root = poseidon_merkle_proof_root(leaf, &proof, &poseidon_params);
+
+        println!("BitVec length {}", params.2.len());
 
         let (inputs, snark_proof) = prover::prove(&params, &root, &(leaf, proof), circuit);
 
