@@ -1,6 +1,6 @@
 [package]
 name = "fawkes-crypto"
-version = "4.0.0"
+version = "4.0.1"
 authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
 description = "zk-SNARK circuit building framework"
 readme = "README.md"
@@ -20,7 +20,7 @@ rand = { version = "0.7.3", optional = true }
 byteorder = "1"
 serde = { version = "1.0", features = ["derive"], optional = true }
 borsh = { version = "0.8.2", optional = true }
-fawkes-crypto_derive = {version="4.0.0", path = "../fawkes-crypto_derive"}
+fawkes-crypto_derive = {version="4.0.1", path = "../fawkes-crypto_derive"}
 impl-trait-for-tuples = "0.1.3"
 getrandom = { version = "0.2", optional = true }
 bit-vec = "0.6.3"

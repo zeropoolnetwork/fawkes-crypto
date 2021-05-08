@@ -62,29 +62,31 @@ fn expand(input: &DeriveInput, _: &str) -> TokenStream {
     )
     .expect("attribute should be a type");
 
-    let field_path = parse_str::<Path>(&fetch_attr("Field", &input.attrs).unwrap_or(String::from("C"))).expect("attribute should be a path");
+    let cs_path = parse_str::<Path>(&fetch_attr("CS", &input.attrs).unwrap_or(String::from("C"))).expect("attribute should be a path");
+    let ignore_list = fetch_attr("Ignore", &input.attrs).unwrap_or(String::from(""))
+        .split_whitespace().map(|e| e.parse::<usize>().unwrap()).collect::<Vec<usize>>();
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let body = match input.data {
         Data::Struct(ref data_struct) => match data_struct.fields {
             Fields::Unnamed(ref fields) => {
                 let field_vec = unnamed_to_vec(fields);
-                tuple_impl(&field_vec, &field_path)
+                tuple_impl(&field_vec, &cs_path, &ignore_list)
             }
             Fields::Named(ref fields) => {
                 let field_vec = named_to_vec(fields);
-                struct_impl(&field_vec, &field_path)
+                struct_impl(&field_vec, &cs_path, &ignore_list)
             }
-            Fields::Unit => struct_impl(&[], &field_path),
+            Fields::Unit => panic!("Unit structs not supported"),
         },
         // Data::Enum(ref data_enum) => {
-        //     enum_impl(data_enum.variants.iter().cloned().collect(), &field_path)
+        //     enum_impl(data_enum.variants.iter().cloned().collect(), &cs_path)
         // },
         _ => panic!("Only structs can derive a constructor"),
     };
 
     quote! {
-        impl #impl_generics Signal<#field_path> for #input_type#ty_generics #where_clause {
+        impl #impl_generics Signal<#cs_path> for #input_type#ty_generics #where_clause {
             type Value = #value_type;
 
             #body
@@ -101,13 +103,32 @@ fn get_field_types<'a>(fields: &'a [&'a Field]) -> Vec<&'a Type> {
     get_field_types_iter(fields).collect()
 }
 
+fn filter_list<C:Clone>(inner:&[C], ignore_list:&[usize]) -> Vec<C> {
+    let mut res = vec![];
+    let inner_len = inner.len();
+    let mut ignore_list_iter = ignore_list.iter();
 
+    let mut cur = 0;
+    while cur < inner_len {
+        let to = ignore_list_iter.next().cloned().unwrap_or(inner_len);
+        for i in cur..to {
+            res.push(inner[i].clone());
+        }
+        cur = to+1;
+    }
+    res
+}
 
-fn tuple_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
+fn tuple_impl(fields: &[&Field], cs_path:&Path, ignore_list:&[usize]) -> TokenStream {
     let var_typenames = get_field_types(&fields);
     let var_ids = (0..fields.len())
         .map(|i| syn::Index::from(i))
         .collect::<Vec<_>>();
+
+    let var_typenames = filter_list(&var_typenames, ignore_list);
+    let var_ids = filter_list(&var_ids, ignore_list);
+
+    let var_id_first = var_ids[0].clone();
 
     quote! {
         fn get_value(&self) -> Option<Self::Value> {
@@ -118,15 +139,15 @@ fn tuple_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
             Some(Self::Value{#(#var_ids:self.#var_ids.as_const()?),*})
         }
 
-        fn switch(&self, bit: &CBool<#field_path>, if_else: &Self) -> Self {
+        fn switch(&self, bit: &CBool<#cs_path>, if_else: &Self) -> Self {
             Self( #(self. #var_ids .switch(bit, &if_else. #var_ids)),* )
         }
 
-        fn get_cs(&self) -> &RCS<#field_path> {
-            self.0.get_cs()
+        fn get_cs(&self) -> &RCS<#cs_path> {
+            self. #var_id_first .get_cs()
         }
 
-        fn from_const(cs:&RCS<#field_path>, value: &Self::Value) -> Self {
+        fn from_const(cs:&RCS<#cs_path>, value: &Self::Value) -> Self {
             Self(#(<#var_typenames>::from_const(cs, &value.#var_ids)),*)
         }
 
@@ -142,23 +163,28 @@ fn tuple_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
             #(self. #var_ids .assert_eq(&other. #var_ids);)*
         }
 
-        fn is_eq(&self, other: &Self) -> CBool<#field_path> {
+        fn is_eq(&self, other: &Self) -> CBool<#cs_path> {
             let mut acc = self.derive_const(&true);
             #(acc &= self. #var_ids .is_eq(&other. #var_ids);)*
             acc
         }
 
-        fn alloc(cs:&RCS<#field_path>, value:Option<&Self::Value>) -> Self {
+        fn alloc(cs:&RCS<#cs_path>, value:Option<&Self::Value>) -> Self {
             Self(#(<#var_typenames>::alloc(cs, value.map(|v| &v.#var_ids))),*)
         }
     }
 }
 
-fn struct_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
+fn struct_impl(fields: &[&Field], cs_path:&Path, ignore_list:&[usize]) -> TokenStream {
+    let var_typenames = get_field_types(&fields);
     let var_names: &Vec<Ident> = &field_idents(fields).iter().map(|f| (**f).clone()).collect();
 
+
+    let var_typenames = filter_list(&var_typenames, ignore_list);
+    let var_names = filter_list(&var_names, ignore_list);
+
     let var_name_first = var_names[0].clone();
-    let var_typenames = get_field_types(&fields);
+    
 
     quote! {
         fn get_value(&self) -> Option<Self::Value> {
@@ -169,15 +195,15 @@ fn struct_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
             Some(Self::Value {#(#var_names: self.#var_names.as_const()?),*})
         }
 
-        fn switch(&self, bit: &CBool<#field_path>, if_else: &Self) -> Self {
+        fn switch(&self, bit: &CBool<#cs_path>, if_else: &Self) -> Self {
             Self {#(#var_names: self.#var_names.switch(bit, &if_else.#var_names)),*}
         }
 
-        fn get_cs(&self) -> &RCS<#field_path> {
+        fn get_cs(&self) -> &RCS<#cs_path> {
             self.#var_name_first.get_cs()
         }
 
-        fn from_const(cs:&RCS<#field_path>, value: &Self::Value) -> Self {
+        fn from_const(cs:&RCS<#cs_path>, value: &Self::Value) -> Self {
             Self {#(#var_names: <#var_typenames>::from_const(cs, &value.#var_names)),*}
         }
 
@@ -193,13 +219,13 @@ fn struct_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
             #(self. #var_names .assert_eq(&other. #var_names);)*
         }
 
-        fn is_eq(&self, other: &Self) -> CBool<#field_path> {
+        fn is_eq(&self, other: &Self) -> CBool<#cs_path> {
             let mut acc = self.derive_const(&true);
             #(acc &= self. #var_names .is_eq(&other. #var_names);)*
             acc
         }
 
-        fn alloc(cs:&RCS<#field_path>, value:Option<&Self::Value>) -> Self {
+        fn alloc(cs:&RCS<#cs_path>, value:Option<&Self::Value>) -> Self {
             Self {#(#var_names: <#var_typenames>::alloc(cs, value.map(|v| &v.#var_names))),*}
         }
 
@@ -208,7 +234,7 @@ fn struct_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
 }
 
 /* 
-fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
+fn enum_impl(variants: Vec<Variant>, cs_path: &Path) -> TokenStream {
     let variant_names: Vec<Ident> = variants.iter().map(|v| v.ident.clone()).collect();
 
     // original field names
@@ -272,7 +298,7 @@ fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
             }
         }
 
-        fn switch(&self, bit: &CBool<#field_path>, if_else: &Self) -> Self {
+        fn switch(&self, bit: &CBool<#cs_path>, if_else: &Self) -> Self {
             match self {
                 #(Self::#variant_names { #(#field_names: #field_names_re),* } => {
                     if let Self::#variant_names { #(#field_names: #other_field_names),* } = if_else {
@@ -284,7 +310,7 @@ fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
             }
         }
 
-        fn get_cs(&self) -> &RCS<#field_path> {
+        fn get_cs(&self) -> &RCS<#cs_path> {
             match self {
                 #(Self::#variant_names { #(#field_names: #field_names_re),* } => {
                     #first_field_names.get_cs()
@@ -292,7 +318,7 @@ fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
             }
         }
 
-        fn from_const(cs:&RCS<#field_path>, value: &Self::Value) -> Self {
+        fn from_const(cs:&RCS<#cs_path>, value: &Self::Value) -> Self {
             match value {
                 #(Self::Value::#variant_names { #(#field_names: #field_names_re),* } => {
                     Self::#variant_names {#(#field_names: Signal::from_const(cs, #field_names_re)),*}
@@ -332,7 +358,7 @@ fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
             }
         }
 
-        fn is_eq(&self, other: &Self) -> CBool<#field_path> {
+        fn is_eq(&self, other: &Self) -> CBool<#cs_path> {
             let mut acc = self.derive_const(&true);
 
             match self {
@@ -346,7 +372,7 @@ fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
             acc
         }
 
-        fn alloc(cs: &RCS<#field_path>, value: Option<&Self::Value>) -> Self {
+        fn alloc(cs: &RCS<#cs_path>, value: Option<&Self::Value>) -> Self {
             if let Some(value) = value {
                 match value {
                     #(Self::Value::#variant_names { #(#field_names: #field_names_re),* } => {
