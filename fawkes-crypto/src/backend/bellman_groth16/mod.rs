@@ -34,10 +34,10 @@ pub trait Engine {
 }
 
 #[repr(transparent)]
-struct BellmanCS<E: Engine, Con:CS<Fr=E::Fr>>(RCS<Con>, PhantomData<E>);
+struct BellmanCS<E: Engine, C:CS<Fr=E::Fr>>(RCS<C>, PhantomData<E>);
 
-impl<E: Engine, Con:CS<Fr=E::Fr>> BellmanCS<E,Con> {
-    fn new(inner:RCS<Con>) -> Self {
+impl<E: Engine, C:CS<Fr=E::Fr>> BellmanCS<E,C> {
+    fn new(inner:RCS<C>) -> Self {
         Self(inner, PhantomData)
     }
 }
@@ -60,7 +60,7 @@ pub fn convert_lc<E: Engine>(
     bellman::LinearCombination::new(res)
 }
 
-impl<E: Engine, Con:CS<Fr=E::Fr>> bellman::Circuit<E::BE> for BellmanCS<E, Con> {
+impl<E: Engine, C:CS<Fr=E::Fr>> bellman::Circuit<E::BE> for BellmanCS<E, C> {
     fn synthesize<BCS: ConstraintSystem<E::BE>>(
         self,
         bellman_cs: &mut BCS,
@@ -282,8 +282,8 @@ mod bellman_groth16_test {
 
     #[test]
     fn test_circuit_poseidon_merkle_root() {
-        fn circuit<Con:CS>(public: CNum<Con>, secret: (CNum<Con>, CMerkleProof<Con, 32>)) {
-            let poseidon_params = PoseidonParams::<Con::Fr>::new(3, 8, 53);
+        fn circuit<C:CS>(public: CNum<C>, secret: (CNum<C>, CMerkleProof<C, 32>)) {
+            let poseidon_params = PoseidonParams::<C::Fr>::new(3, 8, 53);
             let res = c_poseidon_merkle_proof_root(&secret.0, &secret.1, &poseidon_params);
             res.assert_eq(&public);
         }
