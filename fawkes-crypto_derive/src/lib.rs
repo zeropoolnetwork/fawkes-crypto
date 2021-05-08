@@ -1,8 +1,8 @@
 extern crate proc_macro;
-use proc_macro2::{TokenStream, Span};
+use proc_macro2::{TokenStream/*, Span*/};
 use quote::quote;
 use syn::{
-    parse_str, Data, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed, Ident, Path, Type, Variant
+    parse_str, Data, DeriveInput, Field, Fields, FieldsNamed, FieldsUnnamed, Ident, Path, Type/*, Variant*/
 };
 
 
@@ -77,9 +77,9 @@ fn expand(input: &DeriveInput, _: &str) -> TokenStream {
             }
             Fields::Unit => struct_impl(&[], &field_path),
         },
-        Data::Enum(ref data_enum) => {
-            enum_impl(data_enum.variants.iter().cloned().collect(), &field_path)
-        },
+        // Data::Enum(ref data_enum) => {
+        //     enum_impl(data_enum.variants.iter().cloned().collect(), &field_path)
+        // },
         _ => panic!("Only structs can derive a constructor"),
     };
 
@@ -207,6 +207,7 @@ fn struct_impl(fields: &[&Field], field_path:&Path) -> TokenStream {
     }
 }
 
+/* 
 fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
     let variant_names: Vec<Ident> = variants.iter().map(|v| v.ident.clone()).collect();
 
@@ -358,3 +359,4 @@ fn enum_impl(variants: Vec<Variant>, field_path: &Path) -> TokenStream {
         }
     }
 }
+*/
