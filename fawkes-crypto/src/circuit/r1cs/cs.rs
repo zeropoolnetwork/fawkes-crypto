@@ -146,8 +146,7 @@ impl<Fr: PrimeField>  CS for DebugCS<Fr> {
             (Some(a), Some(b), Some(c)) => {
                 assert!(a * b == c, "Not satisfied constraint");
             },
-            (None, None, None) => {},
-            _ => panic!("Variables value missed")
+            _ => {}
         }
         
     }
