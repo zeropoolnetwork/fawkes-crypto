@@ -53,18 +53,20 @@ impl<C: CS> CNum<C> {
         }
     }
 
+
     pub fn is_zero(&self) -> CBool<C> {
         match self.as_const() {
             Some(c) => self.derive_const(&c.is_zero()),
             _ => {
                 let inv_value = self
                     .get_value()
-                    .map(|v| v.checked_inv().unwrap_or(Num::ONE));
+                    .map(|v| v.checked_inv().unwrap_or(Num::ZERO));
                 let inv_signal: CNum<C> = self.derive_alloc(inv_value.as_ref());
-                inv_signal.assert_nonzero();
-                let res_signal = inv_signal * self;
-                (Num::ONE - res_signal).to_bool()
-            }
+ 
+                let ref res_signal = -inv_signal * self + Num::ONE;
+                (res_signal*self).assert_zero();
+                CBool::new_unchecked(res_signal)
+            }   
         }
     }
 
