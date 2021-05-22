@@ -2,7 +2,8 @@ use crate::{
     circuit::{
         bool::CBool,
         cs::{CS, RCS},
-        lc::{LC, Index}
+        lc::{LC, Index},
+        bitify::c_into_bits_le_strict
     },
     core::signal::Signal,
     ff_uint::{Num},
@@ -23,6 +24,11 @@ pub struct CNum<C: CS> {
 impl<C: CS> CNum<C> {
     pub fn assert_zero(&self) {
         self.assert_const(&Num::ZERO)
+    }
+
+    pub fn assert_even(&self) {
+        let bits = c_into_bits_le_strict(&self);
+        bits[0].assert_const(&false);
     }
 
     // for 0/0 uncertainty case any return value is valid

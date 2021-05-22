@@ -106,18 +106,19 @@ impl<Fr: PrimeField> EdwardsPoint<Fr> {
             (x.square() * (x + montgomery_a) + x) / montgomery_b
         }
 
-        let t = t + Num::ONE;
         let t2g1 = t.square() * montgomery_u;
-
         let x2 = -Num::ONE / montgomery_a * (Num::ONE + t2g1.checked_inv().unwrap());
-
-        let (mx, my) = match g(x2, montgomery_a, montgomery_b).even_sqrt() {
+        let (mx, mut my) = match g(x2, montgomery_a, montgomery_b).sqrt() {
             Some(y2) => (x2, y2),
             _ => {
                 let x3 = x2 * t2g1;
-                let y3 = g(x3, montgomery_a, montgomery_b).even_sqrt().unwrap();
+                let y3 = g(x3, montgomery_a, montgomery_b).sqrt().unwrap();
                 (x3, y3)
             }
+        };
+
+        if (my * t).is_odd() {
+            my = -my
         };
 
         MontgomeryPoint { x: mx, y: my }
@@ -126,7 +127,7 @@ impl<Fr: PrimeField> EdwardsPoint<Fr> {
             .into_affine()
     }
 
-    // assume t!= -1
+    // assume t!= 0
     pub fn from_scalar<J: JubJubParams<Fr = Fr>>(t: Num<Fr>, params: &J) -> Self {
         Self::from_scalar_raw(
             t,

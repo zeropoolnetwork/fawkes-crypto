@@ -1,5 +1,5 @@
 use crate::{
-    circuit::{bitify::c_into_bits_le_strict, bool::CBool, cs::{CS, RCS}, mux::c_mux3, num::CNum},
+    circuit::{bool::CBool, cs::{CS, RCS}, mux::c_mux3, num::CNum},
     core::signal::Signal,
     ff_uint::Num,
     native::ecc::{EdwardsPoint, EdwardsPointEx, JubJubParams, MontgomeryPoint},
@@ -188,43 +188,50 @@ impl<C: CS> CEdwardsPoint<C> {
         }
     }
 
-    // assuming t!=-1
+    // assuming t!=-0
     pub fn from_scalar<J: JubJubParams<Fr = C::Fr>>(t: &CNum<C>, params: &J) -> Self {
-
-
         fn check_and_get_y<C: CS, J: JubJubParams<Fr = C::Fr>>(
             x: &CNum<C>,
+            t: &CNum<C>,
             params: &J,
         ) -> (CBool<C>, CNum<C>) {
             let g = (x.square() * (x + params.montgomery_a()) + x) / params.montgomery_b();
 
-            let preimage_value = g.get_value().map(|g| match g.even_sqrt() {
-                Some(g_sqrt) => g_sqrt,
-                _ => (g * params.montgomery_u()).even_sqrt().unwrap(),
+            let y_value = g.get_value().map(|g| {
+                let _y = match g.sqrt() {
+                    Some(g_sqrt) => g_sqrt,
+                    _ => (g * params.montgomery_u()).sqrt().unwrap(),
+                };
+                let _t = t.get_value().unwrap();
+                if (_y*_t).is_even() {
+                    _y
+                } else {
+                    -_y
+                }
             });
 
-            let preimage = x.derive_alloc(preimage_value.as_ref());
-            let preimage_bits = c_into_bits_le_strict(&preimage);
-            preimage_bits[0].assert_const(&false);
 
-            let preimage_square = preimage.square();
+            let y:CNum<C> = x.derive_alloc(y_value.as_ref());
 
-            let is_square = (&g - &preimage_square).is_zero();
-            let isnot_square = (&g * params.montgomery_u() - &preimage_square).is_zero();
+            (&y*t).assert_even();
+
+
+            let y2 = y.square();
+
+            let is_square = (&g - &y2).is_zero();
+            let isnot_square = (&g * params.montgomery_u() - &y2).is_zero();
 
             (&is_square ^ &isnot_square).assert_const(&true);
-            (is_square, preimage)
+            (is_square, y)
         }
-
-        let t = t + Num::ONE;
 
         let t2g1 = t.square() * params.montgomery_u();
 
         let x3 = -Num::ONE / params.montgomery_a() * (&t2g1 + Num::ONE);
         let x2 = x3.div_unchecked(&t2g1);
 
-        let (is_valid, y2) = check_and_get_y(&x2, params);
-        let (_, y3) = check_and_get_y(&x3, params);
+        let (is_valid, y2) = check_and_get_y(&x2, &t, params);
+        let (_, y3) = check_and_get_y(&x3, &t, params);
 
         let x = x2.switch(&is_valid, &x3);
         let y = y2.switch(&is_valid, &y3);
