@@ -141,7 +141,7 @@ pub fn bellman_fp_to_num<Fx: PrimeField, Fy: bellman::pairing::ff::PrimeField>(
     to
 }
 
-pub struct Parameters<E: Engine>(bellman::groth16::Parameters<E::BE>, Vec<Gate<E::Fr>>, BitVec);
+pub struct Parameters<E: Engine>(pub bellman::groth16::Parameters<E::BE>, pub Vec<Gate<E::Fr>>, pub BitVec);
 
 impl<E: Engine> Parameters<E> {
     pub fn get_vk(&self) -> verifier::VK<E> {
@@ -263,50 +263,5 @@ impl<E: Engine> G2Point<E> {
             let y_im = Num::from_mont_uint_unchecked(BorshDeserialize::deserialize(&mut cur).unwrap());
             Self((x_re, x_im), (y_re, y_im))
         }
-    }
-}
-
-#[cfg(feature = "heavy_tests")]
-#[cfg(test)]
-mod bellman_groth16_test {
-    use super::engines::Bn256;
-    use super::setup::setup;
-    use super::*;
-    use crate::circuit::num::CNum;
-    use crate::circuit::poseidon::{c_poseidon_merkle_proof_root, CMerkleProof};
-    use crate::core::signal::Signal;
-    use crate::core::sizedvec::SizedVec;
-    use crate::engines::bn256::Fr;
-    use crate::native::poseidon::{poseidon_merkle_proof_root, MerkleProof, PoseidonParams};
-    use crate::rand::{thread_rng, Rng};
-
-    #[test]
-    fn test_circuit_poseidon_merkle_root() {
-        fn circuit<C:CS>(public: CNum<C>, secret: (CNum<C>, CMerkleProof<C, 32>)) {
-            let poseidon_params = PoseidonParams::<C::Fr>::new(3, 8, 53);
-            let res = c_poseidon_merkle_proof_root(&secret.0, &secret.1, &poseidon_params);
-            res.assert_eq(&public);
-        }
-        let params = setup::<Bn256, _, _, _>(circuit);
-
-        const PROOF_LENGTH: usize = 32;
-        let mut rng = thread_rng();
-        let poseidon_params = PoseidonParams::<Fr>::new(3, 8, 53);
-        let leaf = rng.gen();
-        let sibling = (0..PROOF_LENGTH)
-            .map(|_| rng.gen())
-            .collect::<SizedVec<_, 32>>();
-        let path = (0..PROOF_LENGTH)
-            .map(|_| rng.gen())
-            .collect::<SizedVec<bool, 32>>();
-        let proof = MerkleProof { sibling, path };
-        let root = poseidon_merkle_proof_root(leaf, &proof, &poseidon_params);
-
-        println!("BitVec length {}", params.2.len());
-
-        let (inputs, snark_proof) = prover::prove(&params, &root, &(leaf, proof), circuit);
-
-        let res = verifier::verify(&params.get_vk(), &snark_proof, &inputs);
-        assert!(res, "Verifier result should be true");
     }
 }
