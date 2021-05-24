@@ -2,7 +2,7 @@ use crate::{
     circuit::{
         bool::CBool,
         cs::{CS, RCS},
-        lc::{LC, Index},
+        lc::{Index},
         bitify::c_into_bits_le_strict
     },
     core::signal::Signal,
@@ -13,11 +13,13 @@ use std::{
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
+use super::lc::AbstractLC;
+
 #[derive(Clone, Debug)]
 pub struct CNum<C: CS> {
     pub value: Option<Num<C::Fr>>,
     // a*x + b
-    pub lc: LC<C::Fr>,
+    pub lc: C::LC,
     pub cs: RCS<C>,
 }
 
@@ -117,18 +119,7 @@ impl<C: CS> Signal<C> for CNum<C> {
             }
         }
 
-        let res = if self.lc.0.len() == 0 {
-            Some(Num::ZERO)
-        } else if self.lc.0.len() == 1 {
-            let front = self.lc.0.front().unwrap();
-            if front.1 == Index::Input(0) {
-                Some(front.0)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+        let res = self.lc.as_const();
 
         rcs.const_tracker_after(res.is_some());
         res
@@ -146,7 +137,7 @@ impl<C: CS> Signal<C> for CNum<C> {
         let value = value.clone();
         Self {
             value: Some(value),
-            lc: LC::from_parts(value, Index::Input(0)),
+            lc: C::LC::from_parts(value, Index::Input(0)),
             cs: cs.clone(),
         }
     }
@@ -190,7 +181,7 @@ impl<C: CS> Signal<C> for CNum<C> {
 
 impl<C: CS> CNum<C> {
     pub fn capacity(&self) -> usize {
-        self.lc.0.len()
+        self.lc.capacity()
     }
 }
 
@@ -200,9 +191,7 @@ impl<C: CS> std::ops::Neg for CNum<C> {
     #[inline]
     fn neg(mut self) -> Self::Output {
         self.value = self.value.map(|x| -x);
-        for (v, _) in self.lc.0.iter_mut() {
-            *v = -*v;
-        }
+        self.lc = self.lc.neg();
         self
     }
 }
@@ -215,7 +204,7 @@ impl<'l, C: CS> AddAssign<&'l CNum<C>> for CNum<C> {
     #[inline]
     fn add_assign(&mut self, other: &'l CNum<C>) {
         self.value = self.value.map(|a| other.value.map(|b| a + b)).flatten();
-        self.lc+=&other.lc;
+        self.lc.add_assign(&other.lc);
     }
 }
 
@@ -230,7 +219,7 @@ impl<'l, C: CS> SubAssign<&'l CNum<C>> for CNum<C> {
     #[inline]
     fn sub_assign(&mut self, other: &'l CNum<C>) {
         self.value = self.value.map(|a| other.value.map(|b| a - b)).flatten();
-        self.lc-=&other.lc;
+        self.lc.sub_assign(&other.lc);
     }
 }
 
@@ -248,7 +237,7 @@ impl<'l, C: CS> MulAssign<&'l Num<C::Fr>> for CNum<C> {
             *self = self.derive_const(&Num::ZERO)
         } else {
             self.value = self.value.map(|v| v * other);
-            self.lc*=other;
+            self.lc.mul_assign(other);
         }
     }
 }

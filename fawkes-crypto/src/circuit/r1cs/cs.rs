@@ -1,12 +1,12 @@
 use crate::{
     circuit::{
         num::CNum,
-        lc::{LC, Index}
+        lc::{LC, Index, AbstractLC, ZeroLC}
     },
     core::signal::Signal,
     ff_uint::{Num, PrimeField}
 };
-use linked_list::LinkedList;
+
 use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 use bit_vec::BitVec;
 
@@ -23,6 +23,7 @@ pub struct Gate<Fr:PrimeField>(
 
 pub trait CS: Clone {
     type Fr: PrimeField;
+    type LC: AbstractLC<Self::Fr>;
 
     fn num_gates(&self) -> usize;
     fn num_input(&self) -> usize;
@@ -117,6 +118,7 @@ impl<'a, Fr: PrimeField> WitnessCS<'a, Fr> {
 
 impl<Fr: PrimeField>  CS for DebugCS<Fr> {
     type Fr = Fr;
+    type LC = LC<Fr>;
 
     fn num_gates(&self) -> usize {
         self.num_gates
@@ -171,6 +173,7 @@ impl<Fr: PrimeField>  CS for DebugCS<Fr> {
 }
 impl<'a, Fr: PrimeField> CS for WitnessCS<'a, Fr> {
     type Fr = Fr;
+    type LC = ZeroLC;
 
     fn num_gates(&self) -> usize {
         self.gates.len()
@@ -207,7 +210,7 @@ impl<'a, Fr: PrimeField> CS for WitnessCS<'a, Fr> {
         rcs.values_aux.push(value.cloned().expect("value is empty"));
         CNum {
             value: value.cloned(),
-            lc: LC(LinkedList::new()),
+            lc: ZeroLC,
             cs: cs.clone(),
         }
     }
@@ -223,6 +226,7 @@ impl<'a, Fr: PrimeField> CS for WitnessCS<'a, Fr> {
 
 impl<Fr: PrimeField> CS for BuildCS<Fr> {
     type Fr = Fr;
+    type LC = LC<Fr>;
 
     fn num_gates(&self) -> usize {
         self.gates.len()
