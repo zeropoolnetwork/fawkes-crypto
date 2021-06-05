@@ -4,6 +4,7 @@ use crate::{
     ff_uint::Num,
     native::poseidon::{MerkleProof, PoseidonParams},
 };
+use itertools::Itertools;
 
 #[derive(Clone, Signal)]
 #[Value = "MerkleProof<C::Fr, L>"]
@@ -34,6 +35,23 @@ fn mix<C: CS>(state: &mut [CNum<C>], params: &PoseidonParams<C::Fr>) {
     state.clone_from_slice(&new_state);
 }
 
+fn perm<C: CS>(state: &mut [CNum<C>], params: &PoseidonParams<C::Fr>) {
+    assert!(state.len() == params.t);
+    let half_f = params.f >> 1;
+
+    for i in 0..params.f + params.p {
+        ark(state, &params.c[i]);
+        if i < half_f || i >= half_f + params.p {
+            for j in 0..params.t {
+                state[j] = sigma(&state[j]);
+            }
+        } else {
+            state[0] = sigma(&state[0]);
+        }
+        mix(state, params);
+    }
+}
+
 pub fn c_poseidon<C: CS>(inputs: &[CNum<C>], params: &PoseidonParams<C::Fr>) -> CNum<C> {
     let n_inputs = inputs.len();
     assert!(
@@ -45,19 +63,19 @@ pub fn c_poseidon<C: CS>(inputs: &[CNum<C>], params: &PoseidonParams<C::Fr>) -> 
     let mut state = vec![CNum::from_const(cs, &Num::ZERO); params.t];
     (&mut state[0..n_inputs]).clone_from_slice(inputs);
 
-    let half_f = params.f >> 1;
+    perm(&mut state, params);
+    state[0].clone()
+}
 
-    for i in 0..params.f + params.p {
-        ark(&mut state, &params.c[i]);
-        if i < half_f || i >= half_f + params.p {
-            for j in 0..params.t {
-                state[j] = sigma(&state[j]);
-            }
-        } else {
-            state[0] = sigma(&state[0]);
-        }
-        mix(&mut state, params);
-    }
+
+pub fn c_poseidon_sponge<C: CS>(inputs: &[CNum<C>], params: &PoseidonParams<C::Fr>) -> CNum<C> {
+    let cs = inputs[0].get_cs();
+    let mut state = vec![CNum::from_const(cs, &Num::ZERO); params.t];
+    let size = CNum::from_const(cs, &Num::from(inputs.len() as u64));
+    core::iter::once(&size).chain(inputs.iter()).chunks(params.t-1).into_iter().for_each(|c| {
+        state.iter_mut().zip(c.into_iter()).for_each(|(l, r)| *l+=r);
+        perm(&mut state, params);
+    });
     state[0].clone()
 }
 
