@@ -5,6 +5,7 @@ use serde::{Serialize, Deserialize};
 
 use super::prover::Proof;
 use super::*;
+use super::group::{G1Point, G2Point};
 
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct VK<E: Engine> {

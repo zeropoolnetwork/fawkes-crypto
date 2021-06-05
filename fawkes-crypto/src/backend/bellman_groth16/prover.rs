@@ -1,6 +1,7 @@
 #[cfg(feature = "rand_support")]
 use super::osrng::OsRng;
 use super::*;
+use super::group::{G1Point, G2Point};
 
 #[cfg(feature = "serde_support")]
 use serde::{Serialize, Deserialize};
