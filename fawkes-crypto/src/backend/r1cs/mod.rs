@@ -2,8 +2,10 @@ use crate::circuit::lc::Index;
 use crate::circuit::cs::Gate;
 use crate::ff_uint::{Num, PrimeField, Uint};
 
+pub use r1cs_file::*;
+
 #[cfg(feature = "r1cs-file")]
-pub fn get_r1cs_file<Fr: PrimeField, const FS: usize>(gates: &Vec<Gate<Fr>>) -> r1cs_file::R1csFile<FS> {
+pub fn get_r1cs_file<Fr: PrimeField, const FS: usize>(gates: &Vec<Gate<Fr>>) -> R1csFile<FS> {
     use r1cs_file::*;
 
     let mut n_pub_in = 0;
