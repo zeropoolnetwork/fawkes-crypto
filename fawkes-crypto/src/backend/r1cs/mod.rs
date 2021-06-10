@@ -44,7 +44,7 @@ pub fn get_r1cs_file<Fr: PrimeField, const FS: usize>(gates: &Vec<Gate<Fr>>) -> 
     R1csFile {
         header: Header {
             prime: FieldElement::from(prime_bytes),
-            n_wires: 0,
+            n_wires: n_pub_in + n_prvt_in,
             n_pub_out: 0,
             n_pub_in,
             n_prvt_in,
