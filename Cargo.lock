@@ -180,6 +180,7 @@ dependencies = [
  "r1cs-file",
  "rand 0.7.3",
  "serde",
+ "wtns-file",
 ]
 
 [[package]]
@@ -803,3 +804,12 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "wtns-file"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68cf676c66595a09765db556e461d390c80d947959ced7b456a0b3163cc465cb"
+dependencies = [
+ "byteorder",
+]
