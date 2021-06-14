@@ -26,6 +26,7 @@ getrandom = { version = "0.2", optional = true }
 bit-vec = "0.6.3"
 itertools = "0.10.0"
 r1cs-file = { version = "0.2.1", optional = true }
+wtns-file = { version = "0.1.1", optional = true }
 
 [dependencies.blake2_rfc]
 version = "0.0.1"

@@ -3,6 +3,8 @@ use std::io::{self, Read, Write};
 use bit_vec::BitVec;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 pub use r1cs_file::*;
+pub use wtns_file::WtnsFile;
+
 use crate::circuit::cs::Gate;
 use crate::circuit::lc::Index;
 use crate::core::signal::Signal;
@@ -102,4 +104,24 @@ pub fn get_r1cs_file<Fr: PrimeField, const FS: usize>(
     let consts = ConstTracker(consts.clone());
 
     (r1cs_file, consts)
+}
+
+#[cfg(feature = "wtns-file")]
+pub fn get_witness<
+    'a,
+    Fr: PrimeField,
+    Pub: Signal<WitnessCS<'a, Fr>>,
+    Sec: Signal<WitnessCS<'a, Fr>>,
+    const FS: usize,
+>(
+    gates: &Vec<Gate<Fr>>,
+    consts: &BitVec,
+    input_pub: &Pub::Value,
+    input_sec: &Pub::Value,
+) -> WtnsFile {
+    let cs = WitnessCS::rc_new(gates, consts);
+
+    let signal_pub = Pub::alloc(cs, Some(input_pub));
+    signal_pub.inputize();
+    let signal_sec = Sec::alloc(cs, Some(input_sec));
 }

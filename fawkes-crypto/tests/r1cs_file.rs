@@ -20,7 +20,9 @@ fn test_parameters_get_r1cs_file() {
         let res = c_poseidon_merkle_proof_root(&secret.0, &secret.1, &poseidon_params);
         res.assert_eq(&public);
     }
+
     let params = setup::<Bn256, _, _, _>(circuit);
+
     let file = get_r1cs_file::<<Bn256 as Engine>::Fr, 32>(&params.1);
 
     assert!(true)
