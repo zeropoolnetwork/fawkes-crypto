@@ -807,9 +807,9 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "wtns-file"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68cf676c66595a09765db556e461d390c80d947959ced7b456a0b3163cc465cb"
+checksum = "97af06ea70a8f40f1c0e3db66fbae790455197bb3b9df3396329cdb0ccd22793"
 dependencies = [
  "byteorder",
 ]
