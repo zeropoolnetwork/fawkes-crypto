@@ -5,6 +5,7 @@ use crate::circuit::cs::Gate;
 use crate::circuit::lc::Index;
 use crate::ff_uint::{Num, PrimeField, Uint};
 use crate::backend::r1cs::ConstTrackerFile;
+use std::collections::HashSet;
 
 pub fn get_r1cs_file<Fr: PrimeField, const FS: usize>(
     gates: &Vec<Gate<Fr>>,
@@ -15,17 +16,26 @@ pub fn get_r1cs_file<Fr: PrimeField, const FS: usize>(
     let mut n_pub_in = 0;
     let mut n_prvt_in = 0;
 
+    let mut pub_inputs = HashSet::new();
+    let mut prvt_inputs = HashSet::new();
+
     let constraints = gates
         .iter()
         .map(|gate| {
             let mut map_comb = |(c, i): &(Num<Fr>, Index)| {
                 let i = match *i {
                     Index::Input(i) => {
-                        n_pub_in += 1;
+                        if pub_inputs.insert(i) {
+                            n_pub_in += 1;
+                        }
+
                         i
                     }
                     Index::Aux(i) => {
-                        n_prvt_in += 1;
+                        if prvt_inputs.insert(i) {
+                            n_prvt_in += 1;
+                        }
+
                         i
                     }
                 };
