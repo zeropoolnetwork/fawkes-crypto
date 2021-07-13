@@ -177,8 +177,10 @@ dependencies = [
  "impl-trait-for-tuples",
  "itertools",
  "linked-list",
+ "r1cs-file",
  "rand 0.7.3",
  "serde",
+ "wtns-file",
 ]
 
 [[package]]
@@ -499,6 +501,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "r1cs-file"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "608d0571aab9ad5679b5ce9583f72a61b4c6d539f4745fb9dc25fa8c58192cfd"
+dependencies = [
+ "byteorder",
+]
+
+[[package]]
 name = "rand"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -793,3 +804,12 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "wtns-file"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d3b856452298f68a5879e3901918bac5d753ca9fa4be8a983a37a3d25dabf0a"
+dependencies = [
+ "byteorder",
+]
