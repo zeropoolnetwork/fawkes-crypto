@@ -1,7 +1,7 @@
-use crate::{
-    ff_uint::{BitIterBE, Num, PrimeField},
-    serde::{Deserialize, Serialize},
-};
+use crate::ff_uint::{BitIterBE, Num, PrimeField};
+
+#[cfg(feature = "serde_support")]
+use crate::serde::{Deserialize, Serialize};
 
 #[cfg(feature = "rand_support")]
 use crate::rand::Rng;
@@ -14,15 +14,17 @@ pub struct EdwardsPointEx<Fr: PrimeField> {
     pub z: Num<Fr>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(bound(serialize = "", deserialize = ""))]
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", serde(bound(serialize = "", deserialize = "")))]
 pub struct EdwardsPoint<Fr: PrimeField> {
     pub x: Num<Fr>,
     pub y: Num<Fr>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(bound(serialize = "", deserialize = ""))]
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", serde(bound(serialize = "", deserialize = "")))]
 pub struct MontgomeryPoint<Fr: PrimeField> {
     pub x: Num<Fr>,
     pub y: Num<Fr>,

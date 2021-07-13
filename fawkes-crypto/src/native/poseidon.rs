@@ -2,12 +2,16 @@ use crate::{
     core::sizedvec::SizedVec,
     ff_uint::seedbox::{SeedboxBlake2, SeedBox, SeedBoxGen},
     ff_uint::{Num, PrimeField},
-    serde::{Deserialize, Serialize},
 };
+
+#[cfg(feature = "serde_support")]
+use crate::serde::{Deserialize, Serialize};
 
 use itertools::Itertools;
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", serde(bound(serialize = "", deserialize = "")))]
 pub struct PoseidonParams<Fr: PrimeField> {
     pub c: Vec<Vec<Num<Fr>>>,
     pub m: Vec<Vec<Num<Fr>>>,
@@ -18,20 +22,17 @@ pub struct PoseidonParams<Fr: PrimeField> {
 
 impl<Fr: PrimeField> PoseidonParams<Fr> {
     pub fn new(t: usize, f: usize, p: usize) -> Self {
-        let mut seedbox = SeedboxBlake2::new_with_salt(
-            format!("fawkes_poseidon(t={},f={},p={})", t, f, p).as_bytes(),
-        );
-
-        let c = (0..f + p)
-            .map(|_| (0..t).map(|_| seedbox.gen()).collect())
-            .collect();
-        let m = (0..t)
-            .map(|_| (0..t).map(|_| seedbox.gen()).collect())
-            .collect();
-        PoseidonParams { c, m, t, f, p }
+        Self::new_with_salt(t, f, p, "")
     }
 
     pub fn new_with_salt(t: usize, f: usize, p: usize, salt:&str) -> Self {
+
+        fn m<Fr: PrimeField>(n: usize, seedbox: &mut SeedboxBlake2) -> Vec<Vec<Num<Fr>>> {
+            let x = (0..n).map(|_| seedbox.gen()).collect::<Vec<_>>();
+            let y = (0..n).map(|_| seedbox.gen()).collect::<Vec<_>>();
+            (0..n).map(|i| (0..n).map(|j| Num::ONE/(x[i] + y[j]) ).collect()).collect()
+        }
+
         let mut seedbox = SeedboxBlake2::new_with_salt(
             format!("fawkes_poseidon(t={},f={},p={},salt={})", t, f, p, salt).as_bytes(),
         );
@@ -39,9 +40,7 @@ impl<Fr: PrimeField> PoseidonParams<Fr> {
         let c = (0..f + p)
             .map(|_| (0..t).map(|_| seedbox.gen()).collect())
             .collect();
-        let m = (0..t)
-            .map(|_| (0..t).map(|_| seedbox.gen()).collect())
-            .collect();
+        let m = m(t, &mut seedbox);
         PoseidonParams { c, m, t, f, p }
     }
 }
@@ -107,8 +106,9 @@ pub fn poseidon_sponge<Fr: PrimeField>(inputs: &[Num<Fr>], params: &PoseidonPara
 }
 
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(bound(serialize = "", deserialize = ""))]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", serde(bound(serialize = "", deserialize = "")))]
 pub struct MerkleProof<Fr: PrimeField, const L: usize> {
     pub sibling: SizedVec<Num<Fr>, L>,
     pub path: SizedVec<bool, L>,

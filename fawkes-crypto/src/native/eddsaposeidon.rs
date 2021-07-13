@@ -1,20 +1,30 @@
 use crate::{
-    borsh::{BorshDeserialize, BorshSerialize},
     constants::{PERSONALIZATION},
-    ff_uint::{Num, NumRepr, PrimeField},
+    ff_uint::{Num, NumRepr, PrimeField, Uint},
     native::{
         ecc::{EdwardsPoint, JubJubParams},
         poseidon::{poseidon, PoseidonParams},
     },
 };
+
+use byteorder::{ByteOrder, LittleEndian};
 use blake2_rfc::blake2s::Blake2s;
 
 fn hash_r<Fr: PrimeField, Fs: PrimeField>(sk: Num<Fs>, m: Num<Fr>) -> Num<Fs> {
     let mut h = Blake2s::with_params(32, &[], &[], PERSONALIZATION);
-    h.update(&sk.try_to_vec().unwrap());
-    h.update(&m.try_to_vec().unwrap());
 
-    let n = NumRepr::<Fs::Inner>::try_from_slice(h.finalize().as_ref()).unwrap();
+    sk.to_uint().as_inner().as_ref().iter().for_each(|x| h.update(&x.to_le_bytes()));
+    m.to_uint().as_inner().as_ref().iter().for_each(|x| h.update(&x.to_le_bytes()));
+
+    let res = h.finalize();
+    let res_ref = res.as_ref();
+
+    let mut n = NumRepr::<Fs::Inner>::ZERO;
+    assert!(res_ref.len()*8 == Fs::Inner::NUM_WORDS * Fs::Inner::WORD_BITS);
+    n.as_inner_mut().as_mut().iter_mut().enumerate().for_each(|(i, x)| {
+        *x = LittleEndian::read_u64(&res_ref[i * 8..(i + 1) * 8]);
+    });
+
     Num::from_uint_reduced(n)
 }
 
