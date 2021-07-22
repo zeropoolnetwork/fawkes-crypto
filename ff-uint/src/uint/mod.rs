@@ -406,7 +406,35 @@ macro_rules! construct_uint {
 					}
 				}
 
+				impl core::fmt::Display for $name {
+					fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+						if self.is_zero() {
+							return core::write!(f, "0");
+						}
 
+						let mut buf = [0_u8; $n_words * 20];
+						let mut i = buf.len() - 1;
+						let mut current = *self;
+						let ten = $name::from(10);
+
+						loop {
+							let rem = current.div_mod(ten).1;
+							let digit = rem.low_u64() as u8;
+							buf[i] = digit + b'0';
+							current = current.div_mod(ten).0;
+							if current.is_zero() {
+								break;
+							}
+							i -= 1;
+						}
+
+						// sequence of `'0'..'9'` chars is guaranteed to be a valid UTF8 string
+						let s = unsafe {
+							core::str::from_utf8_unchecked(&buf[i..])
+						};
+						f.write_str(s)
+					}
+				}
 
 				impl Uint for $name {
 					type Inner = [u64; $n_words];
