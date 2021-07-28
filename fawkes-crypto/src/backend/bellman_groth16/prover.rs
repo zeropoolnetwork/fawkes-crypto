@@ -10,9 +10,9 @@ use borsh::{BorshSerialize, BorshDeserialize};
 
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct Proof<E: Engine> {
-    a: G1Point<E>,
-    b: G2Point<E>,
-    c: G1Point<E>,
+    pub a: G1Point<E>,
+    pub b: G2Point<E>,
+    pub c: G1Point<E>,
 }
 
 impl<E: Engine> Proof<E> {

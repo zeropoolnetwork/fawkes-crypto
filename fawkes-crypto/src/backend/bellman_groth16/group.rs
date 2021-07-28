@@ -10,7 +10,7 @@ use super::engines::Engine;
 use ff_uint::Num;
 
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
-pub struct G1Point<E: Engine>(Num<E::Fq>, Num<E::Fq>);
+pub struct G1Point<E: Engine>(pub Num<E::Fq>, pub Num<E::Fq>);
 
 #[cfg(feature = "borsh_support")]
 impl<E: Engine> BorshSerialize for G1Point<E> {
@@ -82,7 +82,7 @@ impl<E: Engine> G1Point<E> {
 
 // Complex components are listed in LE notation, X+IY
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
-pub struct G2Point<E: Engine>((Num<E::Fq>, Num<E::Fq>), (Num<E::Fq>, Num<E::Fq>));
+pub struct G2Point<E: Engine>(pub (Num<E::Fq>, Num<E::Fq>), pub (Num<E::Fq>, Num<E::Fq>));
 
 impl<E: Engine> G2Point<E> {
     pub fn to_bellman(&self) -> <E::BE as bellman::pairing::Engine>::G2Affine {

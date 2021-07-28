@@ -9,11 +9,11 @@ use super::group::{G1Point, G2Point};
 
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
 pub struct VK<E: Engine> {
-    alpha: G1Point<E>,
-    beta: G2Point<E>,
-    gamma: G2Point<E>,
-    delta: G2Point<E>,
-    ic: Vec<G1Point<E>>,
+    pub alpha: G1Point<E>,
+    pub beta: G2Point<E>,
+    pub gamma: G2Point<E>,
+    pub delta: G2Point<E>,
+    pub ic: Vec<G1Point<E>>,
 }
 
 impl<E: Engine> VK<E> {
