@@ -718,7 +718,7 @@ fn prime_field_impl(
 
         impl ::std::fmt::Display for #name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-                write!(f, "{}({:?})", stringify!(#name), self.to_uint())
+                write!(f, "{}", self.to_uint())
             }
         }
 
