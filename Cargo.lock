@@ -164,7 +164,7 @@ dependencies = [
 
 [[package]]
 name = "fawkes-crypto"
-version = "4.2.1"
+version = "4.2.2"
 dependencies = [
  "bit-vec",
  "blake2-rfc_bellman_edition",
@@ -218,7 +218,7 @@ dependencies = [
 
 [[package]]
 name = "ff-uint"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "arbitrary",
  "borsh",
@@ -238,7 +238,7 @@ dependencies = [
 
 [[package]]
 name = "ff-uint_derive"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "num-bigint 0.3.2",
  "num-integer",
