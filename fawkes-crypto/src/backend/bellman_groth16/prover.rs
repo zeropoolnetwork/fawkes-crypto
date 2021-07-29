@@ -9,6 +9,7 @@ use serde::{Serialize, Deserialize};
 use borsh::{BorshSerialize, BorshDeserialize};
 
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", serde(bound(serialize = "", deserialize = "")))]
 pub struct Proof<E: Engine> {
     pub a: G1Point<E>,
     pub b: G2Point<E>,

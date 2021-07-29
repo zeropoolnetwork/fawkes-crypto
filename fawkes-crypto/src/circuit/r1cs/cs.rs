@@ -12,9 +12,12 @@ use bit_vec::BitVec;
 
 pub type RCS<C> = Rc<RefCell<C>>;
 
+#[cfg(feature="borsh_support")]
+use crate::borsh::{BorshSerialize, BorshDeserialize};
 
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "borsh_support", derive(BorshSerialize, BorshDeserialize))]
 pub struct Gate<Fr:PrimeField>(
     pub Vec<(Num<Fr>, Index)>,
     pub Vec<(Num<Fr>, Index)>,

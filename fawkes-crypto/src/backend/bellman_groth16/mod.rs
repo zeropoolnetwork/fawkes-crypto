@@ -16,7 +16,7 @@ use borsh::{BorshSerialize, BorshDeserialize};
 
 
 use bellman::pairing::CurveAffine;
-use std::marker::PhantomData;
+use std::{io::Read, marker::PhantomData};
 use engines::Engine;
 
 pub mod engines;
@@ -148,4 +148,23 @@ impl<E: Engine> Parameters<E> {
     pub fn get_witness_rcs(&self)->RCS<WitnessCS<E::Fr>> {
         WitnessCS::rc_new(&self.1, &self.2)
     }
+
+    pub fn write<W:std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        BorshSerialize::serialize(&self.1, writer)?;
+        BorshSerialize::serialize(&(self.2.len() as u32), writer)?;
+        writer.write_all(&self.2.to_bytes())?;
+        self.0.write(writer)
+    }
+
+    pub fn read(reader: &mut &[u8], disallow_points_at_infinity: bool, checked: bool) -> std::io::Result<Self> {
+        let e1 = BorshDeserialize::deserialize(reader)?;
+        let e2_size = u32::deserialize(reader)? as usize;
+        let mut e2_buf = vec![0; (e2_size+7)/8];
+        reader.read_exact(&mut e2_buf[..])?;
+        let mut e2 = BitVec::from_bytes(&e2_buf);
+        e2.truncate(e2_size);
+        let e0 = bellman::groth16::Parameters::read(reader, disallow_points_at_infinity, checked)?;
+        Ok(Self(e0, e1, e2))
+    }
+
 }

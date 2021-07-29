@@ -3,6 +3,9 @@ use std::usize;
 use crate::ff_uint::{Num, PrimeField};
 use linked_list::{Cursor, LinkedList};
 
+#[cfg(feature="borsh_support")]
+use crate::borsh::{BorshSerialize, BorshDeserialize};
+
 
 pub trait AbstractLC<Fr:PrimeField> : Clone + std::fmt::Debug{
     fn add_assign(&mut self, other: &Self);
@@ -139,6 +142,7 @@ impl<Fr:PrimeField> AbstractLC<Fr> for LC<Fr> {
 
 
 #[derive(PartialEq, Copy, Clone, Debug)]
+#[cfg_attr(feature = "borsh_support", derive(BorshSerialize, BorshDeserialize))]
 pub enum Index {
     Input(usize),
     Aux(usize)

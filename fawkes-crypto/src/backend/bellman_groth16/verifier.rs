@@ -8,6 +8,7 @@ use super::*;
 use super::group::{G1Point, G2Point};
 
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde_support", serde(bound(serialize = "", deserialize = "")))]
 pub struct VK<E: Engine> {
     pub alpha: G1Point<E>,
     pub beta: G2Point<E>,
