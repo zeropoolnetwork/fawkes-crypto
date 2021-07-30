@@ -144,8 +144,8 @@ impl<Fr:PrimeField> AbstractLC<Fr> for LC<Fr> {
 #[derive(PartialEq, Copy, Clone, Debug)]
 #[cfg_attr(feature = "borsh_support", derive(BorshSerialize, BorshDeserialize))]
 pub enum Index {
-    Input(usize),
-    Aux(usize)
+    Input(u32),
+    Aux(u32)
 }
 
 impl core::cmp::Eq for Index {}

@@ -1,6 +1,6 @@
 use crate::{
     circuit::{
-        cs::{RCS, WitnessCS, CS, Gate},
+        cs::{RCS, WitnessCS, CS},
         lc::{Index}
     },
     core::signal::Signal,
@@ -9,6 +9,7 @@ use crate::{
 
 use bit_vec::BitVec;
 
+
 use bellman::{ConstraintSystem, SynthesisError};
 
 #[cfg(feature = "borsh_support")]
@@ -16,7 +17,7 @@ use borsh::{BorshSerialize, BorshDeserialize};
 
 
 use bellman::pairing::CurveAffine;
-use std::{io::Read, marker::PhantomData};
+use std::marker::PhantomData;
 use engines::Engine;
 
 pub mod engines;
@@ -49,8 +50,8 @@ pub fn convert_lc<E: Engine>(
     for e in lc.iter() {
         let k = num_to_bellman_fp(e.0);
         let v = match e.1 {
-            Index::Input(i)=>variables_input[i],
-            Index::Aux(i)=>variables_aux[i]
+            Index::Input(i)=>variables_input[i as usize],
+            Index::Aux(i)=>variables_aux[i as usize],
         };
         res.push((v, k));
     }
@@ -66,13 +67,12 @@ impl<E: Engine, C:CS<Fr=E::Fr>> bellman::Circuit<E::BE> for BellmanCS<E, C> {
         let cs = rcs.borrow();
         let num_input = cs.num_input();
         let num_aux = cs.num_aux();
-        let num_gates = cs.num_gates();
 
         let mut variables_input = Vec::with_capacity(num_input);
         let mut variables_aux = Vec::with_capacity(num_aux);
 
         variables_input.push(BCS::one());
-        for i in 1..num_input {
+        for i in 1..num_input as u32 {
             let v = bellman_cs.alloc_input(
                 || format!("input_{}", i),
                 || cs.get_value(Index::Input(i)).map(num_to_bellman_fp).ok_or(SynthesisError::AssignmentMissing)
@@ -80,7 +80,7 @@ impl<E: Engine, C:CS<Fr=E::Fr>> bellman::Circuit<E::BE> for BellmanCS<E, C> {
             variables_input.push(v);
         }
 
-        for i in 0..num_aux {
+        for i in 0..num_aux as u32{
             let v = bellman_cs.alloc(
                 || format!("aux_{}", i),
                 || cs.get_value(Index::Aux(i)).map(num_to_bellman_fp).ok_or(SynthesisError::AssignmentMissing)
@@ -89,9 +89,7 @@ impl<E: Engine, C:CS<Fr=E::Fr>> bellman::Circuit<E::BE> for BellmanCS<E, C> {
         }
 
         
-        
-        for i in 0..num_gates {
-            let g = cs.get_gate(i);
+        for (i,g) in cs.get_gate_iterator().enumerate() {
             bellman_cs.enforce(
                 || format!("constraint {}", i),
                 |_| convert_lc::<E>(&g.0, &variables_input, &variables_aux),
@@ -138,7 +136,7 @@ pub fn bellman_fp_to_num<Fx: PrimeField, Fy: bellman::pairing::ff::PrimeField>(
     to
 }
 
-pub struct Parameters<E: Engine>(pub bellman::groth16::Parameters<E::BE>, pub Vec<Gate<E::Fr>>, pub BitVec);
+pub struct Parameters<E: Engine>(pub bellman::groth16::Parameters<E::BE>, pub u32, pub Vec<u8>, pub BitVec);
 
 impl<E: Engine> Parameters<E> {
     pub fn get_vk(&self) -> verifier::VK<E> {
@@ -146,25 +144,34 @@ impl<E: Engine> Parameters<E> {
     }
 
     pub fn get_witness_rcs(&self)->RCS<WitnessCS<E::Fr>> {
-        WitnessCS::rc_new(&self.1, &self.2)
+        WitnessCS::rc_new(self.1 as usize, &self.2, &self.3)
     }
 
     pub fn write<W:std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        let bitvec_len = self.3.len() as u32;
         BorshSerialize::serialize(&self.1, writer)?;
-        BorshSerialize::serialize(&(self.2.len() as u32), writer)?;
-        writer.write_all(&self.2.to_bytes())?;
+        BorshSerialize::serialize(&self.2, writer)?;
+        BorshSerialize::serialize(&bitvec_len, writer)?;
+        BorshSerialize::serialize(&self.3.to_bytes(), writer)?;
         self.0.write(writer)
     }
 
     pub fn read(reader: &mut &[u8], disallow_points_at_infinity: bool, checked: bool) -> std::io::Result<Self> {
         let e1 = BorshDeserialize::deserialize(reader)?;
-        let e2_size = u32::deserialize(reader)? as usize;
-        let mut e2_buf = vec![0; (e2_size+7)/8];
-        reader.read_exact(&mut e2_buf[..])?;
-        let mut e2 = BitVec::from_bytes(&e2_buf);
-        e2.truncate(e2_size);
+        let e2 = BorshDeserialize::deserialize(reader)?;
+        let e3_len = <u32 as BorshDeserialize>::deserialize(reader)? as usize;
+        let e3_buf:Vec<u8> = BorshDeserialize::deserialize(reader)?;
+
+        if e3_len > e3_buf.len() * 8 {
+            return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "inconsistent bitvec length"));
+        }
+
+        let mut e3 = BitVec::from_bytes(&e3_buf);
+        e3.truncate(e3_len);
+
+
         let e0 = bellman::groth16::Parameters::read(reader, disallow_points_at_infinity, checked)?;
-        Ok(Self(e0, e1, e2))
+        Ok(Self(e0, e1, e2, e3))
     }
 
 }

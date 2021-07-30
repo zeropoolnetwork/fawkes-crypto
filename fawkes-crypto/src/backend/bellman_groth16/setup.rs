@@ -1,6 +1,9 @@
+use std::io::Write;
+
 use super::osrng::OsRng;
 use super::*;
 use crate::circuit::cs::BuildCS;
+use lzma::LzmaWriter;
 
 pub fn setup<E: Engine, Pub: Signal<BuildCS<E::Fr>>, Sec: Signal<BuildCS<E::Fr>>, C: Fn(Pub, Sec)>(
     circuit: C,
@@ -17,5 +20,16 @@ pub fn setup<E: Engine, Pub: Signal<BuildCS<E::Fr>>, Sec: Signal<BuildCS<E::Fr>>
     let ref mut rng = OsRng::new();
     let bp = bellman::groth16::generate_random_parameters(bcs, rng).unwrap();
     let cs=rcs.borrow();
-    Parameters(bp, cs.gates.clone(), cs.const_tracker.clone())
+
+    let num_gates = cs.gates.len();
+
+    let mut buf = std::io::Cursor::new(vec![]);
+    let mut c = LzmaWriter::new_compressor(&mut buf, 9).unwrap();
+    for g in cs.gates.iter() {
+        c.write_all(&g.try_to_vec().unwrap()).unwrap();
+    }
+
+    c.finish().unwrap();
+
+    Parameters(bp, num_gates as u32, buf.into_inner(), cs.const_tracker.clone())
 }

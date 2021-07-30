@@ -82,7 +82,7 @@ pub fn prove<'a, E: Engine, Pub: Signal<WitnessCS<'a, E::Fr>>, Sec: Signal<Witne
     let cs = rcs.borrow();
     assert!(cs.const_tracker_index==cs.const_tracker.len(), "not all cached data used");
     let mut inputs = Vec::with_capacity(cs.num_input());
-    for i in 1..cs.num_input() {
+    for i in 1..cs.num_input() as u32{
         inputs.push(cs.get_value(Index::Input(i)).unwrap())
     }
     
