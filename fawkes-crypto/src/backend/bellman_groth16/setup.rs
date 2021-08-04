@@ -3,7 +3,6 @@ use std::io::Write;
 use super::osrng::OsRng;
 use super::*;
 use crate::circuit::cs::BuildCS;
-use lzma::LzmaWriter;
 
 pub fn setup<E: Engine, Pub: Signal<BuildCS<E::Fr>>, Sec: Signal<BuildCS<E::Fr>>, C: Fn(Pub, Sec)>(
     circuit: C,
@@ -24,12 +23,13 @@ pub fn setup<E: Engine, Pub: Signal<BuildCS<E::Fr>>, Sec: Signal<BuildCS<E::Fr>>
     let num_gates = cs.gates.len();
 
     let mut buf = std::io::Cursor::new(vec![]);
-    let mut c = LzmaWriter::new_compressor(&mut buf, 9).unwrap();
+    let mut c = brotli::CompressorWriter::new(&mut buf, 4096, 9, 22);
     for g in cs.gates.iter() {
         c.write_all(&g.try_to_vec().unwrap()).unwrap();
     }
 
-    c.finish().unwrap();
+    c.flush().unwrap();
+    drop(c);
 
     Parameters(bp, num_gates as u32, buf.into_inner(), cs.const_tracker.clone())
 }
