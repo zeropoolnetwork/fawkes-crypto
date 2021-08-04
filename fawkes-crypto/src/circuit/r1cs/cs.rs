@@ -10,7 +10,6 @@ use crate::{
 use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 use bit_vec::BitVec;
 use byteorder::{ByteOrder, LittleEndian};
-use lzma::reader::LzmaReader;
 
 pub type RCS<C> = Rc<RefCell<C>>;
 
@@ -226,7 +225,7 @@ impl<Fr:PrimeField, R:std::io::Read> Iterator for GateStreamedIterator<Fr, R> {
 impl<'a, Fr: PrimeField> CS for WitnessCS<'a, Fr> {
     type Fr = Fr;
     type LC = ZeroLC;
-    type GateIterator = GateStreamedIterator<Fr, LzmaReader<&'a [u8]>>;
+    type GateIterator = GateStreamedIterator<Fr, brotli::Decompressor<&'a [u8]>>;
 
     fn num_gates(&self) -> usize {
         self.num_gates
@@ -247,7 +246,7 @@ impl<'a, Fr: PrimeField> CS for WitnessCS<'a, Fr> {
     }
 
     fn get_gate_iterator(&self) -> Self::GateIterator {
-        GateStreamedIterator(LzmaReader::new_decompressor(self.gates_data).unwrap(), PhantomData)
+        GateStreamedIterator(brotli::Decompressor::new(self.gates_data, 4096), PhantomData)
     }
 
     fn enforce(_: &CNum<Self>, _: &CNum<Self>, _: &CNum<Self>) {
