@@ -11,10 +11,8 @@ pub fn c_into_bits_le<C: CS>(signal: &CNum<C>, limit: usize) -> Vec<CBool<C>> {
         Some(value) => {
             let mut bits = Vec::<CBool<C>>::new();
             let mut k = Num::ONE;
-            let mut remained_value = value.clone();
-            let value_bits = value.bit_iter_le().collect::<Vec<_>>();
-            for i in 0..limit {
-                let bit = value_bits[i];
+            let mut remained_value = value;
+            for bit in value.bit_iter_le() {
                 if bit {
                     remained_value -= k;
                 }
@@ -30,7 +28,7 @@ pub fn c_into_bits_le<C: CS>(signal: &CNum<C>, limit: usize) -> Vec<CBool<C>> {
             let mut k = Num::ONE;
             let mut bits = vec![signal.derive_const(&false); limit];
             let value_bits = match value {
-                Some(v) => v.bit_iter_le().map(|x| Some(x)).collect::<Vec<_>>(),
+                Some(v) => v.bit_iter_le().map(Some).collect::<Vec<_>>(),
                 None => vec![None; C::Fr::MODULUS_BITS as usize],
             };
 
@@ -84,19 +82,18 @@ pub fn c_comp_constant<C: CS>(signal: &[CBool<C>], ct: Num<C::Fr>) -> CBool<C> {
 
         let sig_lu = &sig_l * &sig_u;
 
-        acc = acc
-            + k * match (ct_l, ct_u) {
-                (false, false) => &sig_l + &sig_u - sig_lu,
-                (true, false) => &sig_l + &sig_u * Num::from(2) - sig_lu - Num::ONE,
-                (false, true) => sig_lu + &sig_u - Num::ONE,
-                (true, true) => sig_lu - Num::ONE,
-            };
+        acc += k * match (ct_l, ct_u) {
+            (false, false) => &sig_l + &sig_u - sig_lu,
+            (true, false) => &sig_l + &sig_u * Num::from(2) - sig_lu - Num::ONE,
+            (false, true) => sig_lu + &sig_u - Num::ONE,
+            (true, true) => sig_lu - Num::ONE,
+        };
         k = k.double();
     }
 
     k -= Num::ONE;
 
-    acc = acc + k;
+    acc += k;
     let acc_bits = c_into_bits_le(&acc, nsteps + 1);
     acc_bits[nsteps].clone()
 }
@@ -109,12 +106,12 @@ pub fn c_into_bits_le_strict<C: CS>(signal: &CNum<C>) -> Vec<CBool<C>> {
 }
 
 pub fn c_from_bits_le<C: CS>(bits: &[CBool<C>]) -> CNum<C> {
-    assert!(bits.len() > 0, "should be positive number of bits");
+    assert!(!bits.is_empty(), "should be positive number of bits");
     let mut acc = bits[0].to_num();
     let mut k = Num::ONE;
-    for i in 1..bits.len() {
+    for bit in bits.iter().skip(1) {
         k = k.double();
-        acc += k * bits[i].to_num();
+        acc += k * bit.to_num();
     }
     acc
 }

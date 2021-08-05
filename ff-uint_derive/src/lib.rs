@@ -40,7 +40,7 @@ pub fn construct_primefield_params(input: TokenStream) -> TokenStream {
     } = parse_macro_input!(input as PrimeFieldParamsDef);
 
     let cratename = Ident::new(
-        &crate_name("ff_uint").unwrap_or("ff_uint".to_string()),
+        &crate_name("ff_uint").unwrap_or_else(|_| "ff_uint".to_string()),
         Span::call_site(),
     );
 
@@ -84,7 +84,7 @@ pub fn construct_primefield_params(input: TokenStream) -> TokenStream {
         let mut cur = BigUint::one() << 64; // always 64-bit limbs for now
         while cur < mod2 {
             limbs += 1;
-            cur = cur << 64;
+            cur <<= 64;
         }
     }
 
@@ -138,7 +138,7 @@ fn fetch_const(name: &str, items: &[ImplItem]) -> String {
         Expr::Lit(ExprLit {
             lit: Lit::Str(ref s),
             ..
-        }) => return s.value(),
+        }) => s.value(),
         _ => {
             panic!("Associated constant {} should be a string", name);
         }
@@ -153,7 +153,7 @@ fn biguint_to_real_u64_vec(mut v: BigUint, limbs: usize) -> Vec<u64> {
     while v > BigUint::zero() {
         let t: BigUint = &v % &m;
         ret.push(t.to_u64().unwrap());
-        v = v >> 64;
+        v >>= 64;
     }
 
     while ret.len() < limbs {
@@ -175,7 +175,7 @@ fn biguint_num_bits(mut v: BigUint) -> u32 {
     let mut bits = 0;
 
     while v != BigUint::zero() {
-        v = v >> 1;
+        v >>= 1;
         bits += 1;
     }
 
@@ -241,7 +241,7 @@ fn prime_field_constants_and_sqrt(
     let mut s: u32 = 0;
     let mut t = &modulus - BigUint::from_str("1").unwrap();
     while t.is_even() {
-        t = t >> 1;
+        t >>= 1;
         s += 1;
     }
 
@@ -250,7 +250,7 @@ fn prime_field_constants_and_sqrt(
         (exp(generator.clone(), &t, &modulus) * &r) % &modulus,
         limbs,
     );
-    let generator = biguint_to_u64_vec((generator.clone() * &r) % &modulus, limbs);
+    let generator = biguint_to_u64_vec((generator * &r) % &modulus, limbs);
 
     let mod_minus_1_over_2 =
         biguint_to_u64_vec((&modulus - BigUint::from_str("1").unwrap()) >> 1, limbs);
@@ -299,7 +299,7 @@ fn prime_field_constants_and_sqrt(
             }
         } else if (&modulus % BigUint::from_str("16").unwrap()) == BigUint::from_str("1").unwrap() {
             let t_plus_1_over_2 = biguint_to_u64_vec((&t + BigUint::one()) >> 1, limbs);
-            let t = biguint_to_u64_vec(t.clone(), limbs);
+            let t = biguint_to_u64_vec(t, limbs);
 
             quote! {
                 impl ::#cratename::SqrtField for #name {
@@ -564,7 +564,7 @@ fn prime_field_impl(
 
         let mut mont_calling = proc_macro2::TokenStream::new();
         mont_calling.append_separated(
-            (0..(limbs * 2)).map(|i| get_temp(i)),
+            (0..(limbs * 2)).map(get_temp),
             proc_macro2::Punct::new(',', proc_macro2::Spacing::Alone),
         );
 
@@ -611,7 +611,7 @@ fn prime_field_impl(
 
         let mut mont_calling = proc_macro2::TokenStream::new();
         mont_calling.append_separated(
-            (0..(limbs * 2)).map(|i| get_temp(i)),
+            (0..(limbs * 2)).map(get_temp),
             proc_macro2::Punct::new(',', proc_macro2::Spacing::Alone),
         );
 
@@ -622,9 +622,9 @@ fn prime_field_impl(
         gen
     }
 
-    let squaring_impl = sqr_impl(&cratename, quote! {self}, limbs);
-    let multiply_impl = mul_impl(&cratename, quote! {self}, quote! {other}, limbs);
-    let montgomery_impl = mont_impl(&cratename, limbs);
+    let squaring_impl = sqr_impl(cratename, quote! {self}, limbs);
+    let multiply_impl = mul_impl(cratename, quote! {self}, quote! {other}, limbs);
+    let montgomery_impl = mont_impl(cratename, limbs);
 
     // (self.0).0[0], (self.0).0[1], ..., 0, 0, 0, 0, ...
     let mut into_repr_params = proc_macro2::TokenStream::new();

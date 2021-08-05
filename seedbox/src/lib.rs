@@ -3,7 +3,7 @@
 use blake2_rfc::blake2s::Blake2s;
 use byteorder::{LittleEndian, ByteOrder};
 
-pub const PERSONALIZATION: &'static [u8; 8] = b"__fawkes";
+pub const PERSONALIZATION: &[u8; 8] = b"__fawkes";
 
 pub struct SeedboxBlake2 {
     salt: Option<[u8; 32]>,

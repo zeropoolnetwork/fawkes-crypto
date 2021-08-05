@@ -67,7 +67,7 @@ impl<Fr:PrimeField> AbstractLC<Fr> for LC<Fr> {
     }
 
     fn as_const(&self) -> Option<Num<Fr>> {
-        if self.0.len() == 0 {
+        if self.0.is_empty() {
             Some(Num::ZERO)
         } else if self.0.len() == 1 {
             let front = self.0.front().unwrap();

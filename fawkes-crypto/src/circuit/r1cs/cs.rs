@@ -57,8 +57,8 @@ pub struct DebugCS<Fr: PrimeField> {
     pub phantom: PhantomData<Fr>
 }
 
-impl<Fr: PrimeField> DebugCS<Fr> {
-    pub fn new() -> Self {
+impl<Fr: PrimeField> Default for DebugCS<Fr> {
+    fn default() -> Self {
         Self {
             num_input: 1,
             num_aux: 0,
@@ -66,9 +66,11 @@ impl<Fr: PrimeField> DebugCS<Fr> {
             phantom: PhantomData
         }
     }
+}
 
+impl<Fr: PrimeField> DebugCS<Fr> {
     pub fn rc_new() -> RCS<Self> {
-        Rc::new(RefCell::new(Self::new()))
+        Rc::new(RefCell::new(Self::default()))
     }
 }
 
@@ -80,8 +82,8 @@ pub struct BuildCS<Fr: PrimeField> {
     pub const_tracker: BitVec
 }
 
-impl<Fr: PrimeField> BuildCS<Fr> {
-    pub fn new() -> Self {
+impl<Fr: PrimeField> Default for BuildCS<Fr> {
+    fn default() -> Self {
         Self {
             num_input: 1,
             num_aux: 0,
@@ -89,9 +91,11 @@ impl<Fr: PrimeField> BuildCS<Fr> {
             const_tracker: BitVec::new()
         }
     }
+}
 
+impl<Fr: PrimeField> BuildCS<Fr> {
     pub fn rc_new() -> RCS<Self> {
-        Rc::new(RefCell::new(Self::new()))
+        Rc::new(RefCell::new(Self::default()))
     }
 }
 
@@ -152,11 +156,8 @@ impl<Fr: PrimeField>  CS for DebugCS<Fr> {
         let mut rcs = a.get_cs().borrow_mut();
         rcs.num_gates+=1;
 
-        match (a.value, b.value, c.value) {
-            (Some(a), Some(b), Some(c)) => {
-                assert!(a * b == c, "Not satisfied constraint");
-            },
-            _ => {}
+        if let (Some(a), Some(b), Some(c)) = (a.value, b.value, c.value) {
+            assert!(a * b == c, "Not satisfied constraint");
         }
         
     }

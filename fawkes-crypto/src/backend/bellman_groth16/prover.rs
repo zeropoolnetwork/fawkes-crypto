@@ -66,7 +66,7 @@ pub fn prove<'a, E: Engine, Pub: Signal<WitnessCS<'a, E::Fr>>, Sec: Signal<Witne
     input_sec: &Sec::Value,
     circuit: C,
 ) -> (Vec<Num<E::Fr>>, Proof<E>) {
-    let ref rcs = params.get_witness_rcs();
+    let rcs = &params.get_witness_rcs();
     let signal_pub = Pub::alloc(rcs, Some(input_pub));
     signal_pub.inputize();
     let signal_sec = Sec::alloc(rcs, Some(input_sec));
@@ -75,7 +75,7 @@ pub fn prove<'a, E: Engine, Pub: Signal<WitnessCS<'a, E::Fr>>, Sec: Signal<Witne
 
     let bcs = BellmanCS::<E, WitnessCS<E::Fr>>::new(rcs.clone());
 
-    let ref mut rng = OsRng::new();
+    let rng = &mut OsRng::default();
     let proof =
         Proof::from_bellman(&bellman::groth16::create_random_proof(bcs, &params.0, rng).unwrap());
 

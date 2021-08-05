@@ -11,7 +11,7 @@ use fawkes_crypto::{
 #[test]
 fn test_scalar_point_picker() {
     let mut rng = thread_rng();
-    let jubjub_params = JubJubBN256::new();
+    let jubjub_params = JubJubBN256::default();
 
     let t = rng.gen();
 
@@ -27,7 +27,7 @@ fn test_scalar_point_picker() {
 #[test]
 fn test_circuit_subgroup_decompress() {
     let mut rng = thread_rng();
-    let jubjub_params = JubJubBN256::new();
+    let jubjub_params = JubJubBN256::default();
 
     let p =
         EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params).mul(Num::from(8), &jubjub_params);
@@ -49,7 +49,7 @@ fn test_circuit_subgroup_decompress() {
 #[test]
 fn test_circuit_edwards_add() {
     let mut rng = thread_rng();
-    let jubjub_params = JubJubBN256::new();
+    let jubjub_params = JubJubBN256::default();
 
     let p1 = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
     let p2 = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
@@ -68,7 +68,7 @@ fn test_circuit_edwards_add() {
 #[test]
 fn test_circuit_edwards_double() {
     let mut rng = thread_rng();
-    let jubjub_params = JubJubBN256::new();
+    let jubjub_params = JubJubBN256::default();
 
     let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
 
@@ -85,7 +85,7 @@ fn test_circuit_edwards_double() {
 #[test]
 fn test_circuit_edwards_into_montgomery() {
     let mut rng = thread_rng();
-    let jubjub_params = JubJubBN256::new();
+    let jubjub_params = JubJubBN256::default();
     let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
     let mp = p.into_montgomery().unwrap();
     let ref mut cs = DebugCS::rc_new();
@@ -97,7 +97,7 @@ fn test_circuit_edwards_into_montgomery() {
 #[test]
 fn test_circuit_montgomery_into_edwards() {
     let mut rng = thread_rng();
-    let jubjub_params = JubJubBN256::new();
+    let jubjub_params = JubJubBN256::default();
 
     let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
     let mp = p.into_montgomery().unwrap();
@@ -111,7 +111,7 @@ fn test_circuit_montgomery_into_edwards() {
 #[test]
 fn test_circuit_montgomery_add() {
     let mut rng = thread_rng();
-    let jubjub_params = JubJubBN256::new();
+    let jubjub_params = JubJubBN256::default();
 
     let p1 = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
     let p2 = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
@@ -134,7 +134,7 @@ fn test_circuit_montgomery_add() {
 #[test]
 fn test_circuit_montgomery_double() {
     let mut rng = thread_rng();
-    let jubjub_params = JubJubBN256::new();
+    let jubjub_params = JubJubBN256::default();
 
     let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params);
     let p3 = p.double();
@@ -151,7 +151,7 @@ fn test_circuit_montgomery_double() {
 #[test]
 fn test_circuit_edwards_mul() {
     let mut rng = thread_rng();
-    let jubjub_params = JubJubBN256::new();
+    let jubjub_params = JubJubBN256::default();
 
     let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params)
         .mul(Num::from(8), &jubjub_params);
@@ -176,7 +176,7 @@ fn test_circuit_edwards_mul() {
 #[test]
 fn test_circuit_edwards_mul_const() {
     let mut rng = thread_rng();
-    let jubjub_params = JubJubBN256::new();
+    let jubjub_params = JubJubBN256::default();
 
     let p = EdwardsPoint::<Fr>::rand(&mut rng, &jubjub_params)
         .mul(Num::from(8), &jubjub_params);

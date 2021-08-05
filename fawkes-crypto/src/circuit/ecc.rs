@@ -67,7 +67,7 @@ impl<C: CS> CEdwardsPoint<C> {
     pub fn subgroup_decompress<J: JubJubParams<Fr = C::Fr>>(x: &CNum<C>, params: &J) -> Self {
         let preimage_value = x.get_value().map(|x| {
             EdwardsPoint::subgroup_decompress(x, params)
-                .unwrap_or(params.edwards_g().clone())
+                .unwrap_or_else(|| *params.edwards_g())
                 .mul(Num::from(8).checked_inv().unwrap(), params)
         });
         let preimage = CEdwardsPoint::alloc(x.get_cs(), preimage_value.as_ref());
@@ -92,12 +92,12 @@ impl<C: CS> CEdwardsPoint<C> {
         ) -> Vec<Vec<Num<C::Fr>>> {
             let mut x_col = vec![];
             let mut y_col = vec![];
-            let mut q = p.clone();
+            let mut q = *p;
             for _ in 0..8 {
                 let MontgomeryPoint { x, y } = q.into_montgomery().unwrap();
                 x_col.push(x);
                 y_col.push(y);
-                q = q.add(&p, params);
+                q = q.add(p, params);
             }
             vec![x_col, y_col]
         }
@@ -230,8 +230,8 @@ impl<C: CS> CEdwardsPoint<C> {
         let x3 = -Num::ONE / params.montgomery_a() * (&t2g1 + Num::ONE);
         let x2 = x3.div_unchecked(&t2g1);
 
-        let (is_valid, y2) = check_and_get_y(&x2, &t, params);
-        let (_, y3) = check_and_get_y(&x3, &t, params);
+        let (is_valid, y2) = check_and_get_y(&x2, t, params);
+        let (_, y3) = check_and_get_y(&x3, t, params);
 
         let x = x2.switch(&is_valid, &x3);
         let y = y2.switch(&is_valid, &y3);
@@ -252,8 +252,8 @@ impl<C: CS> CMontgomeryPoint<C> {
         let a = params.montgomery_a();
 
         Self {
-            x: &b_l2 - &a - Num::from(2) * &self.x,
-            y: l * (Num::from(3) * &self.x + a - &b_l2) - &self.y,
+            x: &b_l2 - a - Num::from(2) * &self.x,
+            y: l * (Num::from(3) * &self.x + a - b_l2) - &self.y,
         }
     }
 
@@ -264,7 +264,7 @@ impl<C: CS> CMontgomeryPoint<C> {
         let a = params.montgomery_a();
 
         Self {
-            x: &b_l2 - &a - &self.x - &p.x,
+            x: &b_l2 - a - &self.x - &p.x,
             y: l * (Num::from(2) * &self.x + &p.x + a - &b_l2) - &self.y,
         }
     }
