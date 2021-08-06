@@ -62,7 +62,7 @@ fn expand(input: &DeriveInput, _: &str) -> TokenStream {
     )
     .expect("attribute should be a type");
 
-    let cs_path = parse_str::<Path>(&fetch_attr("CS", &input.attrs).unwrap_or(String::from("C"))).expect("attribute should be a path");
+    let cs_path = parse_str::<Path>(&fetch_attr("CS", &input.attrs).unwrap_or_else(|| String::from("C"))).expect("attribute should be a path");
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let body = match input.data {
@@ -104,9 +104,9 @@ fn get_field_types<'a>(fields: &'a [&'a Field]) -> Vec<&'a Type> {
 
 
 fn tuple_impl(fields: &[&Field], cs_path:&Path) -> TokenStream {
-    let var_typenames = get_field_types(&fields);
+    let var_typenames = get_field_types(fields);
     let var_ids = (0..fields.len())
-        .map(|i| syn::Index::from(i))
+        .map(syn::Index::from)
         .collect::<Vec<_>>();
 
 
@@ -158,7 +158,7 @@ fn tuple_impl(fields: &[&Field], cs_path:&Path) -> TokenStream {
 }
 
 fn struct_impl(fields: &[&Field], cs_path:&Path) -> TokenStream {
-    let var_typenames = get_field_types(&fields);
+    let var_typenames = get_field_types(fields);
     let var_names: &Vec<Ident> = &field_idents(fields).iter().map(|f| (**f).clone()).collect();
 
     let var_name_first = var_names[0].clone();

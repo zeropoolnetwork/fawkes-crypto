@@ -35,7 +35,7 @@ pub fn c_eddsaposeidon_verify<C: CS, J: JubJubParams<Fr = C::Fr>>(
     let h_bits = c_into_bits_le_strict(&h);
     let ha = p_a.mul(&h_bits, jubjub_params);
 
-    let s_bits = c_into_bits_le(&s, Num::<J::Fs>::MODULUS_BITS as usize);
+    let s_bits = c_into_bits_le(s, Num::<J::Fs>::MODULUS_BITS as usize);
     let jubjub_generator = CEdwardsPoint::from_const(cs, jubjub_params.edwards_g());
     let sb = jubjub_generator.mul(&s_bits, jubjub_params);
     let ha_plus_r = ha.add(&p_r, jubjub_params);

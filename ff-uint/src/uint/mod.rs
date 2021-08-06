@@ -363,7 +363,7 @@ macro_rules! construct_uint {
 					type Err = &'static str;
 
 					fn from_str(value: &str) -> core::result::Result<$name, Self::Err> {
-						if !value.bytes().all(|b| b >= 48 && b <= 57) {
+						if !value.bytes().all(|b| (48..=57).contains(&b)) {
 							return Err("Invalid character")
 						}
 

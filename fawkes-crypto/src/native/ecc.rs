@@ -271,7 +271,7 @@ impl<Fr: PrimeField> EdwardsPointEx<Fr> {
     }
 
     pub fn negate(&self) -> Self {
-        let mut p = self.clone();
+        let mut p = *self;
         p.x = -p.x;
         p.t = -p.t;
         p

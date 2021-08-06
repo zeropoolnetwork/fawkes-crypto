@@ -45,8 +45,8 @@ pub struct JubJubBLS12_381 {
     montgomery_u: Num<Fr>,
 }
 
-impl JubJubBLS12_381 {
-    pub fn new() -> Self {
+impl Default for JubJubBLS12_381 {
+    fn default() -> Self {
         let edwards_d = -Num::from(10240) / Num::from(10241);
 
         let montgomery_a = Num::from(2) * (Num::ONE - edwards_d) / (Num::ONE + edwards_d);

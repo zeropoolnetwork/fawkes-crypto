@@ -294,9 +294,8 @@ impl<Fp: PrimeField> SeedBoxGen<Num<Fp>> for SeedboxBlake2 {
                 self.fill_limbs(p);
                 p[len-1] &= shave;
             }
-            match Num::from_mont_uint(NumRepr(n)) {
-                Some(n) => return n,
-                _ => {}
+            if let Some(n) = Num::from_mont_uint(NumRepr(n)) {
+                return n;
             }
         }
     }
@@ -454,7 +453,7 @@ impl<Fp: PrimeField> Serialize for Num<Fp> {
 impl<'de, Fp: PrimeField> Deserialize<'de> for Num<Fp> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let bn = <NumRepr<Fp::Inner> as Deserialize>::deserialize(deserializer)?;
-        Self::from_uint(bn).ok_or(crate::serde::de::Error::custom("Field overflow"))
+        Self::from_uint(bn).ok_or_else(|| crate::serde::de::Error::custom("Field overflow"))
     }
 }
 

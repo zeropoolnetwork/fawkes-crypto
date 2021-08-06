@@ -40,7 +40,7 @@ impl<T: Serialize, const L: usize> Serialize for SizedVec<T, L> {
 #[cfg(feature = "serde_support")]
 impl<'de, T: Deserialize<'de>, const L: usize> Deserialize<'de> for SizedVec<T, L> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<SizedVec<T, L>, D::Error> {
-        Vec::<T>::deserialize(deserializer).map(|v| SizedVec::<T, L>::from_iter(v))
+        Vec::<T>::deserialize(deserializer).map(SizedVec::<T, L>::from_iter)
     }
 }
 

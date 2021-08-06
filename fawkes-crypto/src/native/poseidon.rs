@@ -119,7 +119,7 @@ pub fn poseidon_merkle_proof_root<Fr: PrimeField, const L: usize>(
     proof: &MerkleProof<Fr, L>,
     params: &PoseidonParams<Fr>,
 ) -> Num<Fr> {
-    let mut root = leaf.clone();
+    let mut root = leaf;
     for (&p, &s) in proof.path.iter().zip(proof.sibling.iter()) {
         let pair = if p { [s, root] } else { [root, s] };
         root = poseidon(pair.as_ref(), params);
@@ -139,8 +139,8 @@ pub fn poseidon_merkle_tree_root<Fr: PrimeField>(
     state.extend_from_slice(&vec![Num::ZERO; total_leaf_sz - leaf_sz]);
     for j in 0..proof_sz {
         for i in 0..total_leaf_sz >> (j + 1) {
-            state[i] = poseidon(&[state[2 * i].clone(), state[2 * i + 1].clone()], params);
+            state[i] = poseidon(&[state[2 * i], state[2 * i + 1]], params);
         }
     }
-    state[0].clone()
+    state[0]
 }

@@ -29,7 +29,7 @@ impl<C: CS> CNum<C> {
     }
 
     pub fn assert_even(&self) {
-        let bits = c_into_bits_le_strict(&self);
+        let bits = c_into_bits_le_strict(self);
         bits[0].assert_const(&false);
     }
 
@@ -71,9 +71,9 @@ impl<C: CS> CNum<C> {
                     .map(|v| v.checked_inv().unwrap_or(Num::ZERO));
                 let inv_signal: CNum<C> = self.derive_alloc(inv_value.as_ref());
  
-                let ref res_signal = -inv_signal * self + Num::ONE;
-                (res_signal*self).assert_zero();
-                CBool::new_unchecked(res_signal)
+                let res_signal = -inv_signal * self + Num::ONE;
+                (&res_signal * self).assert_zero();
+                CBool::new_unchecked(&res_signal)
             }   
         }
     }
@@ -126,7 +126,7 @@ impl<C: CS> Signal<C> for CNum<C> {
     }
 
     fn inputize(&self) {
-        CS::inputize(&self);
+        CS::inputize(self);
     }
 
     fn get_value(&self) -> Option<Self::Value> {
@@ -134,10 +134,9 @@ impl<C: CS> Signal<C> for CNum<C> {
     }
 
     fn from_const(cs: &RCS<C>, value: &Self::Value) -> Self {
-        let value = value.clone();
         Self {
-            value: Some(value),
-            lc: C::LC::from_parts(value, Index::Input(0)),
+            value: Some(*value),
+            lc: C::LC::from_parts(*value, Index::Input(0)),
             cs: cs.clone(),
         }
     }

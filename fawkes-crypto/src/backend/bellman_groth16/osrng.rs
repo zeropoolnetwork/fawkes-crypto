@@ -1,13 +1,8 @@
 use bellman::rand::Rng;
 use getrandom::getrandom;
 
-pub struct OsRng {}
-
-impl OsRng {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
+#[derive(Default)]
+pub struct OsRng;
 
 impl Rng for OsRng {
     fn next_u32(&mut self) -> u32 {

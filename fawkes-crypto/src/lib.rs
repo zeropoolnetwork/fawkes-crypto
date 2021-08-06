@@ -1,3 +1,10 @@
+#![allow(
+    clippy::many_single_char_names,
+    clippy::type_complexity,
+    clippy::too_many_arguments,
+    clippy::needless_range_loop,
+)]
+
 #[macro_use]
 pub mod macros;
 
