@@ -58,47 +58,49 @@ pub fn c_comp<C: CS>(s1:&CNum<C>, s2:&CNum<C>, limit:usize) -> CBool<C> {
 }
 
 // return true if signal > ct
+// assuming at least one bit in signal
 pub fn c_comp_constant<C: CS>(signal: &[CBool<C>], ct: Num<C::Fr>) -> CBool<C> {
     let siglen = signal.len();
     assert!(siglen > 0, "should be at least one input signal");
-    let cs = signal[0].get_cs();
-    let nsteps = (siglen >> 1) + (siglen & 1);
-    let sig_zero = if siglen & 1 == 1 {
-        vec![CBool::from_const(cs, &false)]
+    let c_false = signal[0].derive_const(&false);
+    if (ct.to_uint() >> (siglen as u32)).is_zero() {
+        let cs = signal[0].get_cs();
+        let nsteps = (siglen + 1) >> 1;
+        assert!(nsteps + 1 < Num::<C::Fr>::MODULUS_BITS as usize, "signal length is too large");
+
+        let mut sig_bits = signal.iter().chain(std::iter::repeat(&c_false));
+        let mut ct_bits = ct.bit_iter_le().chain(std::iter::repeat(false));
+        
+        let mut k = Num::ONE;
+        let mut acc = CNum::from_const(cs, &Num::ZERO);
+    
+        for _ in 0..nsteps {
+            let ct_l = ct_bits.next().unwrap();
+            let ct_u = ct_bits.next().unwrap();
+    
+            let sig_l = sig_bits.next().unwrap().to_num();
+            let sig_u = sig_bits.next().unwrap().to_num();
+    
+            let sig_lu = &sig_l * &sig_u;
+    
+            acc = acc
+                + k * match (ct_l, ct_u) {
+                    (false, false) => &sig_l + &sig_u - sig_lu,
+                    (true, false) => &sig_l + &sig_u * Num::from(2) - sig_lu - Num::ONE,
+                    (false, true) => sig_lu + &sig_u - Num::ONE,
+                    (true, true) => sig_lu - Num::ONE,
+                };
+            k = k.double();
+        }
+    
+        k -= Num::ONE;
+    
+        acc = acc + k;
+        let acc_bits = c_into_bits_le(&acc, nsteps + 1);
+        acc_bits[nsteps].clone()
     } else {
-        vec![]
-    };
-
-    let mut sig_bits = signal.iter().chain(sig_zero.iter());
-    let mut ct_bits = ct.bit_iter_le();
-
-    let mut k = Num::ONE;
-    let mut acc = CNum::from_const(cs, &Num::ZERO);
-
-    for _ in 0..nsteps {
-        let ct_l = ct_bits.next().unwrap();
-        let ct_u = ct_bits.next().unwrap();
-
-        let sig_l = sig_bits.next().unwrap().to_num();
-        let sig_u = sig_bits.next().unwrap().to_num();
-
-        let sig_lu = &sig_l * &sig_u;
-
-        acc = acc
-            + k * match (ct_l, ct_u) {
-                (false, false) => &sig_l + &sig_u - sig_lu,
-                (true, false) => &sig_l + &sig_u * Num::from(2) - sig_lu - Num::ONE,
-                (false, true) => sig_lu + &sig_u - Num::ONE,
-                (true, true) => sig_lu - Num::ONE,
-            };
-        k = k.double();
+        c_false
     }
-
-    k -= Num::ONE;
-
-    acc = acc + k;
-    let acc_bits = c_into_bits_le(&acc, nsteps + 1);
-    acc_bits[nsteps].clone()
 }
 
 pub fn c_into_bits_le_strict<C: CS>(signal: &CNum<C>) -> Vec<CBool<C>> {
