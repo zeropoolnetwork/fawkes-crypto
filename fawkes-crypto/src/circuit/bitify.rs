@@ -82,7 +82,8 @@ pub fn c_comp_constant<C: CS>(signal: &[CBool<C>], ct: Num<C::Fr>) -> CBool<C> {
             let sig_u = sig_bits.next().unwrap().to_num();
     
             let sig_lu = &sig_l * &sig_u;
-    
+
+            // Each addend is -1, 0 or 1 if the pair of signal bits is <, ==, or > the pair of constant bits.
             acc = acc
                 + k * match (ct_l, ct_u) {
                     (false, false) => &sig_l + &sig_u - sig_lu,
