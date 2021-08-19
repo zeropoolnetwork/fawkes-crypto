@@ -12,6 +12,7 @@ use crate::{
     native::{ecc::JubJubParams, poseidon::PoseidonParams},
 };
 
+// assuming Num::<J::Fs>::MODULUS_BITS < Num::<C::Fr>::MODULUS_BITS
 pub fn c_eddsaposeidon_verify<C: CS, J: JubJubParams<Fr = C::Fr>>(
     s: &CNum<C>,
     r: &CNum<C>,
