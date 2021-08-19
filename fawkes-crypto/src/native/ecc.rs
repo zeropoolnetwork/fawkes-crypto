@@ -1,3 +1,5 @@
+// Assuming JubJub curves with cofactor=8 only
+
 use crate::ff_uint::{BitIterBE, Num, PrimeField};
 
 #[cfg(feature = "serde_support")]

@@ -1,3 +1,5 @@
+// Assuming JubJub curves with cofactor=8 only
+
 use crate::{
     circuit::{bool::CBool, cs::{CS, RCS}, mux::c_mux3, num::CNum},
     core::signal::Signal,
