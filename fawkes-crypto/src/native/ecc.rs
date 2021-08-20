@@ -126,7 +126,7 @@ impl<Fr: PrimeField> EdwardsPoint<Fr> {
         };
 
         MontgomeryPoint { x: mx, y: my }
-            .into_extended()
+            .into_edwards_ex()
             .mul_by_cofactor()
             .into_affine()
     }
@@ -210,7 +210,7 @@ impl<Fr: PrimeField> EdwardsPoint<Fr> {
 }
 
 impl<Fr: PrimeField> MontgomeryPoint<Fr> {
-    pub fn into_affine(&self) -> EdwardsPoint<Fr> {
+    pub fn into_edwards(&self) -> EdwardsPoint<Fr> {
         if self.x.is_zero() {
             EdwardsPoint {
                 x: Num::ZERO,
@@ -223,8 +223,8 @@ impl<Fr: PrimeField> MontgomeryPoint<Fr> {
         }
     }
 
-    pub fn into_extended(&self) -> EdwardsPointEx<Fr> {
-        self.into_affine().into_extended()
+    pub fn into_edwards_ex(&self) -> EdwardsPointEx<Fr> {
+        self.into_edwards().into_extended()
     }
 }
 
