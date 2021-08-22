@@ -52,7 +52,7 @@ impl JubJubBN256 {
         let montgomery_a = Num::from(2) * (Num::ONE - edwards_d) / (Num::ONE + edwards_d);
         let montgomery_b = -Num::from(4) / (Num::ONE + edwards_d);
 
-        // value of montgomery polynomial for x=montgomery_b (has no square root in Fr)
+        // value of polynomial g(x)=(x^3+montgomery_a*x^2+x)/montgomery_b at x=montgomery_b (has no square root in Fr)
         let montgomery_u = Num::from(337401);
 
         let edwards_g = EdwardsPoint::from_scalar_raw(
