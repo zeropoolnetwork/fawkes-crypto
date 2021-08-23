@@ -25,6 +25,9 @@ impl<Fr: PrimeField> PoseidonParams<Fr> {
         Self::new_with_salt(t, f, p, "")
     }
 
+    // All generated parameters should be additionally checked according to reference implementation
+    // https://extgit.iaik.tugraz.at/krypto/hadeshash/-/blob/659de89cd207e19b92852458dce92adf83ad7cf7/code/generate_parameters_grain.sage#L167-285
+    //
     pub fn new_with_salt(t: usize, f: usize, p: usize, salt:&str) -> Self {
 
         fn m<Fr: PrimeField>(n: usize, seedbox: &mut SeedboxBlake2) -> Vec<Vec<Num<Fr>>> {
