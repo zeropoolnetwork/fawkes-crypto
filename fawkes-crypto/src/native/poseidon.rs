@@ -52,6 +52,7 @@ fn ark<Fr: PrimeField>(state: &mut [Num<Fr>], c: &[Num<Fr>]) {
     state.iter_mut().zip(c.iter()).for_each(|(s, c)| *s += c)
 }
 
+// assuming (r - 1) % 5 != 0
 fn sigma<Fr: PrimeField>(a: Num<Fr>) -> Num<Fr> {
     a.square().square() * a
 }
