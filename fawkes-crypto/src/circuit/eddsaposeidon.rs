@@ -1,6 +1,6 @@
 use crate::{
     circuit::{
-        bitify::{c_into_bits_le, c_into_bits_le_strict},
+        bitify::{c_into_bits_le, c_into_bits_le_strict, c_comp_constant},
         bool::CBool,
         ecc::CEdwardsPoint,
         num::CNum,
@@ -37,6 +37,8 @@ pub fn c_eddsaposeidon_verify<C: CS, J: JubJubParams<Fr = C::Fr>>(
     let ha = p_a.mul(&h_bits, jubjub_params);
 
     let s_bits = c_into_bits_le(&s, Num::<J::Fs>::MODULUS_BITS as usize);
+    c_comp_constant(&s_bits, (-Num::<J::Fs>::ONE).to_other().unwrap()).assert_const(&false);
+
     let jubjub_generator = CEdwardsPoint::from_const(cs, jubjub_params.edwards_g());
     let sb = jubjub_generator.mul(&s_bits, jubjub_params);
     let ha_plus_r = ha.add(&p_r, jubjub_params);
