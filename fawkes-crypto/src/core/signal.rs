@@ -9,8 +9,10 @@ pub use fawkes_crypto_derive::Signal;
 pub trait Signal<C: CS>: Sized + Clone {
     type Value: Clone + Sized;
 
+    // Return Some(value) if signal is constant. Otherwise, return None
     fn as_const(&self) -> Option<Self::Value>;
 
+    // Return value if we apply the data to the circuit. Otherwise, return None
     fn get_value(&self) -> Option<Self::Value>;
 
     #[inline]
@@ -18,20 +20,28 @@ pub trait Signal<C: CS>: Sized + Clone {
         T::from_const(self.get_cs(), value)
     }
 
+    // Create a new signal with constant value (for R1CS case this is linear compination with only 1st nonzero element)
     fn from_const(cs: &RCS<C>, value: &Self::Value) -> Self;
 
+    // Get link to the circut
     fn get_cs(&self) -> &RCS<C>;
 
+    // Create a new signal with custom value
     fn alloc(cs: &RCS<C>, value: Option<&Self::Value>) -> Self;
 
+    // Returns self if bit is true, if_else otherwise
     fn switch(&self, bit: &CBool<C>, if_else: &Self) -> Self;
 
+    // And constant constraint to the circuit (for R1CS case it is self * ONE == value)
     fn assert_const(&self, value: &Self::Value);
 
+    // Add eq constraint to the circuit
     fn assert_eq(&self, other: &Self);
 
+    // Return true if values are equal, false otherwise
     fn is_eq(&self, other: &Self) -> CBool<C>;
 
+    // Make the signal public
     fn inputize(&self);
 
     #[inline]
