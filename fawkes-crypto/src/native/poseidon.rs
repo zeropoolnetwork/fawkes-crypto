@@ -1,6 +1,6 @@
 use crate::{
     core::sizedvec::SizedVec,
-    ff_uint::seedbox::{SeedboxBlake2, SeedBox, SeedBoxGen},
+    ff_uint::seedbox::{SeedboxChaCha20, SeedBox, SeedBoxGen},
     ff_uint::{Num, PrimeField},
 };
 
@@ -30,13 +30,13 @@ impl<Fr: PrimeField> PoseidonParams<Fr> {
     //
     pub fn new_with_salt(t: usize, f: usize, p: usize, salt:&str) -> Self {
 
-        fn m<Fr: PrimeField>(n: usize, seedbox: &mut SeedboxBlake2) -> Vec<Vec<Num<Fr>>> {
+        fn m<Fr: PrimeField>(n: usize, seedbox: &mut SeedboxChaCha20) -> Vec<Vec<Num<Fr>>> {
             let x = (0..n).map(|_| seedbox.gen()).collect::<Vec<_>>();
             let y = (0..n).map(|_| seedbox.gen()).collect::<Vec<_>>();
             (0..n).map(|i| (0..n).map(|j| Num::ONE/(x[i] + y[j]) ).collect()).collect()
         }
 
-        let mut seedbox = SeedboxBlake2::new_with_salt(
+        let mut seedbox = SeedboxChaCha20::new_with_salt(
             format!("fawkes_poseidon(t={},f={},p={},salt={})", t, f, p, salt).as_bytes(),
         );
 

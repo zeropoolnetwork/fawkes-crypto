@@ -1,7 +1,7 @@
 //! This crate provides traits for working with finite fields.
 
 // Catch documentation errors caused by code changes.
-#![deny(broken_intra_doc_links)]
+#![deny(rustdoc::broken_intra_doc_links)]
 #![allow(unused_imports)]
 
 pub use ff_uint_derive::*;

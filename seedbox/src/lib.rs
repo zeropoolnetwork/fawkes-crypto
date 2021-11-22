@@ -1,90 +1,40 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use blake2_rfc::blake2s::Blake2s;
-use byteorder::{LittleEndian, ByteOrder};
+use sha3::{Digest, Keccak256};
+use rand_chacha::ChaCha20Rng;
+use rand_core::{RngCore, SeedableRng};
 
 pub const PERSONALIZATION: &'static [u8; 8] = b"__fawkes";
 
-pub struct SeedboxBlake2 {
-    salt: Option<[u8; 32]>,
-    n_iter: u64,
-    n_limb: usize,
-    buff: [u8; 32],
+fn keccak256(data:&[u8])->[u8;32] {
+    let mut hasher = Keccak256::new();
+    hasher.update(data);
+    let mut res = [0u8;32];
+    res.iter_mut().zip(hasher.finalize().into_iter()).for_each(|(l,r)| *l=r);
+    res
 }
 
-impl SeedboxBlake2 {
-    fn update(&mut self) {
-        self.n_limb = 0;
-        let mut h = Blake2s::with_params(32, &[], &[], PERSONALIZATION);
-        let mut n_iter_bin = [0u8; 8];
 
-        LittleEndian::write_u64(&mut n_iter_bin, self.n_iter);
+pub struct SeedboxChaCha20(ChaCha20Rng);
 
-        self.n_iter += 1;
-        h.update(n_iter_bin.as_ref());
-        if self.salt.is_some() {
-            h.update(self.salt.unwrap().as_ref());
-        }
-        self.buff.as_mut().clone_from_slice(h.finalize().as_ref())
-    }
-
-    fn next_byte(&mut self) -> u8 {
-        if self.n_limb == 32 {
-            self.update();
-        }
-
-        let res = self.buff[self.n_limb];
-        self.n_limb += 1;
-        res
-    }
-
-}
 
 pub trait SeedBox {
     fn fill_bytes(&mut self, dest: &mut [u8]);
     fn fill_limbs(&mut self, dest: &mut [u64]);
-    fn new() -> Self;
     fn new_with_salt(salt: &[u8]) -> Self;
 }
 
-impl SeedBox for SeedboxBlake2 {
-    fn new() -> Self {
-        let mut res = SeedboxBlake2 {
-            salt: None,
-            n_iter: 0,
-            n_limb: 8,
-            buff: [0; 32],
-        };
-        res.update();
-        res
-    }
-
+impl SeedBox for SeedboxChaCha20 {
     fn new_with_salt(salt: &[u8]) -> Self {
-        let mut h = Blake2s::new(32);
-        let mut buff = [0u8; 32];
-        h.update(salt);
-        buff[..].clone_from_slice(h.finalize().as_ref());
-
-        let mut res= SeedboxBlake2 {
-            salt: Some(buff),
-            n_iter: 0,
-            n_limb: 8,
-            buff: [0; 32],
-        };
-        res.update();
-        res
+        SeedboxChaCha20(<ChaCha20Rng as SeedableRng>::from_seed(keccak256(salt)))
     }
+
     fn fill_bytes(&mut self, dest: &mut [u8]) {
-        dest.iter_mut().for_each(|f| *f = self.next_byte());
+        self.0.fill_bytes(dest);
     }
 
     fn fill_limbs(&mut self, dest: &mut [u64]) {
-        let mut b = [0u8;8];
-
-        dest.iter_mut().for_each(|f| {
-            self.fill_bytes(&mut b);
-            *f = LittleEndian::read_u64(&b);
-        });
+        dest.iter_mut().for_each(|f| *f = self.0.next_u64());
     }
 }
 

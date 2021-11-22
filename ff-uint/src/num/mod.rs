@@ -11,7 +11,7 @@ use crate::maybestd::vec;
 
 use ref_cast::RefCast;
 
-use crate::seedbox::{SeedBox, SeedBoxGen, SeedboxBlake2};
+use crate::seedbox::{SeedBox, SeedBoxGen, SeedboxChaCha20};
 use core::convert::TryInto;
 
 #[repr(transparent)]
@@ -283,7 +283,7 @@ impl<Fp: PrimeField> BorshDeserialize for Num<Fp> {
     }
 }
 
-impl<Fp: PrimeField> SeedBoxGen<Num<Fp>> for SeedboxBlake2 {
+impl<Fp: PrimeField> SeedBoxGen<Num<Fp>> for SeedboxChaCha20 {
     fn gen(&mut self) -> Num<Fp> {
         let mut n = Fp::Inner::ZERO;
         let shave = 0xffffffffffffffffu64 >> Fp::REPR_SHAVE_BITS;
