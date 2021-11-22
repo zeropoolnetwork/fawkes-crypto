@@ -1,6 +1,6 @@
 [package]
 name = "seedbox"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
 description = "Library for generating math objects from seeds"
 homepage = "https://github.com/zeropoolnetwork/fawkes-crypto"
