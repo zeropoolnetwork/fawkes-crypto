@@ -35,7 +35,7 @@ pub mod group;
 struct BellmanCS<E: Engine, C:CS<Fr=E::Fr>>(RCS<C>, PhantomData<E>);
 
 impl<E: Engine, C:CS<Fr=E::Fr>> BellmanCS<E,C> {
-    fn new(inner:RCS<C>) -> Self {
+    pub fn new(inner:RCS<C>) -> Self {
         Self(inner, PhantomData)
     }
 }
