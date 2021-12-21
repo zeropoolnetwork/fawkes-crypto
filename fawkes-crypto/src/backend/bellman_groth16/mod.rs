@@ -32,7 +32,7 @@ pub mod group;
 
 
 #[repr(transparent)]
-struct BellmanCS<E: Engine, C:CS<Fr=E::Fr>>(RCS<C>, PhantomData<E>);
+pub struct BellmanCS<E: Engine, C:CS<Fr=E::Fr>>(RCS<C>, PhantomData<E>);
 
 impl<E: Engine, C:CS<Fr=E::Fr>> BellmanCS<E,C> {
     pub fn new(inner:RCS<C>) -> Self {

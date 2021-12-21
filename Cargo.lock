@@ -225,7 +225,7 @@ dependencies = [
 
 [[package]]
 name = "fawkes-crypto"
-version = "4.3.1"
+version = "4.3.2"
 dependencies = [
  "bit-vec",
  "blake2-rfc_bellman_edition",
