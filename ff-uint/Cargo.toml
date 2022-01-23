@@ -1,6 +1,6 @@
 [package]
 name = "ff-uint"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
 description = "Library for building and interfacing with fixed-sized integers and finite fields"
 documentation = "https://docs.rs/ff-uint/"
@@ -22,7 +22,7 @@ arbitrary = { version = "0.4", optional = true }
 ff-uint_derive = { version = "0.2.0", path = "../ff-uint_derive" }
 rand_core = { version = "0.5", default-features = false, optional = true }
 concat-idents = "1.0.0"
-borsh = { version = "0.8.2", optional = true, default-features = false }
+borsh = { version = "0.9", optional = true, default-features = false }
 serde = { version = "1.0", optional = true, default-features = false }
 ref-cast = "1.0"
 seedbox = { version = "0.2.0", path = "../seedbox", default-features = false }
