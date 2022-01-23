@@ -7,8 +7,8 @@ use num_bigint::BigUint;
 use num_integer::Integer;
 use num_traits::{One, ToPrimitive, Zero};
 use proc_macro::TokenStream;
-use proc_macro_crate::crate_name;
 use proc_macro2::Span;
+use proc_macro_crate::crate_name;
 use quote::quote;
 use quote::TokenStreamExt;
 use std::str::FromStr;
@@ -638,25 +638,25 @@ fn prime_field_impl(
     let top_limb_index = limbs - 1;
 
     quote! {
-        impl ::std::marker::Copy for #name { }
+        impl ::core::marker::Copy for #name { }
 
-        impl ::std::clone::Clone for #name {
+        impl ::core::clone::Clone for #name {
             fn clone(&self) -> #name {
                 *self
             }
         }
 
-        impl ::std::cmp::PartialEq for #name {
+        impl ::core::cmp::PartialEq for #name {
             fn eq(&self, other: &#name) -> bool {
                 self.0 == other.0
             }
         }
 
-        impl ::std::cmp::Eq for #name { }
+        impl ::core::cmp::Eq for #name { }
 
-        impl ::std::fmt::Debug for #name
+        impl ::core::fmt::Debug for #name
         {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
                 write!(f, "{}({:?})", stringify!(#name), self.to_uint())
             }
         }
@@ -667,11 +667,11 @@ fn prime_field_impl(
             }
         }
 
-        impl std::str::FromStr for #name {
+        impl ::core::str::FromStr for #name {
             type Err = &'static str;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
-                let uint = <<#name as PrimeFieldParams>::Inner as std::str::FromStr>::from_str(s)?;
+                let uint = <<#name as PrimeFieldParams>::Inner as ::core::str::FromStr>::from_str(s)?;
                 Self::from_uint(uint)
                     .ok_or("non-canonical input")
             }
@@ -704,20 +704,20 @@ fn prime_field_impl(
         /// Elements are ordered lexicographically.
         impl Ord for #name {
             #[inline(always)]
-            fn cmp(&self, other: &#name) -> ::std::cmp::Ordering {
+            fn cmp(&self, other: &#name) -> ::core::cmp::Ordering {
                 self.to_uint().cmp(&other.to_uint())
             }
         }
 
         impl PartialOrd for #name {
             #[inline(always)]
-            fn partial_cmp(&self, other: &#name) -> Option<::std::cmp::Ordering> {
+            fn partial_cmp(&self, other: &#name) -> Option<::core::cmp::Ordering> {
                 Some(self.cmp(other))
             }
         }
 
-        impl ::std::fmt::Display for #name {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        impl ::core::fmt::Display for #name {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
                 write!(f, "{}", self.to_uint())
             }
         }
