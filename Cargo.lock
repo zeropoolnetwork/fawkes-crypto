@@ -280,7 +280,7 @@ dependencies = [
 
 [[package]]
 name = "ff-uint"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "arbitrary",
  "borsh",
@@ -300,7 +300,7 @@ dependencies = [
 
 [[package]]
 name = "ff-uint_derive"
-version = "0.2.0"
+version = "0.2.2"
 dependencies = [
  "num-bigint 0.3.2",
  "num-integer",
