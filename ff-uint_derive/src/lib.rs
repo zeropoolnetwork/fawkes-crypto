@@ -701,6 +701,36 @@ fn prime_field_impl(
             }
         }
 
+        #[cfg(feature = "scale_support")]
+        impl #cratename::parity_scale_codec::Encode for #name {
+            fn using_encoded<R, F: FnOnce(&[u8]) -> R>(&self, f: F) -> R {
+                let uint = self.to_uint();
+                uint.using_encoded(f)
+            }
+        }
+
+        #[cfg(feature = "scale_support")]
+        impl #cratename::parity_scale_codec::Decode for #name {
+            fn decode<I: #cratename::parity_scale_codec::Input>(input: &mut I) -> Result<Self, #cratename::parity_scale_codec::Error> {
+                let uint = <<#name as PrimeFieldParams>::Inner as #cratename::parity_scale_codec::Decode>::decode(input)?;
+                Self::from_uint(uint)
+                    .ok_or(#cratename::parity_scale_codec::Error::from("Invalid Data"))
+            }
+        }
+
+        #[cfg(feature = "scale_support")]
+        impl #cratename::scale_info::TypeInfo for #name {
+            type Identity = Self;
+
+            fn type_info() -> #cratename::scale_info::Type {
+                #cratename::scale_info::Type::builder()
+                    .path(#cratename::scale_info::Path::new(stringify!(#name), module_path!()))
+                    .composite(scale_info::build::Fields::unnamed()
+                        .field(|f| f.ty::<#inner>().type_name(stringify!(#inner)))
+                    )
+            }
+        }
+
         /// Elements are ordered lexicographically.
         impl Ord for #name {
             #[inline(always)]

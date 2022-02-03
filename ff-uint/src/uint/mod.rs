@@ -12,12 +12,17 @@ macro_rules! construct_uint {
 				use $crate::Uint;
 				#[cfg(feature = "borsh_support")]
 				use $crate::borsh::{BorshSerialize, BorshDeserialize};
+				#[cfg(feature = "scale_support")]
+				use $crate::parity_scale_codec_derive::{Encode, Decode};
+				#[cfg(feature = "scale_support")]
+				use $crate::scale_info::TypeInfo;
 				use $crate::maybestd::{vec, vec::Vec};
 
 				#[repr(C)]
 				$(#[$attr])*
 				#[derive(Copy, Clone, Default, Debug)]
 				#[cfg_attr(feature = "borsh_support", derive(BorshSerialize, BorshDeserialize))]
+				#[cfg_attr(feature = "scale_support", derive(Encode, Decode, TypeInfo))]
 				pub struct $name (pub [u64; $n_words]);
 
 				#[inline]
