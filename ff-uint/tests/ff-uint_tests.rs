@@ -1248,6 +1248,54 @@ fn trailing_zeros() {
     assert_eq!(U256::from("0").trailing_zeros(), 256);
 }
 
+#[test]
+fn u512_scale_encode_decode() {
+    use parity_scale_codec::{Encode, Decode};
+
+    let original_value = U512::from_str("340282366920938463481821351505477763070").unwrap();
+    let code = original_value.encode();
+    let decoded_value = U512::decode(&mut code.as_slice()).unwrap();
+    assert_eq!(decoded_value, original_value);
+}
+
+#[test]
+fn ff_scale_encode_decode() {
+    use parity_scale_codec::{Encode, Decode};
+
+    let original_value = Fs::from("6309289652141936190746119273485978351753073401847546942597907876037438057717");
+    let code = original_value.encode();
+    let decoded_value = Fs::decode(&mut code.as_slice()).unwrap();
+    assert_eq!(decoded_value, original_value);
+}
+
+#[test]
+fn u512_type_info() {
+    use scale_info::{TypeInfo, TypeDef};
+
+    let info = U512::type_info();
+
+    assert!(info.path().segments().contains(&"U512"));
+    assert!(matches!(info.type_def(), TypeDef::Composite { .. }));
+    if let TypeDef::Composite(comp) = info.type_def() {
+        assert_eq!(comp.fields().len(), 1);
+        assert_eq!(*comp.fields()[0].type_name().unwrap(), "[u64; 8]");
+    }
+}
+
+#[test]
+fn ff_type_info() {
+    use scale_info::{TypeInfo, TypeDef};
+
+    let info = Fs::type_info();
+
+    assert!(info.path().segments().contains(&"Fs"));
+    assert!(matches!(info.type_def(), TypeDef::Composite { .. }));
+    if let TypeDef::Composite(comp) = info.type_def() {
+        assert_eq!(comp.fields().len(), 1);
+        assert!(comp.fields()[0].type_name().unwrap().contains("U256"));
+    }
+}
+
 #[cfg(feature = "quickcheck")]
 pub mod laws {
     use super::construct_uint;

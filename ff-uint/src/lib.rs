@@ -17,6 +17,15 @@ pub use rustc_hex;
 #[cfg(feature = "serde_support")]
 #[doc(hidden)]
 pub use serde;
+#[cfg(feature = "scale_support")]
+#[doc(hidden)]
+pub use parity_scale_codec;
+#[cfg(feature = "scale_support")]
+#[doc(hidden)]
+pub use parity_scale_codec_derive;
+#[cfg(feature = "scale_support")]
+#[doc(hidden)]
+pub use scale_info;
 #[doc(hidden)]
 pub use static_assertions;
 
