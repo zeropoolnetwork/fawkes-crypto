@@ -1,6 +1,6 @@
 [package]
 name = "ff-uint_derive"
-version = "0.2.2"
+version = "0.2.4"
 authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
 description = "Library for building and interfacing with fixed-sized integers and finite fields"
 documentation = "https://docs.rs/ff-uint/"
