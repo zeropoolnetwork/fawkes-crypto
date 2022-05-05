@@ -1,12 +1,12 @@
 [package]
 name = "fawkes-crypto"
-version = "4.3.3"
+version = "4.4.0"
 authors = ["Igor Gulamov <igor.gulamov@gmail.com>"]
 description = "zk-SNARK circuit building framework"
 readme = "README.md"
 homepage = "https://github.com/zeropoolnetwork/fawkes-crypto"
 repository = "https://github.com/zeropoolnetwork/fawkes-crypto"
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 
 [lib]

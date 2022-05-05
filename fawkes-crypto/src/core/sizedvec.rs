@@ -3,8 +3,10 @@ use std::{
     ops::{Index, IndexMut},
     slice::SliceIndex,
     slice::{Iter, IterMut},
+    mem::MaybeUninit,
     self
 };
+
 
 
 #[cfg(feature = "borsh_support")]
@@ -19,6 +21,10 @@ pub struct SizedVec<T: Sized, const L: usize>([T; L]);
 impl<T, const L: usize> SizedVec<T, L> {
     pub fn as_slice(&self) -> &[T] {
         &self.0
+    }
+
+    pub fn as_mut_slice(&mut self) -> &mut [T] {
+        &mut self.0
     }
 
     pub fn iter(&self) -> Iter<'_, T> {
@@ -62,22 +68,20 @@ impl<T: BorshDeserialize, const L: usize> BorshDeserialize for SizedVec<T, L> {
     }
 }
 
-// This is a workaround for lack of implementation of FromIterator for [T; N]
-// Relevant issue: https://github.com/rust-lang/rust/issues/81615
+
 impl<T, const L: usize> FromIterator<T> for SizedVec<T, L> {
     #[inline]
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         let mut iter = iter.into_iter();
-        let mut data: [std::mem::MaybeUninit<T>; L] = unsafe {
-            std::mem::MaybeUninit::uninit().assume_init()
-        };
+        let mut data: [MaybeUninit<T>; L] = unsafe { MaybeUninit::uninit().assume_init()};
 
-        for elem in &mut data[..] {
-            let src_elem = iter.next().expect("iterator is shorter than expected");
-            unsafe { std::ptr::write(elem.as_mut_ptr(), src_elem); }
+        for i in 0..L {
+            data[i] = MaybeUninit::new(iter.next().expect("iterator is shorter than expected"));
         }
 
-        SizedVec(unsafe { std::mem::transmute_copy::<_, [T; L]>(&data) })
+        assert!(iter.next().is_none(), "iterator is longer than expected");
+
+        SizedVec(unsafe { (&*(&MaybeUninit::new(data) as *const _ as *const MaybeUninit<_>)).assume_init_read() })
     }
 }
 
