@@ -405,7 +405,7 @@ dependencies = [
  "parity-scale-codec",
  "parity-scale-codec-derive",
  "quickcheck",
- "rand 0.7.3",
+ "rand 0.8.5",
  "rand_core 0.5.1",
  "ref-cast",
  "rustc-hex",

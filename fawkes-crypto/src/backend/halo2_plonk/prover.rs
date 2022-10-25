@@ -14,7 +14,7 @@ use halo2_proofs::{
 use itertools::Itertools;
 use rand::rngs::OsRng;
 
-pub fn gen_proof<
+pub fn prove<
     C: Circuit<Fr>,
     E: EncodedChallenge<G1Affine>,
     TW: TranscriptWriterBuffer<Vec<u8>, G1Affine, E>,
@@ -45,20 +45,6 @@ pub fn gen_proof<
         .unwrap();
         transcript.finalize()
     };
-
-    // let accept = {
-    //     let mut transcript = TR::init(Cursor::new(proof.clone()));
-    //     VerificationStrategy::<_, VerifierGWC<_>>::finalize(
-    //         verify_proof::<_, VerifierGWC<_>, _, TR, _>(
-    //             params.verifier_params(),
-    //             pk.get_vk(),
-    //             AccumulatorStrategy::new(params.verifier_params()),
-    //             &[instances.as_slice()],
-    //             &mut transcript,
-    //         )
-    //         .unwrap(),
-    //     )
-    // };
 
     proof
 }
