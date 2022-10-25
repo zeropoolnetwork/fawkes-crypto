@@ -16,7 +16,7 @@ crate-type = ["rlib"]
 [dependencies]
 ff-uint = { version = "0.2.1", path = "../ff-uint", default-features = false }
 linked-list = {version="0.0.3", optional=true}
-rand = { version = "0.7.3", optional = true }
+rand = { version = "0.8", optional = true }
 byteorder = "1"
 serde = { version = "1.0", features = ["derive"], optional = true }
 borsh = { version = "0.9", optional = true }
@@ -26,6 +26,14 @@ getrandom = { version = "0.2", optional = true }
 bit-vec = "0.6.3"
 itertools = "0.10.0"
 brotli = "3.3.2"
+halo2_curves = { git = "https://github.com/privacy-scaling-explorations/halo2curves", tag = "0.2.1", package = "halo2curves" }
+halo2_kzg_srs = { git = "https://github.com/han0110/halo2-kzg-srs" }
+halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2022_09_10" }
+
+
+[patch."https://github.com/privacy-scaling-explorations/halo2"]
+halo2_proofs = { git = "https://github.com/han0110/halo2", branch = "feature/configurable-instance-query", package = "halo2_proofs" }
+
 
 [dependencies.blake2_rfc]
 version = "0.0.1"

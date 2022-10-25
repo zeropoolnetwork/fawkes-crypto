@@ -18,7 +18,10 @@ pub struct EdwardsPointEx<Fr: PrimeField> {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde_support", serde(bound(serialize = "", deserialize = "")))]
+#[cfg_attr(
+    feature = "serde_support",
+    serde(bound(serialize = "", deserialize = ""))
+)]
 pub struct EdwardsPoint<Fr: PrimeField> {
     pub x: Num<Fr>,
     pub y: Num<Fr>,
@@ -26,7 +29,10 @@ pub struct EdwardsPoint<Fr: PrimeField> {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[cfg_attr(feature = "serde_support", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde_support", serde(bound(serialize = "", deserialize = "")))]
+#[cfg_attr(
+    feature = "serde_support",
+    serde(bound(serialize = "", deserialize = ""))
+)]
 pub struct MontgomeryPoint<Fr: PrimeField> {
     pub x: Num<Fr>,
     pub y: Num<Fr>,
