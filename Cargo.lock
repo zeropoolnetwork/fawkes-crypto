@@ -336,7 +336,6 @@ dependencies = [
  "fawkes-crypto_derive",
  "ff-uint",
  "getrandom 0.2.8",
- "halo2_kzg_srs",
  "halo2_proofs",
  "halo2curves",
  "impl-trait-for-tuples 0.1.3",
@@ -518,21 +517,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "halo2_kzg_srs"
-version = "0.1.0"
-source = "git+https://github.com/han0110/halo2-kzg-srs#ff65429d69db3bf5575a3f011da34932af7a0325"
-dependencies = [
- "byteorder",
- "halo2curves",
- "num-bigint 0.4.3",
- "rand_core 0.6.4",
- "rayon",
-]
-
-[[package]]
 name = "halo2_proofs"
 version = "0.2.0"
-source = "git+https://github.com/privacy-scaling-explorations/halo2?tag=v2022_09_10#a9e99a72a65d7c98e8a4258c2c94269c834d1c10"
+source = "git+https://github.com/privacy-scaling-explorations/halo2?tag=v2022_10_22#5fc8ce89ef3235d8eefeb8994173ac706e89e4ec"
 dependencies = [
  "blake2b_simd",
  "ff",
@@ -546,7 +533,7 @@ dependencies = [
 [[package]]
 name = "halo2curves"
 version = "0.2.1"
-source = "git+https://github.com/privacy-scaling-explorations/halo2curves?tag=0.2.1#f75ed26c961179186e9cec02cc3f841ca9e3fec1"
+source = "git+https://github.com/privacy-scaling-explorations/halo2curves?tag=0.3.0#83c72d49762343ffc9576ca11a2aa615efe1029b"
 dependencies = [
  "ff",
  "group",
