@@ -38,5 +38,5 @@ fn test_create_proof() {
     let params = ParamsKZG::<Bn256>::new(K);
 
     // Create proof with correct number of instances
-    prove::<_, _, Blake2bWrite<_, _, Challenge255<_>>>(&params, MyCircuit, vec![]);
+    let _proof = prove::<_, _, Blake2bWrite<_, _, Challenge255<_>>>(&params, MyCircuit, vec![]);
 }

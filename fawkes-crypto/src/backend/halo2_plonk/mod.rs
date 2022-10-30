@@ -1,3 +1,3 @@
-pub mod engines;
-pub mod group;
+pub mod deserialize_proof;
+mod proof_deserialisation_utils;
 pub mod prover;
