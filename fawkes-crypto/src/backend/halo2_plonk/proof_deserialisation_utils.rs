@@ -1,9 +1,14 @@
 use halo2_curves::bn256::{Fr, G1Affine};
+use halo2_proofs::arithmetic::CurveAffine;
+use halo2_proofs::transcript::ChallengeScalar;
 use halo2_proofs::{
     plonk::{Error, VerifyingKey},
     // poly::commitment::{CommitmentScheme, Verifier},
     transcript::{EncodedChallenge, TranscriptRead},
 };
+use std::marker::PhantomData;
+
+pub struct ChallengeScalarType;
 
 pub struct LookupPermutationCommitments {
     pub permuted_input_commitment: G1Affine,
@@ -168,4 +173,14 @@ pub fn lookup_evaluate<E: EncodedChallenge<G1Affine>, T: TranscriptRead<G1Affine
         permuted_input_inv_eval,
         permuted_table_eval,
     })
+}
+
+pub struct ChallengeScalars {
+    pub theta: ChallengeScalar<G1Affine, ()>,
+    pub beta: ChallengeScalar<G1Affine, ()>,
+    pub gamma: ChallengeScalar<G1Affine, ()>,
+    pub y: ChallengeScalar<G1Affine, ()>,
+    pub x: ChallengeScalar<G1Affine, ()>,
+    pub v: ChallengeScalar<G1Affine, ()>,
+    pub u: ChallengeScalar<G1Affine, ()>,
 }

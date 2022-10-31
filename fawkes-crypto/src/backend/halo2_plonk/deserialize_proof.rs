@@ -8,13 +8,15 @@ use halo2_proofs::{
 use std::io;
 
 pub struct Proof {
-    pub advice_commitments: Vec<Vec<G1Affine>>,
-    pub advice_evals: Vec<Vec<Fr>>,
-    pub fixed_evals: Vec<Fr>,
-    pub vanishing: PartiallyEvaluated,
-    pub permutations_common: CommonEvaluated,
-    pub permutations_evaluated: Vec<PermutationEvaluated>,
-    pub lookups_evaluated: Vec<Vec<LookupEvaluated>>,
+    pub advice_commitments: Vec<Vec<G1Affine>>, // Plonk commitments
+    pub advice_evals: Vec<Vec<Fr>>,             // Plonk evaluations
+    pub challenges: Vec<Fr>,                    // Plonk commitments
+    pub challenge_scalars: ChallengeScalars,
+    pub fixed_evals: Vec<Fr>,                 // Plonk evaluations
+    pub vanishing: PartiallyEvaluated,        // Vanishing argument
+    pub permutations_common: CommonEvaluated, // Plonk evaluations
+    pub permutations_evaluated: Vec<PermutationEvaluated>, // polynomial commitment scheme
+    pub lookups_evaluated: Vec<Vec<LookupEvaluated>>, // Plonk commitments
 }
 
 pub fn deserialize_proof<'params, E: EncodedChallenge<G1Affine>, T: TranscriptRead<G1Affine, E>>(
@@ -24,8 +26,36 @@ pub fn deserialize_proof<'params, E: EncodedChallenge<G1Affine>, T: TranscriptRe
     transcript: &mut T,
 ) -> Result<Proof, Error> {
     let num_proofs = instances.len();
-    let advice_commitments =
-        vec![vec![transcript.read_point()?; vk.cs().num_advice_columns()]; num_proofs];
+    let (advice_commitments, challenges) = {
+        let mut advice_commitments =
+            vec![vec![G1Affine::default(); vk.cs().num_advice_columns()]; num_proofs];
+        let mut challenges = vec![Fr::zero(); vk.cs().num_challenges()];
+
+        for current_phase in 0..*vk.cs().advice_column_phase().iter().max().unwrap_or(&0u8) {
+            for advice_commitments in advice_commitments.iter_mut() {
+                for (phase, commitment) in vk
+                    .cs()
+                    .advice_column_phase()
+                    .iter()
+                    .zip(advice_commitments.iter_mut())
+                {
+                    if current_phase == *phase {
+                        *commitment = transcript.read_point()?;
+                    }
+                }
+            }
+            for (phase, challenge) in vk.cs().challenge_phase().iter().zip(challenges.iter_mut()) {
+                if current_phase == *phase {
+                    *challenge = *transcript.squeeze_challenge_scalar::<()>();
+                }
+            }
+        }
+
+        (advice_commitments, challenges)
+    };
+
+    // Sample theta challenge for keeping lookup columns linearly independent
+    let theta = transcript.squeeze_challenge_scalar::<()>();
 
     let lookups_permuted = (0..num_proofs)
         .map(|_| -> Result<Vec<_>, _> {
@@ -37,6 +67,12 @@ pub fn deserialize_proof<'params, E: EncodedChallenge<G1Affine>, T: TranscriptRe
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
+
+    // Sample beta challenge
+    let beta = transcript.squeeze_challenge_scalar::<()>();
+
+    // Sample gamma challenge
+    let gamma = transcript.squeeze_challenge_scalar::<()>();
 
     let permutations_committed = (0..num_proofs)
         .map(|_| vk_read_product_commitments(vk, transcript))
@@ -53,12 +89,19 @@ pub fn deserialize_proof<'params, E: EncodedChallenge<G1Affine>, T: TranscriptRe
         })
         .collect::<Result<Vec<_>, _>>()?;
 
+    let vanishing = transcript.read_point()?;
+
+    let y = transcript.squeeze_challenge_scalar::<()>();
+
     let vanishing = Constructed {
         // before y
-        random_poly_commitment: transcript.read_point()?,
+        random_poly_commitment: vanishing,
         // after y
         h_commitments: read_n_points(transcript, vk.get_domain().get_quotient_poly_degree())?,
     };
+    // Sample x challenge, which is used to ensure the circuit is
+    // satisfied with high probability.
+    let x = transcript.squeeze_challenge_scalar::<()>();
 
     // instance_evals connected with transcript only if QUERY_INSTANCE is true on verifier
     // and after that those code
@@ -101,17 +144,39 @@ pub fn deserialize_proof<'params, E: EncodedChallenge<G1Affine>, T: TranscriptRe
                 .collect::<Result<Vec<_>, _>>()
         })
         .collect::<Result<Vec<_>, _>>()?;
-    
-    // in verify_proof, after all deserialization, it all chained into queries and put into verifier function, 
+
+    let v = transcript.squeeze_challenge_scalar();
+
+    // let commitment_data = construct_intermediate_sets(queries);
+
+    // let w: Vec<E::G1Affine> = (0..commitment_data.len())
+    //     .map(|_| transcript.read_point().map_err(|_| Error::SamplingError))
+    //     .collect::<Result<Vec<E::G1Affine>, Error>>()?;
+
+    let u = transcript.squeeze_challenge_scalar();
+
+    // in verify_proof, after all deserialization, it all chained into queries and put into verifier function,
     // where read some new points - last trouble it's the size of this commitment_data
     //         let commitment_data = construct_intermediate_sets(queries);
     // let w: Vec<E::G1Affine> = (0..commitment_data.len())
     // .map(|_| transcript.read_point().map_err(|_| Error::SamplingError))
     // .collect::<Result<Vec<E::G1Affine>, Error>>()?;
 
+    let challenge_scalars = ChallengeScalars {
+        theta,
+        beta,
+        gamma,
+        y,
+        x,
+        v,
+        u,
+    };
+
     let proof = Proof {
         advice_commitments,
         advice_evals,
+        challenges,
+        challenge_scalars,
         fixed_evals,
         vanishing,
         permutations_common,
