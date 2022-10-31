@@ -121,6 +121,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "block-buffer"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69cce20737498f97b993470a6e536b8523f0af7892a4f928cceb1ac5e52ebe7e"
+dependencies = [
+ "generic-array",
+]
+
+[[package]]
 name = "block-padding"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -288,6 +297,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
+name = "crypto-common"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bfb12502f3fc46cca1bb51ac28df9d618d813cdc3d2f25b9fe775a34af26bb3"
+dependencies = [
+ "generic-array",
+ "typenum",
+]
+
+[[package]]
 name = "derive_more"
 version = "0.99.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -308,6 +327,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "digest"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adfbc57365a37acbd2ebf2b64d7e69bb766e2fea813521ed536f5d0520dcf86c"
+dependencies = [
+ "block-buffer 0.10.3",
+ "crypto-common",
+]
+
+[[package]]
+name = "ecc"
+version = "0.1.0"
+source = "git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2022_09_09#2d708b4453387f03059aad68d6d87441db112a2f"
+dependencies = [
+ "group",
+ "integer",
+ "num-bigint 0.4.3",
+ "num-integer",
+ "num-traits",
+ "rand 0.8.5",
+ "subtle",
+]
+
+[[package]]
 name = "either"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -324,6 +367,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "ethbloom"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11da94e443c60508eb62cf256243a64da87304c2802ac2528847f79d750007ef"
+dependencies = [
+ "crunchy",
+ "fixed-hash",
+ "tiny-keccak",
+]
+
+[[package]]
+name = "ethereum-types"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2827b94c556145446fcce834ca86b7abf0c39a805883fe20e72c5bfdb5a0dc6"
+dependencies = [
+ "ethbloom",
+ "fixed-hash",
+ "primitive-types",
+ "uint",
+]
+
+[[package]]
 name = "fawkes-crypto"
 version = "4.4.0"
 dependencies = [
@@ -337,10 +403,11 @@ dependencies = [
  "ff-uint",
  "getrandom 0.2.8",
  "halo2_proofs",
- "halo2curves",
+ "halo2curves 0.2.1",
  "impl-trait-for-tuples 0.1.3",
  "itertools",
  "linked-list",
+ "plonk_verifier",
  "rand 0.8.5",
  "serde",
 ]
@@ -401,8 +468,8 @@ dependencies = [
  "concat-idents",
  "crunchy",
  "ff-uint_derive",
- "parity-scale-codec",
- "parity-scale-codec-derive",
+ "parity-scale-codec 2.3.1",
+ "parity-scale-codec-derive 2.3.1",
  "quickcheck",
  "rand 0.8.5",
  "rand_core 0.5.1",
@@ -435,7 +502,7 @@ checksum = "18af1ea1b80a4b474fae13af4c58cf0a5a2bc33832d5fa70f68a4b286178fdb5"
 dependencies = [
  "byteorder",
  "ff_derive_ce",
- "hex",
+ "hex 0.3.2",
  "rand 0.4.6",
 ]
 
@@ -451,6 +518,18 @@ dependencies = [
  "proc-macro2 0.4.30",
  "quote 0.6.13",
  "syn 0.14.9",
+]
+
+[[package]]
+name = "fixed-hash"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfcf0ed7fe52a17a03854ec54a9f76d6d84508d1c0e66bc1793301c73fc8493c"
+dependencies = [
+ "byteorder",
+ "rand 0.8.5",
+ "rustc-hex",
+ "static_assertions",
 ]
 
 [[package]]
@@ -519,12 +598,12 @@ dependencies = [
 [[package]]
 name = "halo2_proofs"
 version = "0.2.0"
-source = "git+https://github.com/privacy-scaling-explorations/halo2?tag=v2022_10_22#5fc8ce89ef3235d8eefeb8994173ac706e89e4ec"
+source = "git+https://github.com/privacy-scaling-explorations/halo2?tag=v2022_09_10#a9e99a72a65d7c98e8a4258c2c94269c834d1c10"
 dependencies = [
  "blake2b_simd",
  "ff",
  "group",
- "halo2curves",
+ "halo2curves 0.2.1",
  "rand_core 0.6.4",
  "rayon",
  "tracing",
@@ -532,8 +611,8 @@ dependencies = [
 
 [[package]]
 name = "halo2curves"
-version = "0.2.1"
-source = "git+https://github.com/privacy-scaling-explorations/halo2curves?tag=0.3.0#83c72d49762343ffc9576ca11a2aa615efe1029b"
+version = "0.2.0"
+source = "git+https://github.com/privacy-scaling-explorations/halo2curves?tag=v0.2.0#bbd4cee10dbf9c51e0456ea67ec2b894b49f688c"
 dependencies = [
  "ff",
  "group",
@@ -545,6 +624,35 @@ dependencies = [
  "rand_core 0.6.4",
  "static_assertions",
  "subtle",
+]
+
+[[package]]
+name = "halo2curves"
+version = "0.2.1"
+source = "git+https://github.com/privacy-scaling-explorations/halo2curves?tag=0.2.1#f75ed26c961179186e9cec02cc3f841ca9e3fec1"
+dependencies = [
+ "ff",
+ "group",
+ "lazy_static",
+ "num-bigint 0.4.3",
+ "num-traits",
+ "pasta_curves",
+ "rand 0.8.5",
+ "rand_core 0.6.4",
+ "static_assertions",
+ "subtle",
+]
+
+[[package]]
+name = "halo2wrong"
+version = "0.1.0"
+source = "git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2022_09_09#2d708b4453387f03059aad68d6d87441db112a2f"
+dependencies = [
+ "group",
+ "halo2_proofs",
+ "num-bigint 0.4.3",
+ "num-integer",
+ "num-traits",
 ]
 
 [[package]]
@@ -572,6 +680,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "805026a5d0141ffc30abb3be3173848ad46a1b1664fe632428479619a3644d77"
 
 [[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "impl-codec"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba6a270039626615617f3f36d15fc827041df3b78c439da2cadfa47455a77f2f"
+dependencies = [
+ "parity-scale-codec 3.2.1",
+]
+
+[[package]]
 name = "impl-trait-for-tuples"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -594,6 +717,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "integer"
+version = "0.1.0"
+source = "git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2022_09_09#2d708b4453387f03059aad68d6d87441db112a2f"
+dependencies = [
+ "group",
+ "maingate",
+ "num-bigint 0.4.3",
+ "num-integer",
+ "num-traits",
+ "rand 0.8.5",
+ "subtle",
+]
+
+[[package]]
 name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -601,6 +738,12 @@ checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
 dependencies = [
  "either",
 ]
+
+[[package]]
+name = "itoa"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 
 [[package]]
 name = "js-sys"
@@ -642,6 +785,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
 dependencies = [
  "cfg-if 1.0.0",
+]
+
+[[package]]
+name = "maingate"
+version = "0.1.0"
+source = "git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2022_09_09#2d708b4453387f03059aad68d6d87441db112a2f"
+dependencies = [
+ "group",
+ "halo2wrong",
+ "num-bigint 0.4.3",
+ "num-integer",
+ "num-traits",
+ "rand 0.8.5",
+ "subtle",
 ]
 
 [[package]]
@@ -696,6 +853,7 @@ dependencies = [
  "autocfg",
  "num-integer",
  "num-traits",
+ "rand 0.8.5",
 ]
 
 [[package]]
@@ -748,7 +906,21 @@ dependencies = [
  "arrayvec 0.7.2",
  "byte-slice-cast",
  "impl-trait-for-tuples 0.2.2",
- "parity-scale-codec-derive",
+ "parity-scale-codec-derive 2.3.1",
+]
+
+[[package]]
+name = "parity-scale-codec"
+version = "3.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "366e44391a8af4cfd6002ef6ba072bae071a96aafca98d7d448a34c5dca38b6a"
+dependencies = [
+ "arrayvec 0.7.2",
+ "bitvec",
+ "byte-slice-cast",
+ "impl-trait-for-tuples 0.2.2",
+ "parity-scale-codec-derive 3.1.3",
+ "serde",
 ]
 
 [[package]]
@@ -756,6 +928,18 @@ name = "parity-scale-codec-derive"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1557010476e0595c9b568d16dcfb81b93cdeb157612726f5170d31aa707bed27"
+dependencies = [
+ "proc-macro-crate 1.2.1",
+ "proc-macro2 1.0.47",
+ "quote 1.0.21",
+ "syn 1.0.103",
+]
+
+[[package]]
+name = "parity-scale-codec-derive"
+version = "3.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9299338969a3d2f491d65f140b00ddec470858402f888af98e8642fb5e8965cd"
 dependencies = [
  "proc-macro-crate 1.2.1",
  "proc-macro2 1.0.47",
@@ -785,10 +969,53 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e0a7ae3ac2f1173085d398531c705756c94a4c56843785df85a60c1a0afac116"
 
 [[package]]
+name = "plonk_verifier"
+version = "0.1.0"
+source = "git+https://github.com/Janmajayamall/plonk-verifier.git?branch=feature/system-circom-cli#a7072e2e1f438b73f7199b57ae2e0a247171e16c"
+dependencies = [
+ "ecc",
+ "ethereum-types",
+ "halo2_proofs",
+ "halo2curves 0.2.1",
+ "itertools",
+ "lazy_static",
+ "num-bigint 0.4.3",
+ "num-traits",
+ "poseidon",
+ "rand 0.8.5",
+ "rand_chacha 0.3.1",
+ "serde",
+ "serde_json",
+ "sha3 0.10.6",
+ "transcript",
+]
+
+[[package]]
+name = "poseidon"
+version = "0.2.0"
+source = "git+https://github.com/privacy-scaling-explorations/poseidon?branch=padding#6a305ac124810a1eaf83ae7fafd520b19bfa304e"
+dependencies = [
+ "group",
+ "halo2curves 0.2.0",
+ "subtle",
+]
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb9f9e6e233e5c4a35559a617bf40a4ec447db2e84c20b55a6f83167b7e57872"
+
+[[package]]
+name = "primitive-types"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e28720988bff275df1f51b171e1b2a18c30d194c4d2b61defdacecd625a5d94a"
+dependencies = [
+ "fixed-hash",
+ "impl-codec",
+ "uint",
+]
 
 [[package]]
 name = "proc-macro-crate"
@@ -1040,6 +1267,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e75f6a532d0fd9f7f13144f392b6ad56a32696bfcd9c78f797f16bbb6f072d6"
 
 [[package]]
+name = "ryu"
+version = "1.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4501abdff3ae82a1c1b477a17252eb69cee9e66eb915c1abaa4f44d873df9f09"
+
+[[package]]
 name = "scale-info"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1047,7 +1280,7 @@ checksum = "5c55b744399c25532d63a0d2789b109df8d46fc93752d46b0782991a931a782f"
 dependencies = [
  "cfg-if 1.0.0",
  "derive_more",
- "parity-scale-codec",
+ "parity-scale-codec 2.3.1",
  "scale-info-derive",
 ]
 
@@ -1075,7 +1308,7 @@ version = "0.2.0"
 dependencies = [
  "rand_chacha 0.3.1",
  "rand_core 0.6.4",
- "sha3",
+ "sha3 0.9.1",
 ]
 
 [[package]]
@@ -1099,15 +1332,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_json"
+version = "1.0.87"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ce777b7b150d76b9cf60d28b55f5847135a003f7d7350c6be7a773508ce7d45"
+dependencies = [
+ "itoa",
+ "ryu",
+ "serde",
+]
+
+[[package]]
 name = "sha3"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f81199417d4e5de3f04b1e871023acea7389672c4135918f05aa9cbf2f2fa809"
 dependencies = [
- "block-buffer",
- "digest",
+ "block-buffer 0.9.0",
+ "digest 0.9.0",
  "keccak",
  "opaque-debug",
+]
+
+[[package]]
+name = "sha3"
+version = "0.10.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bdf0c33fae925bdc080598b84bc15c55e7b9a4a43b3c704da051f977469691c9"
+dependencies = [
+ "digest 0.10.5",
+ "keccak",
 ]
 
 [[package]]
@@ -1171,6 +1425,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tiny-keccak"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c9d3793400a45f954c52e73d068316d76b6f4e36977e3fcebb13a2721e80237"
+dependencies = [
+ "crunchy",
+]
+
+[[package]]
 name = "toml"
 version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1212,10 +1475,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "transcript"
+version = "0.1.0"
+source = "git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2022_09_09#2d708b4453387f03059aad68d6d87441db112a2f"
+dependencies = [
+ "ecc",
+ "group",
+ "poseidon",
+ "subtle",
+]
+
+[[package]]
 name = "typenum"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dcf81ac59edc17cc8697ff311e8f5ef2d99fcbd9817b34cec66f90b6c3dfd987"
+
+[[package]]
+name = "uint"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a45526d29728d135c2900b0d30573fe3ee79fceb12ef534c7bb30e810a91b601"
+dependencies = [
+ "byteorder",
+ "crunchy",
+ "hex 0.4.3",
+ "static_assertions",
+]
 
 [[package]]
 name = "unicode-ident"

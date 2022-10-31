@@ -1,7 +1,6 @@
 use halo2_curves::bn256::{Bn256, Fq, Fr, G1Affine};
 use halo2_proofs::{plonk::VerifyingKey, poly::{kzg::commitment::ParamsKZG, commitment::ParamsProver}};
 use plonk_verifier::{
-    cost::CostEstimation,
     loader::evm::EvmLoader,
     pcs::kzg::{Gwc19, Kzg, LimbsEncoding},
     system::halo2::{compile as compile_halo2, transcript::evm::EvmTranscript, Config},
@@ -30,9 +29,6 @@ pub fn deserialize_kzg_proof(
     );
 
     let svk = params.get_g()[0].into();
-
-    verifier::Plonk::<Kzg<Bn256, Gwc19>>::estimate_cost(&protocol);
-
     let loader = EvmLoader::new::<Fq, Fr>();
     let mut transcript = EvmTranscript::<_, Rc<EvmLoader>, _, _>::new(loader.clone());
 
