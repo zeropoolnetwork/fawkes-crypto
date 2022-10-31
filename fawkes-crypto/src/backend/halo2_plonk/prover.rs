@@ -21,7 +21,7 @@ fn gen_pk<C: Circuit<Fr>>(params: &ParamsKZG<Bn256>, circuit: &C) -> ProvingKey<
 pub fn prove<
     C: Circuit<Fr>,
     E: EncodedChallenge<G1Affine>,
-    TW: TranscriptWriterBuffer<Vec<u8>, G1Affine, E>, // TranscriptWrite<G1Affine, E>
+    TW: TranscriptWriterBuffer<Vec<u8>, G1Affine, E>,
 >(
     params: &ParamsKZG<Bn256>,
     circuit: C,

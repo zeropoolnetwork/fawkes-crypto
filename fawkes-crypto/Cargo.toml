@@ -26,10 +26,10 @@ getrandom = { version = "0.2", optional = true }
 bit-vec = "0.6.3"
 itertools = "0.10.0"
 brotli = "3.3.2"
-# halo2_proofs = "0.2.0"
 
-halo2_curves = { git = "https://github.com/privacy-scaling-explorations/halo2curves", tag = "0.3.0", package = "halo2curves" }
-halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2022_10_22" }
+halo2_curves = { git = "https://github.com/privacy-scaling-explorations/halo2curves", tag = "0.2.1", package = "halo2curves" }
+halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v2022_09_10" }
+plonk_verifier = {git = "https://github.com/Janmajayamall/plonk-verifier.git", branch="feature/system-circom-cli"}
 
 
 [dependencies.blake2_rfc]
