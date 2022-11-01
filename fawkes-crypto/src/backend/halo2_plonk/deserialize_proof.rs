@@ -4,6 +4,7 @@ use halo2_proofs::{
     plonk::VerifyingKey,
     poly::{commitment::ParamsProver, kzg::commitment::ParamsKZG},
 };
+use itertools::Itertools;
 use plonk_verifier::{
     loader::native::NativeLoader,
     pcs::kzg::{Gwc19, Kzg, LimbsEncoding},
@@ -24,7 +25,12 @@ pub fn deserialize_kzg_proof(
     instances: Vec<Vec<Fr>>,
     proof: &[u8],
 ) -> Result<PlonkProof<G1Affine, NativeLoader, Kzg<Bn256, Gwc19>>, Error> {
-    let protocol = compile(params, vk, Config::kzg());
+    let num_instances = instances
+        .iter()
+        .map(|instances| instances.len())
+        .collect_vec();
+    // println!("num_instances {:?}", num_instances);
+    let protocol = compile(params, vk, Config::kzg().with_num_instance(num_instances));
 
     let svk = params.get_g()[0].into();
     let mut transcript = Blake2bRead::<_, G1Affine, Challenge255<_>>::init(proof);
