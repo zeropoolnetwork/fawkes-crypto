@@ -1,4 +1,4 @@
-#[cfg(feature = "heavy_tests")]
+#[cfg(all(feature = "heavy_tests", feature="backend_bellman_groth16"))]
 use fawkes_crypto::{
     backend::bellman_groth16::{
         *,
@@ -15,7 +15,7 @@ use fawkes_crypto::{
     rand::{thread_rng, Rng}
 };
 
-#[cfg(feature = "heavy_tests")]
+#[cfg(all(feature = "heavy_tests", feature="backend_bellman_groth16"))]
 #[test]
 fn test_circuit_poseidon_merkle_root() {
     fn circuit<C:CS>(public: CNum<C>, secret: (CNum<C>, CMerkleProof<C, 32>)) {
