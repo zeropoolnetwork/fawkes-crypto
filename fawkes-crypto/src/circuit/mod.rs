@@ -8,7 +8,7 @@ pub use r1cs::*;
 mod plonk;
 
 #[cfg(feature = "plonk")]
-pub use plonk::*;
+pub use self::plonk::*;
 
 pub mod bitify;
 pub mod ecc;
