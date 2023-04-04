@@ -16,13 +16,13 @@ use halo2_proofs::{
 use plonk_verifier::system::halo2::transcript::evm::EvmTranscript;
 use itertools::Itertools;
 use std::io::Cursor;
-use super::setup::VK;
+use super::setup::VerifyingKey;
 use super::prover::Proof;
 
 
 pub fn verify(
     params: &Parameters<super::engines::Bn256>,
-    vk: &VK<super::engines::Bn256>,
+    vk: &VerifyingKey<super::engines::Bn256>,
     proof: &Proof,
     inputs: &[Num<crate::engines::bn256::Fr>]
 ) -> bool {

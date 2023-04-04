@@ -93,7 +93,12 @@ enum Halo2Cell<F:FieldExt> {
 /// witnesses. If the `val` was assigned to some cell before, this function
 /// will copy it from the old locaiton ensuring the equality between the two
 /// cells.
-fn assign_advice_ex<Fr:PrimeField, F:FieldExt, AnR: Into<String>, An:Fn()->AnR, Val:Fn() -> Option<Num<Fr>>>(
+fn assign_advice_ex<
+    Fr:PrimeField,
+    F:FieldExt,
+    AnR: Into<String>,
+    An:Fn()->AnR, Val:Fn() -> Option<Num<Fr>>
+>(
     region: &mut Region<F>,
     var_cells: &mut[Option::<Halo2Cell<F>>],
     annotation: An,
@@ -135,7 +140,11 @@ impl<F: FieldExt, C:CS> Circuit<F> for HaloCS<C> {
         PlonkConfig::configure(meta)
     }
 
-    fn synthesize(&self, config: Self::Config, mut layouter: impl Layouter<F>) -> Result<(), Error> {
+    fn synthesize(
+        &self,
+        config: Self::Config,
+        mut layouter: impl Layouter<F>
+    ) -> Result<(), Error> {
         let cs = self.0.borrow();
         let num_input = cs.num_input();
         let num_var = cs.num_aux()+num_input;
@@ -151,18 +160,30 @@ impl<F: FieldExt, C:CS> Circuit<F> for HaloCS<C> {
             }
 
             for (offset, g) in cs.get_gate_iterator().enumerate() {
-                assign_advice_ex(&mut region, &mut var_cells, || format!("assign x[{}]", offset),
-                    offset, config.a, config.instance, g.x, || cs.get_value(g.x))?;
-                assign_advice_ex(&mut region, &mut var_cells, || format!("assign y[{}]", offset),
-                    offset, config.b, config.instance, g.y, || cs.get_value(g.y))?;
-                assign_advice_ex(&mut region, &mut var_cells, || format!("assign z[{}]", offset),
-                    offset, config.c, config.instance, g.z, || cs.get_value(g.z))?;
+                let mut adv_helper = |ann, adv, var| {
+                    assign_advice_ex(
+                        &mut region, &mut var_cells,
+                        || format!("assign {}[{}]", ann, offset),
+                        offset, adv, config.instance, var,
+                        || cs.get_value(var)
+                    )
+                };
+                adv_helper("x", config.a, g.x)?;
+                adv_helper("y", config.b, g.y)?;
+                adv_helper("z", config.c, g.z)?;
 
-                region.assign_fixed(|| format!("assign a[{}]", offset), config.q_a, offset, || num_to_halo_fp_value::<_,F>(Some(g.a)))?;
-                region.assign_fixed(|| format!("assign b[{}]", offset), config.q_b, offset, || num_to_halo_fp_value::<_,F>(Some(g.b)))?;
-                region.assign_fixed(|| format!("assign c[{}]", offset), config.q_c, offset, || num_to_halo_fp_value::<_,F>(Some(g.c)))?;
-                region.assign_fixed(|| format!("assign d[{}]", offset), config.q_ab, offset, || num_to_halo_fp_value::<_,F>(Some(g.d)))?;
-                region.assign_fixed(|| format!("assign e[{}]", offset), config.constant, offset, || num_to_halo_fp_value::<_,F>(Some(g.e)))?;
+                let mut fixed_helper = |ann, fix, val| {
+                    region.assign_fixed(
+                        || format!("assign {}[{}]", ann, offset),
+                        fix, offset,
+                        || num_to_halo_fp_value::<_,F>(Some(val))
+                    )
+                };
+                fixed_helper("a", config.q_a, g.a)?;
+                fixed_helper("b", config.q_b, g.b)?;
+                fixed_helper("c", config.q_c, g.c)?;
+                fixed_helper("d", config.q_ab, g.d)?;
+                fixed_helper("e", config.constant, g.e)?;
             }
 
             Ok(())
