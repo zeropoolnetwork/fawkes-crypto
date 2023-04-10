@@ -2,9 +2,10 @@ use crate::{
     circuit::{
         bool::CBool,
         cs::{CS, RCS},
+        bitify::c_into_bits_le_strict,
     },
     core::signal::Signal,
-    ff_uint::{Num, PrimeField},
+    ff_uint::{Num},
 };
 use std::{
     cell::RefCell,
@@ -13,26 +14,32 @@ use std::{
 };
 
 #[derive(Clone, Debug)]
-pub struct CNum<Fr: PrimeField> {
-    pub value: Option<Num<Fr>>,
+pub struct CNum<C: CS> {
+    pub value: Option<Num<C::Fr>>,
     // a*x + b
-    pub lc: (Num<Fr>, usize, Num<Fr>),
-    pub cs: Rc<RefCell<CS<Fr>>>,
+    pub lc: (Num<C::Fr>, usize, Num<C::Fr>),
+    pub cs: Rc<RefCell<C>>,
 }
 
-impl<Fr: PrimeField> CNum<Fr> {
+impl<C: CS> CNum<C> {
     pub fn assert_zero(&self) {
         self.assert_const(&Num::ZERO)
     }
 
+    // FIXME: I'm not sure how this thing works. I copied it from R1CS.
+    pub fn assert_even(&self) {
+        let bits = c_into_bits_le_strict(&self);
+        bits[0].assert_const(&false);
+    }
+
     // for 0/0 uncertainty case any return value is valid
-    pub fn div_unchecked(&self, other: &CNum<Fr>) -> Self {
+    pub fn div_unchecked(&self, other: &CNum<C>) -> Self {
         match (self.as_const(), other.as_const()) {
             (_, Some(b)) => self / b,
             _ => {
                 let value = self.value.map(|a| other.value.map(|b| a / b)).flatten();
                 let signal = self.derive_alloc(value.as_ref());
-                CS::enforce_mul(&signal, other, self);
+                C::enforce_mul(&signal, other, self);
                 signal
             }
         }
@@ -48,19 +55,19 @@ impl<Fr: PrimeField> CNum<Fr> {
                     .get_value()
                     .map(|v| v.checked_inv().unwrap_or(Num::ONE));
                 let inv_signal = self.derive_alloc(inv_value.as_ref());
-                CS::enforce_mul(self, &inv_signal, &self.derive_const(&Num::ONE));
+                C::enforce_mul(self, &inv_signal, &self.derive_const(&Num::ONE));
             }
         }
     }
 
-    pub fn is_zero(&self) -> CBool<Fr> {
+    pub fn is_zero(&self) -> CBool<C> {
         match self.as_const() {
             Some(c) => self.derive_const(&c.is_zero()),
             _ => {
                 let inv_value = self
                     .get_value()
                     .map(|v| v.checked_inv().unwrap_or(Num::ONE));
-                let inv_signal: CNum<Fr> = self.derive_alloc(inv_value.as_ref());
+                let inv_signal: CNum<C> = self.derive_alloc(inv_value.as_ref());
                 inv_signal.assert_nonzero();
                 let res_signal = inv_signal * self;
                 (Num::ONE - res_signal).to_bool()
@@ -69,18 +76,18 @@ impl<Fr: PrimeField> CNum<Fr> {
     }
 
     pub fn assert_bit(&self) {
-        CS::enforce_mul(self, &(self - Num::ONE), &self.derive_const(&Num::ZERO));
+        C::enforce_mul(self, &(self - Num::ONE), &self.derive_const(&Num::ZERO));
     }
 
-    pub fn to_bool(&self) -> CBool<Fr> {
+    pub fn to_bool(&self) -> CBool<C> {
         CBool::new(self)
     }
 
-    pub fn to_bool_unchecked(&self) -> CBool<Fr> {
+    pub fn to_bool_unchecked(&self) -> CBool<C> {
         CBool::new_unchecked(self)
     }
 
-    pub fn from_bool(b: CBool<Fr>) -> Self {
+    pub fn from_bool(b: CBool<C>) -> Self {
         b.to_num()
     }
 
@@ -95,8 +102,8 @@ impl<Fr: PrimeField> CNum<Fr> {
     }
 }
 
-impl<Fr: PrimeField> Signal<Fr> for CNum<Fr> {
-    type Value = Num<Fr>;
+impl<C: CS> Signal<C> for CNum<C> {
+    type Value = Num<C::Fr>;
 
     fn as_const(&self) -> Option<Self::Value> {
         let lc = self.lc;
@@ -115,7 +122,7 @@ impl<Fr: PrimeField> Signal<Fr> for CNum<Fr> {
         self.value
     }
 
-    fn from_const(cs: &RCS<Fr>, value: &Self::Value) -> Self {
+    fn from_const(cs: &RCS<C>, value: &Self::Value) -> Self {
         let value = value.clone();
         Self {
             value: Some(value),
@@ -124,11 +131,11 @@ impl<Fr: PrimeField> Signal<Fr> for CNum<Fr> {
         }
     }
 
-    fn get_cs(&self) -> &RCS<Fr> {
+    fn get_cs(&self) -> &RCS<C> {
         &self.cs
     }
 
-    fn alloc(cs: &RCS<Fr>, value: Option<&Self::Value>) -> Self {
+    fn alloc(cs: &RCS<C>, value: Option<&Self::Value>) -> Self {
         CS::alloc(cs, value)
     }
 
@@ -140,7 +147,7 @@ impl<Fr: PrimeField> Signal<Fr> for CNum<Fr> {
         )
     }
 
-    fn switch(&self, bit: &CBool<Fr>, if_else: &Self) -> Self {
+    fn switch(&self, bit: &CBool<C>, if_else: &Self) -> Self {
         if let Some(b) = bit.as_const() {
             if b {
                 self.clone()
@@ -156,12 +163,12 @@ impl<Fr: PrimeField> Signal<Fr> for CNum<Fr> {
         CS::enforce_add(self, &self.derive_const(&Num::ZERO), other);
     }
 
-    fn is_eq(&self, other: &Self) -> CBool<Fr> {
+    fn is_eq(&self, other: &Self) -> CBool<C> {
         (self - other).is_zero()
     }
 }
 
-impl<Fr: PrimeField> CNum<Fr> {
+impl<C: CS> CNum<C> {
     pub fn capacity(&self) -> usize {
         if self.lc.0 == Num::ZERO {
             0
@@ -171,8 +178,8 @@ impl<Fr: PrimeField> CNum<Fr> {
     }
 }
 
-impl<Fr: PrimeField> std::ops::Neg for CNum<Fr> {
-    type Output = CNum<Fr>;
+impl<C: CS> std::ops::Neg for CNum<C> {
+    type Output = CNum<C>;
 
     #[inline]
     fn neg(mut self) -> Self::Output {
@@ -183,11 +190,11 @@ impl<Fr: PrimeField> std::ops::Neg for CNum<Fr> {
     }
 }
 
-forward_unop_ex!(impl<Fr:PrimeField> Neg for CNum<Fr>, neg);
+forward_unop_ex!(impl<C: CS> Neg for CNum<C>, neg);
 
-impl<'l, Fr: PrimeField> AddAssign<&'l CNum<Fr>> for CNum<Fr> {
+impl<'l, C: CS> AddAssign<&'l CNum<C>> for CNum<C> {
     #[inline]
-    fn add_assign(&mut self, other: &'l CNum<Fr>) {
+    fn add_assign(&mut self, other: &'l CNum<C>) {
         let cs = self.cs.clone();
         *self = if let Some(c) = self.as_const() {
             let value = other.value.map(|v| v + c);
@@ -214,47 +221,47 @@ impl<'l, Fr: PrimeField> AddAssign<&'l CNum<Fr>> for CNum<Fr> {
     }
 }
 
-impl<'l, Fr: PrimeField> AddAssign<&'l Num<Fr>> for CNum<Fr> {
+impl<'l, C: CS> AddAssign<&'l Num<C::Fr>> for CNum<C> {
     #[inline]
-    fn add_assign(&mut self, other: &'l Num<Fr>) {
+    fn add_assign(&mut self, other: &'l Num<C::Fr>) {
         *self += self.derive_const::<Self>(other)
     }
 }
 
-impl<'l, Fr: PrimeField> SubAssign<&'l CNum<Fr>> for CNum<Fr> {
+impl<'l, C: CS> SubAssign<&'l CNum<C>> for CNum<C> {
     #[inline]
-    fn sub_assign(&mut self, other: &'l CNum<Fr>) {
+    fn sub_assign(&mut self, other: &'l CNum<C>) {
         self.add_assign(&-other)
     }
 }
 
-impl<'l, Fr: PrimeField> SubAssign<&'l Num<Fr>> for CNum<Fr> {
+impl<'l, C: CS> SubAssign<&'l Num<C::Fr>> for CNum<C> {
     #[inline]
-    fn sub_assign(&mut self, other: &'l Num<Fr>) {
+    fn sub_assign(&mut self, other: &'l Num<C::Fr>) {
         *self -= self.derive_const::<Self>(other)
     }
 }
 
-impl<'l, Fr: PrimeField> MulAssign<&'l Num<Fr>> for CNum<Fr> {
+impl<'l, C: CS> MulAssign<&'l Num<C::Fr>> for CNum<C> {
     #[inline]
-    fn mul_assign(&mut self, other: &'l Num<Fr>) {
+    fn mul_assign(&mut self, other: &'l Num<C::Fr>) {
         self.lc.0 *= other;
         self.lc.2 *= other;
         self.value = self.value.map(|v| v * other);
     }
 }
 
-impl<'l, Fr: PrimeField> DivAssign<&'l Num<Fr>> for CNum<Fr> {
+impl<'l, C: CS> DivAssign<&'l Num<C::Fr>> for CNum<C> {
     #[inline]
-    fn div_assign(&mut self, other: &'l Num<Fr>) {
+    fn div_assign(&mut self, other: &'l Num<C::Fr>) {
         let inv = other.checked_inv().expect("Division by zero");
         self.mul_assign(&inv);
     }
 }
 
-impl<'l, Fr: PrimeField> MulAssign<&'l CNum<Fr>> for CNum<Fr> {
+impl<'l, C: CS> MulAssign<&'l CNum<C>> for CNum<C> {
     #[inline]
-    fn mul_assign(&mut self, other: &'l CNum<Fr>) {
+    fn mul_assign(&mut self, other: &'l CNum<C>) {
         let cs = self.cs.clone();
         *self = if let Some(c) = self.as_const() {
             let mut lc = other.lc;
@@ -283,136 +290,136 @@ impl<'l, Fr: PrimeField> MulAssign<&'l CNum<Fr>> for CNum<Fr> {
     }
 }
 
-impl<'l, Fr: PrimeField> DivAssign<&'l CNum<Fr>> for CNum<Fr> {
+impl<'l, C: CS> DivAssign<&'l CNum<C>> for CNum<C> {
     #[inline]
-    fn div_assign(&mut self, other: &'l CNum<Fr>) {
+    fn div_assign(&mut self, other: &'l CNum<C>) {
         other.assert_nonzero();
         *self = self.div_unchecked(other);
     }
 }
 
-forward_val_assign_ex!(impl<Fr:PrimeField> AddAssign<CNum<Fr>> for CNum<Fr>, add_assign);
-forward_val_assign_ex!(impl<Fr:PrimeField> AddAssign<Num<Fr>> for CNum<Fr>, add_assign);
+forward_val_assign_ex!(impl<C: CS> AddAssign<CNum<C>> for CNum<C>, add_assign);
+forward_val_assign_ex!(impl<C: CS> AddAssign<Num<C::Fr>> for CNum<C>, add_assign);
 
-forward_val_assign_ex!(impl<Fr:PrimeField> SubAssign<CNum<Fr>> for CNum<Fr>, sub_assign);
-forward_val_assign_ex!(impl<Fr:PrimeField> SubAssign<Num<Fr>> for CNum<Fr>, sub_assign);
+forward_val_assign_ex!(impl<C: CS> SubAssign<CNum<C>> for CNum<C>, sub_assign);
+forward_val_assign_ex!(impl<C: CS> SubAssign<Num<C::Fr>> for CNum<C>, sub_assign);
 
-forward_val_assign_ex!(impl<Fr:PrimeField> MulAssign<CNum<Fr>> for CNum<Fr>, mul_assign);
-forward_val_assign_ex!(impl<Fr:PrimeField> MulAssign<Num<Fr>> for CNum<Fr>, mul_assign);
+forward_val_assign_ex!(impl<C: CS> MulAssign<CNum<C>> for CNum<C>, mul_assign);
+forward_val_assign_ex!(impl<C: CS> MulAssign<Num<C::Fr>> for CNum<C>, mul_assign);
 
-forward_val_assign_ex!(impl<Fr:PrimeField> DivAssign<CNum<Fr>> for CNum<Fr>, div_assign);
-forward_val_assign_ex!(impl<Fr:PrimeField> DivAssign<Num<Fr>> for CNum<Fr>, div_assign);
+forward_val_assign_ex!(impl<C: CS> DivAssign<CNum<C>> for CNum<C>, div_assign);
+forward_val_assign_ex!(impl<C: CS> DivAssign<Num<C::Fr>> for CNum<C>, div_assign);
 
-impl<'l, Fr: PrimeField> Add<&'l CNum<Fr>> for CNum<Fr> {
-    type Output = CNum<Fr>;
+impl<'l, C: CS> Add<&'l CNum<C>> for CNum<C> {
+    type Output = CNum<C>;
 
     #[inline]
-    fn add(mut self, other: &'l CNum<Fr>) -> Self::Output {
+    fn add(mut self, other: &'l CNum<C>) -> Self::Output {
         self += other;
         self
     }
 }
 
-impl<'l, Fr: PrimeField> Add<&'l Num<Fr>> for CNum<Fr> {
-    type Output = CNum<Fr>;
+impl<'l, C: CS> Add<&'l Num<C::Fr>> for CNum<C> {
+    type Output = CNum<C>;
 
     #[inline]
-    fn add(mut self, other: &'l Num<Fr>) -> Self::Output {
+    fn add(mut self, other: &'l Num<C::Fr>) -> Self::Output {
         self += other;
         self
     }
 }
 
-impl<'l, Fr: PrimeField> Sub<&'l CNum<Fr>> for CNum<Fr> {
-    type Output = CNum<Fr>;
+impl<'l, C: CS> Sub<&'l CNum<C>> for CNum<C> {
+    type Output = CNum<C>;
 
     #[inline]
-    fn sub(mut self, other: &'l CNum<Fr>) -> Self::Output {
+    fn sub(mut self, other: &'l CNum<C>) -> Self::Output {
         self -= other;
         self
     }
 }
 
-impl<'l, Fr: PrimeField> Sub<&'l Num<Fr>> for CNum<Fr> {
-    type Output = CNum<Fr>;
+impl<'l, C: CS> Sub<&'l Num<C::Fr>> for CNum<C> {
+    type Output = CNum<C>;
 
     #[inline]
-    fn sub(mut self, other: &'l Num<Fr>) -> Self::Output {
+    fn sub(mut self, other: &'l Num<C::Fr>) -> Self::Output {
         self -= other;
         self
     }
 }
 
-impl<'l, Fr: PrimeField> Sub<&'l CNum<Fr>> for Num<Fr> {
-    type Output = CNum<Fr>;
+impl<'l, C: CS> Sub<&'l CNum<C>> for Num<C::Fr> {
+    type Output = CNum<C>;
 
     #[inline]
-    fn sub(self, other: &'l CNum<Fr>) -> Self::Output {
+    fn sub(self, other: &'l CNum<C>) -> Self::Output {
         -other + self
     }
 }
 
-impl<'l, Fr: PrimeField> Mul<&'l Num<Fr>> for CNum<Fr> {
-    type Output = CNum<Fr>;
+impl<'l, C: CS> Mul<&'l Num<C::Fr>> for CNum<C> {
+    type Output = CNum<C>;
 
     #[inline]
-    fn mul(mut self, other: &'l Num<Fr>) -> Self::Output {
+    fn mul(mut self, other: &'l Num<C::Fr>) -> Self::Output {
         self *= other;
         self
     }
 }
 
-impl<'l, Fr: PrimeField> Mul<&'l CNum<Fr>> for CNum<Fr> {
-    type Output = CNum<Fr>;
+impl<'l, C: CS> Mul<&'l CNum<C>> for CNum<C> {
+    type Output = CNum<C>;
 
     #[inline]
-    fn mul(mut self, other: &'l CNum<Fr>) -> Self::Output {
+    fn mul(mut self, other: &'l CNum<C>) -> Self::Output {
         self *= other;
         self
     }
 }
 
-impl<'l, Fr: PrimeField> Div<&'l CNum<Fr>> for CNum<Fr> {
-    type Output = CNum<Fr>;
+impl<'l, C: CS> Div<&'l CNum<C>> for CNum<C> {
+    type Output = CNum<C>;
 
     #[inline]
-    fn div(mut self, other: &'l CNum<Fr>) -> Self::Output {
+    fn div(mut self, other: &'l CNum<C>) -> Self::Output {
         self /= other;
         self
     }
 }
 
-impl<'l, Fr: PrimeField> Div<&'l Num<Fr>> for CNum<Fr> {
-    type Output = CNum<Fr>;
+impl<'l, C: CS> Div<&'l Num<C::Fr>> for CNum<C> {
+    type Output = CNum<C>;
 
     #[inline]
-    fn div(mut self, other: &'l Num<Fr>) -> Self::Output {
+    fn div(mut self, other: &'l Num<C::Fr>) -> Self::Output {
         self /= other;
         self
     }
 }
 
-impl<'l, Fr: PrimeField> Div<&'l CNum<Fr>> for Num<Fr> {
-    type Output = CNum<Fr>;
+impl<'l, C: CS> Div<&'l CNum<C>> for Num<C::Fr> {
+    type Output = CNum<C>;
 
     #[inline]
-    fn div(self, other: &'l CNum<Fr>) -> Self::Output {
+    fn div(self, other: &'l CNum<C>) -> Self::Output {
         other.inv() * self
     }
 }
 
-forward_all_binop_to_val_ref_ex!(impl<Fr:PrimeField> Sub<CNum<Fr>> for CNum<Fr>, sub -> CNum<Fr>);
-forward_all_binop_to_val_ref_ex!(impl<Fr:PrimeField> Sub<CNum<Fr>> for Num<Fr>, sub -> CNum<Fr>);
-forward_all_binop_to_val_ref_ex!(impl<Fr:PrimeField> Sub<Num<Fr>> for CNum<Fr>, sub -> CNum<Fr>);
+forward_all_binop_to_val_ref_ex!(impl<C: CS> Sub<CNum<C>> for CNum<C>, sub -> CNum<C>);
+forward_all_binop_to_val_ref_ex!(impl<C: CS> Sub<CNum<C>> for Num<C::Fr>, sub -> CNum<C>);
+forward_all_binop_to_val_ref_ex!(impl<C: CS> Sub<Num<C::Fr>> for CNum<C>, sub -> CNum<C>);
 
-forward_all_binop_to_val_ref_commutative_ex!(impl<Fr:PrimeField> Add for CNum<Fr>, add);
-forward_all_binop_to_val_ref_ex!(impl<Fr:PrimeField> Add<Num<Fr>> for CNum<Fr>, add -> CNum<Fr>);
-swap_commutative!(impl<Fr:PrimeField> Add<Num<Fr>> for CNum<Fr>, add);
+forward_all_binop_to_val_ref_commutative_ex!(impl<C: CS> Add for CNum<C>, add);
+forward_all_binop_to_val_ref_ex!(impl<C: CS> Add<Num<C::Fr>> for CNum<C>, add -> CNum<C>);
+swap_commutative!(impl<C: CS> Add<Num<C::Fr>> for CNum<C>, add);
 
-forward_all_binop_to_val_ref_commutative_ex!(impl<Fr:PrimeField> Mul for CNum<Fr>, mul);
-forward_all_binop_to_val_ref_ex!(impl<Fr:PrimeField> Mul<Num<Fr>> for CNum<Fr>, mul -> CNum<Fr>);
-swap_commutative!(impl<Fr:PrimeField> Mul<Num<Fr>> for CNum<Fr>, mul);
+forward_all_binop_to_val_ref_commutative_ex!(impl<C: CS> Mul for CNum<C>, mul);
+forward_all_binop_to_val_ref_ex!(impl<C: CS> Mul<Num<C::Fr>> for CNum<C>, mul -> CNum<C>);
+swap_commutative!(impl<C: CS> Mul<Num<C::Fr>> for CNum<C>, mul);
 
-forward_all_binop_to_val_ref_ex!(impl<Fr:PrimeField> Div<CNum<Fr>> for CNum<Fr>, div -> CNum<Fr>);
-forward_all_binop_to_val_ref_ex!(impl<Fr:PrimeField> Div<Num<Fr>> for CNum<Fr>, div -> CNum<Fr>);
-forward_all_binop_to_val_ref_ex!(impl<Fr:PrimeField> Div<CNum<Fr>> for Num<Fr>, div -> CNum<Fr>);
+forward_all_binop_to_val_ref_ex!(impl<C: CS> Div<CNum<C>> for CNum<C>, div -> CNum<C>);
+forward_all_binop_to_val_ref_ex!(impl<C: CS> Div<Num<C::Fr>> for CNum<C>, div -> CNum<C>);
+forward_all_binop_to_val_ref_ex!(impl<C: CS> Div<CNum<C>> for Num<C::Fr>, div -> CNum<C>);

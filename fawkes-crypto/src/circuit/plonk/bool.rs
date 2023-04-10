@@ -4,29 +4,29 @@ use crate::{
         num::CNum,
     },
     core::signal::Signal,
-    ff_uint::{Num, PrimeField},
+    ff_uint::{Num},
 };
 
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 
 #[derive(Clone, Debug)]
-pub struct CBool<Fr: PrimeField>(CNum<Fr>);
+pub struct CBool<C: CS>(CNum<C>);
 
-impl<Fr: PrimeField> CBool<Fr> {
-    pub fn new_unchecked(n: &CNum<Fr>) -> Self {
+impl<C: CS> CBool<C> {
+    pub fn new_unchecked(n: &CNum<C>) -> Self {
         CBool(n.clone())
     }
 
-    pub fn new(n: &CNum<Fr>) -> Self {
+    pub fn new(n: &CNum<C>) -> Self {
         n.assert_bit();
         Self::new_unchecked(n)
     }
 
-    pub fn to_num(&self) -> CNum<Fr> {
+    pub fn to_num(&self) -> CNum<C> {
         self.0.clone()
     }
 
-    pub fn as_num(&self) -> &CNum<Fr> {
+    pub fn as_num(&self) -> &CNum<C> {
         &self.0
     }
 
@@ -35,7 +35,7 @@ impl<Fr: PrimeField> CBool<Fr> {
     }
 }
 
-impl<Fr: PrimeField> Signal<Fr> for CBool<Fr> {
+impl<C: CS> Signal<C> for CBool<C> {
     type Value = bool;
 
     fn as_const(&self) -> Option<Self::Value> {
@@ -69,28 +69,28 @@ impl<Fr: PrimeField> Signal<Fr> for CBool<Fr> {
         })
     }
 
-    fn from_const(cs: &RCS<Fr>, value: &Self::Value) -> Self {
+    fn from_const(cs: &RCS<C>, value: &Self::Value) -> Self {
         Self::new_unchecked(&CNum::from_const(cs, &(*value).into()))
     }
 
-    fn get_cs(&self) -> &RCS<Fr> {
+    fn get_cs(&self) -> &RCS<C> {
         &self.0.cs
     }
 
-    fn alloc(cs: &RCS<Fr>, value: Option<&Self::Value>) -> Self {
-        let value = value.map(|&b| Into::<Num<Fr>>::into(b));
+    fn alloc(cs: &RCS<C>, value: Option<&Self::Value>) -> Self {
+        let value = value.map(|&b| Into::<Num<C::Fr>>::into(b));
         Self::new_unchecked(&CNum::alloc(cs, value.as_ref()))
     }
 
     fn assert_const(&self, value: &Self::Value) {
-        CS::enforce_add(
+        C::enforce_add(
             &self.to_num(),
             &self.derive_const(&Num::ZERO),
             &self.derive_const(&(*value).into()),
         )
     }
 
-    fn switch(&self, bit: &CBool<Fr>, if_else: &Self) -> Self {
+    fn switch(&self, bit: &CBool<C>, if_else: &Self) -> Self {
         self.to_num()
             .switch(bit, &if_else.to_num())
             .to_bool_unchecked()
@@ -100,13 +100,13 @@ impl<Fr: PrimeField> Signal<Fr> for CBool<Fr> {
         self.to_num().assert_eq(&other.to_num())
     }
 
-    fn is_eq(&self, other: &Self) -> CBool<Fr> {
+    fn is_eq(&self, other: &Self) -> CBool<C> {
         let value = self
             .get_value()
             .map(|a| other.get_value().map(|b| a == b))
             .flatten();
-        let signal: CBool<Fr> = self.derive_alloc(value.as_ref());
-        CS::enforce_mul(
+        let signal: CBool<C> = self.derive_alloc(value.as_ref());
+        C::enforce_mul(
             &(self.to_num() * Num::from(2) - Num::ONE),
             &(other.to_num() * Num::from(2) - Num::ONE),
             &(signal.to_num() * Num::from(2) - Num::ONE),
@@ -115,7 +115,7 @@ impl<Fr: PrimeField> Signal<Fr> for CBool<Fr> {
     }
 }
 
-impl<Fr: PrimeField> Not for CBool<Fr> {
+impl<C: CS> Not for CBool<C> {
     type Output = Self;
 
     fn not(self) -> Self::Output {
@@ -123,71 +123,71 @@ impl<Fr: PrimeField> Not for CBool<Fr> {
     }
 }
 
-forward_unop_ex!(impl<Fr:PrimeField> Not for CBool<Fr>, not);
+forward_unop_ex!(impl<C: CS> Not for CBool<C>, not);
 
-impl<'l, Fr: PrimeField> BitAndAssign<&'l CBool<Fr>> for CBool<Fr> {
+impl<'l, C: CS> BitAndAssign<&'l CBool<C>> for CBool<C> {
     #[inline]
-    fn bitand_assign(&mut self, other: &'l CBool<Fr>) {
+    fn bitand_assign(&mut self, other: &'l CBool<C>) {
         *self = (self.to_num() * other.to_num()).to_bool_unchecked()
     }
 }
 
-impl<'l, Fr: PrimeField> BitAndAssign<&'l bool> for CBool<Fr> {
+impl<'l, C: CS> BitAndAssign<&'l bool> for CBool<C> {
     #[inline]
     fn bitand_assign(&mut self, other: &'l bool) {
         *self &= self.derive_const::<Self>(other)
     }
 }
 
-impl<'l, Fr: PrimeField> BitOrAssign<&'l CBool<Fr>> for CBool<Fr> {
+impl<'l, C: CS> BitOrAssign<&'l CBool<C>> for CBool<C> {
     #[inline]
-    fn bitor_assign(&mut self, other: &'l CBool<Fr>) {
+    fn bitor_assign(&mut self, other: &'l CBool<C>) {
         *self = !(!self.clone() & !other)
     }
 }
 
-impl<'l, Fr: PrimeField> BitOrAssign<&'l bool> for CBool<Fr> {
+impl<'l, C: CS> BitOrAssign<&'l bool> for CBool<C> {
     #[inline]
     fn bitor_assign(&mut self, other: &'l bool) {
         *self |= self.derive_const::<Self>(other)
     }
 }
 
-impl<'l, Fr: PrimeField> BitXorAssign<&'l CBool<Fr>> for CBool<Fr> {
+impl<'l, C: CS> BitXorAssign<&'l CBool<C>> for CBool<C> {
     #[inline]
-    fn bitxor_assign(&mut self, other: &'l CBool<Fr>) {
+    fn bitxor_assign(&mut self, other: &'l CBool<C>) {
         *self = !self.is_eq(other)
     }
 }
 
-impl<'l, Fr: PrimeField> BitXorAssign<&'l bool> for CBool<Fr> {
+impl<'l, C: CS> BitXorAssign<&'l bool> for CBool<C> {
     #[inline]
     fn bitxor_assign(&mut self, other: &'l bool) {
         *self ^= self.derive_const::<Self>(other)
     }
 }
 
-forward_val_assign_ex!(impl<Fr:PrimeField> BitAndAssign<CBool<Fr>> for CBool<Fr>, bitand_assign);
-forward_val_assign_ex!(impl<Fr:PrimeField> BitAndAssign<bool> for CBool<Fr>, bitand_assign);
+forward_val_assign_ex!(impl<C: CS> BitAndAssign<CBool<C>> for CBool<C>, bitand_assign);
+forward_val_assign_ex!(impl<C: CS> BitAndAssign<bool> for CBool<C>, bitand_assign);
 
-forward_val_assign_ex!(impl<Fr:PrimeField> BitOrAssign<CBool<Fr>> for CBool<Fr>, bitor_assign);
-forward_val_assign_ex!(impl<Fr:PrimeField> BitOrAssign<bool> for CBool<Fr>, bitor_assign);
+forward_val_assign_ex!(impl<C: CS> BitOrAssign<CBool<C>> for CBool<C>, bitor_assign);
+forward_val_assign_ex!(impl<C: CS> BitOrAssign<bool> for CBool<C>, bitor_assign);
 
-forward_val_assign_ex!(impl<Fr:PrimeField> BitXorAssign<CBool<Fr>> for CBool<Fr>, bitxor_assign);
-forward_val_assign_ex!(impl<Fr:PrimeField> BitXorAssign<bool> for CBool<Fr>, bitxor_assign);
+forward_val_assign_ex!(impl<C: CS> BitXorAssign<CBool<C>> for CBool<C>, bitxor_assign);
+forward_val_assign_ex!(impl<C: CS> BitXorAssign<bool> for CBool<C>, bitxor_assign);
 
-impl<'l, Fr: PrimeField> BitAnd<&'l CBool<Fr>> for CBool<Fr> {
-    type Output = CBool<Fr>;
+impl<'l, C: CS> BitAnd<&'l CBool<C>> for CBool<C> {
+    type Output = CBool<C>;
 
     #[inline]
-    fn bitand(mut self, other: &'l CBool<Fr>) -> Self::Output {
+    fn bitand(mut self, other: &'l CBool<C>) -> Self::Output {
         self &= other;
         self
     }
 }
 
-impl<'l, Fr: PrimeField> BitAnd<&'l bool> for CBool<Fr> {
-    type Output = CBool<Fr>;
+impl<'l, C: CS> BitAnd<&'l bool> for CBool<C> {
+    type Output = CBool<C>;
 
     #[inline]
     fn bitand(mut self, other: &'l bool) -> Self::Output {
@@ -196,22 +196,22 @@ impl<'l, Fr: PrimeField> BitAnd<&'l bool> for CBool<Fr> {
     }
 }
 
-forward_all_binop_to_val_ref_commutative_ex!(impl<Fr:PrimeField> BitAnd for CBool<Fr>, bitand);
-forward_all_binop_to_val_ref_ex!(impl<Fr:PrimeField> BitAnd<bool> for CBool<Fr>, bitand -> CBool<Fr>);
-swap_commutative!(impl<Fr:PrimeField> BitAnd<bool> for CBool<Fr>, bitand);
+forward_all_binop_to_val_ref_commutative_ex!(impl<C: CS> BitAnd for CBool<C>, bitand);
+forward_all_binop_to_val_ref_ex!(impl<C: CS> BitAnd<bool> for CBool<C>, bitand -> CBool<C>);
+swap_commutative!(impl<C: CS> BitAnd<bool> for CBool<C>, bitand);
 
-impl<'l, Fr: PrimeField> BitOr<&'l CBool<Fr>> for CBool<Fr> {
-    type Output = CBool<Fr>;
+impl<'l, C: CS> BitOr<&'l CBool<C>> for CBool<C> {
+    type Output = CBool<C>;
 
     #[inline]
-    fn bitor(mut self, other: &'l CBool<Fr>) -> Self::Output {
+    fn bitor(mut self, other: &'l CBool<C>) -> Self::Output {
         self |= other;
         self
     }
 }
 
-impl<'l, Fr: PrimeField> BitOr<&'l bool> for CBool<Fr> {
-    type Output = CBool<Fr>;
+impl<'l, C: CS> BitOr<&'l bool> for CBool<C> {
+    type Output = CBool<C>;
 
     #[inline]
     fn bitor(mut self, other: &'l bool) -> Self::Output {
@@ -220,22 +220,22 @@ impl<'l, Fr: PrimeField> BitOr<&'l bool> for CBool<Fr> {
     }
 }
 
-forward_all_binop_to_val_ref_commutative_ex!(impl<Fr:PrimeField> BitOr for CBool<Fr>, bitor);
-forward_all_binop_to_val_ref_ex!(impl<Fr:PrimeField> BitOr<bool> for CBool<Fr>, bitor -> CBool<Fr>);
-swap_commutative!(impl<Fr:PrimeField> BitOr<bool> for CBool<Fr>, bitor);
+forward_all_binop_to_val_ref_commutative_ex!(impl<C: CS> BitOr for CBool<C>, bitor);
+forward_all_binop_to_val_ref_ex!(impl<C: CS> BitOr<bool> for CBool<C>, bitor -> CBool<C>);
+swap_commutative!(impl<C: CS> BitOr<bool> for CBool<C>, bitor);
 
-impl<'l, Fr: PrimeField> BitXor<&'l CBool<Fr>> for CBool<Fr> {
-    type Output = CBool<Fr>;
+impl<'l, C: CS> BitXor<&'l CBool<C>> for CBool<C> {
+    type Output = CBool<C>;
 
     #[inline]
-    fn bitxor(mut self, other: &'l CBool<Fr>) -> Self::Output {
+    fn bitxor(mut self, other: &'l CBool<C>) -> Self::Output {
         self ^= other;
         self
     }
 }
 
-impl<'l, Fr: PrimeField> BitXor<&'l bool> for CBool<Fr> {
-    type Output = CBool<Fr>;
+impl<'l, C: CS> BitXor<&'l bool> for CBool<C> {
+    type Output = CBool<C>;
 
     #[inline]
     fn bitxor(mut self, other: &'l bool) -> Self::Output {
@@ -244,6 +244,6 @@ impl<'l, Fr: PrimeField> BitXor<&'l bool> for CBool<Fr> {
     }
 }
 
-forward_all_binop_to_val_ref_commutative_ex!(impl<Fr:PrimeField> BitXor for CBool<Fr>, bitxor);
-forward_all_binop_to_val_ref_ex!(impl<Fr:PrimeField> BitXor<bool> for CBool<Fr>, bitxor -> CBool<Fr>);
-swap_commutative!(impl<Fr:PrimeField> BitXor<bool> for CBool<Fr>, bitxor);
+forward_all_binop_to_val_ref_commutative_ex!(impl<C: CS> BitXor for CBool<C>, bitxor);
+forward_all_binop_to_val_ref_ex!(impl<C: CS> BitXor<bool> for CBool<C>, bitxor -> CBool<C>);
+swap_commutative!(impl<C: CS> BitXor<bool> for CBool<C>, bitxor);

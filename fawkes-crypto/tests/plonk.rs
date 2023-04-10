@@ -1,6 +1,6 @@
-#[cfg(all(feature = "heavy_tests", feature="backend_bellman_groth16"))]
+#[cfg(all(feature = "heavy_tests", feature="plonk"))]
 use fawkes_crypto::{
-    backend::bellman_groth16::{
+    backend::plonk::{
         *,
         engines::Bn256,
         setup::setup
@@ -15,7 +15,8 @@ use fawkes_crypto::{
     rand::{thread_rng, Rng}
 };
 
-#[cfg(all(feature = "heavy_tests", feature="backend_bellman_groth16"))]
+
+#[cfg(all(feature = "heavy_tests", feature="plonk"))]
 #[test]
 fn test_circuit_poseidon_merkle_root() {
     fn circuit<C:CS>(public: CNum<C>, secret: (CNum<C>, CMerkleProof<C, 32>)) {
@@ -23,7 +24,8 @@ fn test_circuit_poseidon_merkle_root() {
         let res = c_poseidon_merkle_proof_root(&secret.0, &secret.1, &poseidon_params);
         res.assert_eq(&public);
     }
-    let params = setup::<Bn256, _, _, _>(circuit);
+    let parameters = Parameters::<Bn256>::setup(20);
+    let keys = setup::<_, _, _>(&parameters, circuit);
 
     const PROOF_LENGTH: usize = 32;
     let mut rng = thread_rng();
@@ -38,11 +40,11 @@ fn test_circuit_poseidon_merkle_root() {
     let proof = MerkleProof { sibling, path };
     let root = poseidon_merkle_proof_root(leaf, &proof, &poseidon_params);
 
-    println!("BitVec length {}", params.2.len());
+    
 
-    let (inputs, snark_proof) = prover::prove(&params, &root, &(leaf, proof), circuit);
+    let (inputs, snark_proof) = prover::prove(&parameters, &keys.1, &root, &(leaf, proof), circuit);
 
-    let res = verifier::verify(&params.get_vk(), &snark_proof, &inputs);
+    let res = verifier::verify(&parameters, &keys.0, &snark_proof, &inputs);
     assert!(res, "Verifier result should be true");
 }
 
