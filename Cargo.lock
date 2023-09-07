@@ -629,7 +629,7 @@ dependencies = [
 [[package]]
 name = "halo2curves"
 version = "0.2.0"
-source = "git+https://github.com/privacy-scaling-explorations/halo2curves?tag=v0.2.0#bbd4cee10dbf9c51e0456ea67ec2b894b49f688c"
+source = "git+https://github.com/privacy-scaling-explorations/halo2curves?rev=bbd4cee10dbf9c51e0456ea67ec2b894b49f688c#bbd4cee10dbf9c51e0456ea67ec2b894b49f688c"
 dependencies = [
  "ff",
  "group",
@@ -1010,7 +1010,7 @@ dependencies = [
 [[package]]
 name = "poseidon"
 version = "0.2.0"
-source = "git+https://github.com/privacy-scaling-explorations/poseidon.git?branch=padding#6a305ac124810a1eaf83ae7fafd520b19bfa304e"
+source = "git+https://github.com/gnull/poseidon?branch=patch-1#a0d6ef1a1308a169c1277fcf2a5c1a427f138fe2"
 dependencies = [
  "group",
  "halo2curves 0.2.0",
