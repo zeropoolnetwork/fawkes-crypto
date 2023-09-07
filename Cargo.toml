@@ -6,3 +6,6 @@ members = [
   "ff-uint_derive",
   "seedbox"
 ]
+
+[patch."https://github.com/privacy-scaling-explorations/poseidon.git"]
+poseidon = { git = "https://github.com/gnull/poseidon", branch = "patch-1" }
