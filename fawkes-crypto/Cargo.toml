@@ -33,7 +33,7 @@ halo2_wrong_ecc = { git = "https://github.com/privacy-scaling-explorations/halo2
 halo2_wrong_transcript = { git = "https://github.com/privacy-scaling-explorations/halo2wrong", tag = "v2022_09_09", package = "transcript", optional = true}
 halo2_kzg_srs = { git = "https://github.com/han0110/halo2-kzg-srs", rev="ff65429", optional = true }
 halo2_rand = {package="rand", version="0.8", optional = true}
-plonk_verifier = {git = "https://github.com/Janmajayamall/plonk-verifier.git", branch="feature/system-circom-cli", optional = true}
+plonk_verifier = { git = "https://github.com/privacy-scaling-explorations/plonk-verifier", package = "snark-verifier", tag ="v2023_04_20", features = [], optional = true }
 
 [dependencies.blake2_rfc]
 version = "0.0.1"
