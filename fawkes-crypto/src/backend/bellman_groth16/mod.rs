@@ -1,3 +1,4 @@
+use std::io::{Read, Write};
 use crate::{
     circuit::{
         cs::{RCS, WitnessCS, CS},
@@ -149,8 +150,14 @@ impl<E: Engine> Parameters<E> {
 
     pub fn write<W:std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
         let bitvec_len = self.3.len() as u32;
+
+        let mut gates = Vec::new();
+        let mut w = brotli::CompressorWriter::new(&mut gates, 4096, 9, 22);
+        w.write_all(&self.2)?;
+        drop(w);
+
         BorshSerialize::serialize(&self.1, writer)?;
-        BorshSerialize::serialize(&self.2, writer)?;
+        BorshSerialize::serialize(&gates, writer)?;
         BorshSerialize::serialize(&bitvec_len, writer)?;
         BorshSerialize::serialize(&self.3.to_bytes(), writer)?;
         self.0.write(writer)
@@ -158,7 +165,10 @@ impl<E: Engine> Parameters<E> {
 
     pub fn read(reader: &mut &[u8], disallow_points_at_infinity: bool, checked: bool) -> std::io::Result<Self> {
         let e1 = BorshDeserialize::deserialize(reader)?;
-        let e2 = BorshDeserialize::deserialize(reader)?;
+        let e2_compressed: Vec<u8> = BorshDeserialize::deserialize(reader)?;
+        let mut e2 = Vec::new();
+        brotli::Decompressor::new(e2_compressed.as_slice(), 1024).read_to_end(&mut e2)?;
+
         let e3_len = <u32 as BorshDeserialize>::deserialize(reader)? as usize;
         let e3_buf:Vec<u8> = BorshDeserialize::deserialize(reader)?;
 

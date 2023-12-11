@@ -22,14 +22,13 @@ pub fn setup<E: Engine, Pub: Signal<BuildCS<E::Fr>>, Sec: Signal<BuildCS<E::Fr>>
 
     let num_gates = cs.gates.len();
 
-    let mut buf = std::io::Cursor::new(vec![]);
-    let mut c = brotli::CompressorWriter::new(&mut buf, 4096, 9, 22);
+    let mut buf = vec![];
+    let mut c = &mut buf;
     for g in cs.gates.iter() {
         c.write_all(&g.try_to_vec().unwrap()).unwrap();
     }
 
     c.flush().unwrap();
-    drop(c);
 
-    Parameters(bp, num_gates as u32, buf.into_inner(), cs.const_tracker.clone())
+    Parameters(bp, num_gates as u32, buf, cs.const_tracker.clone())
 }

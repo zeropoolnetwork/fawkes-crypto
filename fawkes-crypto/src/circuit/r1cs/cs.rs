@@ -225,7 +225,7 @@ impl<Fr:PrimeField, R:std::io::Read> Iterator for GateStreamedIterator<Fr, R> {
 impl<'a, Fr: PrimeField> CS for WitnessCS<'a, Fr> {
     type Fr = Fr;
     type LC = ZeroLC;
-    type GateIterator = GateStreamedIterator<Fr, brotli::Decompressor<&'a [u8]>>;
+    type GateIterator = GateStreamedIterator<Fr, &'a [u8]>;
 
     fn num_gates(&self) -> usize {
         self.num_gates
@@ -246,7 +246,7 @@ impl<'a, Fr: PrimeField> CS for WitnessCS<'a, Fr> {
     }
 
     fn get_gate_iterator(&self) -> Self::GateIterator {
-        GateStreamedIterator(brotli::Decompressor::new(self.gates_data, 4096), PhantomData)
+        GateStreamedIterator(&self.gates_data, PhantomData)
     }
 
     fn enforce(_: &CNum<Self>, _: &CNum<Self>, _: &CNum<Self>) {
