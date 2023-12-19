@@ -37,9 +37,6 @@ halo2_rand = {package="rand", version="0.8", optional = true}
 plonk_verifier = { git = "https://github.com/zeropoolnetwork/snark-verifier", package = "snark-verifier", branch ="zeropool-near", features = [], optional = true }
 # near-halo2-verifier = { git = "https://github.com/zeropoolnetwork/near-halo2-verifier", branch = "master", optional = true }
 
-[patch."https://github.com/privacy-scaling-explorations/halo2curves"]
-halo2curves = { git = "https://github.com/zeropoolnetwork/halo2curves", branch = "zeropool-near" }
-
 [dependencies.blake2_rfc]
 version = "0.0.1"
 package = "blake2-rfc_bellman_edition"
