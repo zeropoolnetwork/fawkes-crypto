@@ -445,7 +445,7 @@ dependencies = [
  "getrandom 0.2.11",
  "halo2_kzg_srs",
  "halo2_proofs 0.2.0 (git+https://github.com/privacy-scaling-explorations/halo2?tag=v2023_04_20)",
- "halo2curves 0.3.2 (git+https://github.com/zeropoolnetwork/halo2curves?branch=zeropool-near)",
+ "halo2curves 0.3.2",
  "impl-trait-for-tuples 0.1.3",
  "itertools",
  "linked-list",
@@ -695,7 +695,7 @@ dependencies = [
  "blake2b_simd",
  "ff 0.13.0",
  "group 0.13.0",
- "halo2curves 0.3.2 (git+https://github.com/privacy-scaling-explorations/halo2curves?tag=0.3.2)",
+ "halo2curves 0.3.2",
  "rand_chacha 0.3.1",
  "rand_core 0.6.4",
  "rayon",
@@ -731,24 +731,6 @@ dependencies = [
  "num-bigint 0.4.4",
  "num-traits",
  "pasta_curves 0.4.1",
- "rand 0.8.5",
- "rand_core 0.6.4",
- "static_assertions",
- "subtle",
-]
-
-[[package]]
-name = "halo2curves"
-version = "0.3.2"
-source = "git+https://github.com/privacy-scaling-explorations/halo2curves?tag=0.3.2#9f5c50810bbefe779ee5cf1d852b2fe85dc35d5e"
-dependencies = [
- "ff 0.13.0",
- "group 0.13.0",
- "lazy_static",
- "num-bigint 0.4.4",
- "num-traits",
- "pasta_curves 0.5.1",
- "paste",
  "rand 0.8.5",
  "rand_core 0.6.4",
  "static_assertions",
@@ -1241,7 +1223,7 @@ name = "poseidon"
 version = "0.2.0"
 source = "git+https://github.com/privacy-scaling-explorations/poseidon?tag=v2023_04_20#807f8f555313f726ca03bdf941f798098f488ba4"
 dependencies = [
- "halo2curves 0.3.2 (git+https://github.com/privacy-scaling-explorations/halo2curves?tag=0.3.2)",
+ "halo2curves 0.3.2",
  "subtle",
 ]
 
@@ -1730,7 +1712,7 @@ dependencies = [
  "bytes",
  "ecc 0.1.0 (git+https://github.com/privacy-scaling-explorations/halo2wrong?tag=v2023_04_20)",
  "halo2_proofs 0.2.0 (git+https://github.com/privacy-scaling-explorations/halo2?tag=v2023_04_20)",
- "halo2curves 0.3.2 (git+https://github.com/privacy-scaling-explorations/halo2curves?tag=0.3.2)",
+ "halo2curves 0.3.2",
  "hex 0.4.3",
  "itertools",
  "lazy_static",
