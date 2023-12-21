@@ -12,7 +12,7 @@ use crate::{
     ff_uint::{Num, PrimeField, NumRepr},
 };
 
-use ff::PrimeField as HaloPrimeField;
+use halo2_curves::ff::PrimeField as HaloPrimeField;
 
 use halo2_proofs::{
     circuit::{AssignedCell,  Layouter, Region, SimpleFloorPlanner, Value},
