@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
   "fawkes-crypto",
   "fawkes-crypto_derive",
