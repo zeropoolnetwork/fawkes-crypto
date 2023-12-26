@@ -4,6 +4,7 @@ pub mod plonk_config;
 pub mod engines;
 pub mod setup;
 
+use std::fmt::Debug;
 use crate::{
     circuit::{
         cs::{RCS, CS}
@@ -12,18 +13,23 @@ use crate::{
     ff_uint::{Num, PrimeField, NumRepr},
 };
 
-use halo2_curves::ff::PrimeField as HaloPrimeField;
+use halo2_curves::{
+    ff::PrimeField as HaloPrimeField,
+    serde::SerdeObject
+};
 
 use halo2_proofs::{
     circuit::{AssignedCell,  Layouter, Region, SimpleFloorPlanner, Value},
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance},
-    poly::kzg::commitment::ParamsKZG,
+    poly::{
+        kzg::commitment::ParamsKZG,
+        commitment::Params
+    },
 };
 
 use self::plonk_config::PlonkConfig;
 use engines::Engine;
 use halo2_rand::rngs::OsRng;
-
 
 
 pub fn num_to_halo_fp<Fx: PrimeField, Fy: HaloPrimeField>(
@@ -193,14 +199,26 @@ impl<F: HaloPrimeField, C:CS> Circuit<F> for HaloCS<C> {
     }
 }
 
+
 #[derive(Clone, Debug)]
 pub struct Parameters<E: Engine>(pub ParamsKZG<E::BE>);
 
 impl <E: Engine> Parameters<E> where
     <<E as Engine>::BE as halo2_curves::pairing::Engine>::Scalar: HaloPrimeField,
+    <<E as Engine>::BE as halo2_curves::pairing::Engine>::G1Affine: SerdeObject,
+    <<E as Engine>::BE as halo2_curves::pairing::Engine>::G2Affine: SerdeObject,
+
 {
     pub fn setup(k:usize) -> Self {
         let params = ParamsKZG::<<E as Engine>::BE>::setup(k as u32, OsRng);
         Self(params)
+    }
+
+    pub fn write<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        self.0.write(writer)
+    }
+
+    pub fn read<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
+        Ok(Self(ParamsKZG::<E::BE>::read(reader)?))
     }
 }
