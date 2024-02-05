@@ -71,7 +71,7 @@ Igor Gulamov
 
 ## Disclaimer
 
-Fawkes-Crypto is audited, but experimental and is provided as is, use at your own risk.
+Fawkes-Crypto is audited, but experimental and provided as is, use at your own risk.
 
 ## License
 
