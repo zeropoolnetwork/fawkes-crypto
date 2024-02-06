@@ -6,3 +6,6 @@ members = [
   "ff-uint_derive",
   "seedbox"
 ]
+
+[patch."https://github.com/privacy-scaling-explorations/halo2curves"]
+halo2curves = { git = "https://github.com/zeropoolnetwork/halo2curves", branch = "zeropool-near" }
