@@ -12,8 +12,9 @@ use crate::{
     ff_uint::{Num, PrimeField, NumRepr},
 };
 
+use halo2_curves::ff::PrimeField as HaloPrimeField;
+
 use halo2_proofs::{
-    arithmetic::{FieldExt},
     circuit::{AssignedCell,  Layouter, Region, SimpleFloorPlanner, Value},
     plonk::{Advice, Circuit, Column, ConstraintSystem, Error, Instance},
     poly::kzg::commitment::ParamsKZG,
@@ -25,7 +26,7 @@ use halo2_rand::rngs::OsRng;
 
 
 
-pub fn num_to_halo_fp<Fx: PrimeField, Fy: FieldExt>(
+pub fn num_to_halo_fp<Fx: PrimeField, Fy: HaloPrimeField>(
     from: Num<Fx>,
 ) -> Fy {
     let buff = from.to_uint().into_inner();
@@ -43,7 +44,7 @@ pub fn num_to_halo_fp<Fx: PrimeField, Fy: FieldExt>(
     Fy::from_repr_vartime(to).unwrap()
 }
 
-pub fn halo_fp_to_num<Fx: PrimeField, Fy: FieldExt>(
+pub fn halo_fp_to_num<Fx: PrimeField, Fy: HaloPrimeField>(
     from: Fy,
 ) -> Num<Fx> {
     let repr = from.to_repr();
@@ -61,7 +62,7 @@ pub fn halo_fp_to_num<Fx: PrimeField, Fy: FieldExt>(
     Num::from_uint(to).unwrap()
 }
 
-pub fn num_to_halo_fp_value<Fx: PrimeField, Fy: FieldExt>(
+pub fn num_to_halo_fp_value<Fx: PrimeField, Fy: HaloPrimeField>(
     from: Option<Num<Fx>>,
 ) -> Value<Fy> {
     match from {
@@ -81,7 +82,7 @@ impl <C:CS> HaloCS<C> {
 }
 
 #[derive(Clone, Debug)]
-enum Halo2Cell<F:FieldExt> {
+enum Halo2Cell<F:HaloPrimeField> {
     Input(usize),
     Aux(AssignedCell<F, F>),
 }
@@ -95,7 +96,7 @@ enum Halo2Cell<F:FieldExt> {
 /// cells.
 fn assign_advice_ex<
     Fr:PrimeField,
-    F:FieldExt,
+    F:HaloPrimeField,
     AnR: Into<String>,
     An:Fn()->AnR, Val:Fn() -> Option<Num<Fr>>
 >(
@@ -128,7 +129,7 @@ fn assign_advice_ex<
 }
 
 
-impl<F: FieldExt, C:CS> Circuit<F> for HaloCS<C> {
+impl<F: HaloPrimeField, C:CS> Circuit<F> for HaloCS<C> {
     type Config = plonk_config::PlonkConfig;
     type FloorPlanner = SimpleFloorPlanner;
 
@@ -195,9 +196,11 @@ impl<F: FieldExt, C:CS> Circuit<F> for HaloCS<C> {
 #[derive(Clone, Debug)]
 pub struct Parameters<E: Engine>(pub ParamsKZG<E::BE>);
 
-impl <E:Engine> Parameters<E> {
+impl <E: Engine> Parameters<E> where
+    <<E as Engine>::BE as halo2_curves::pairing::Engine>::Scalar: HaloPrimeField,
+{
     pub fn setup(k:usize) -> Self {
-        let params = ParamsKZG::<E::BE>::setup(k as u32, OsRng);
+        let params = ParamsKZG::<<E as Engine>::BE>::setup(k as u32, OsRng);
         Self(params)
     }
 }

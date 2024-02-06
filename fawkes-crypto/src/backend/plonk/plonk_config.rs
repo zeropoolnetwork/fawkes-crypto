@@ -1,5 +1,5 @@
+use halo2_curves::ff::PrimeField;
 use halo2_proofs::{
-    arithmetic::FieldExt,
     plonk::{Advice, Any, Column, ConstraintSystem, Fixed, Instance},
     poly::Rotation,
 };
@@ -19,7 +19,7 @@ pub struct PlonkConfig {
 }
 
 impl PlonkConfig {
-    pub fn configure<F: FieldExt>(meta: &mut ConstraintSystem<F>) -> Self {
+    pub fn configure<F: PrimeField>(meta: &mut ConstraintSystem<F>) -> Self {
         let a = meta.advice_column();
         let b = meta.advice_column();
         let c = meta.advice_column();

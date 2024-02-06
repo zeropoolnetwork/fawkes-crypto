@@ -40,60 +40,6 @@ use super::setup::{ProvingKey};
 #[derive(Clone, Debug, BorshDeserialize, BorshSerialize)]
 pub struct Proof(pub Vec<u8>);
 
-fn gen_proof<
-    E: MultiMillerLoop+std::fmt::Debug,
-    C: Circuit<E::Scalar>,
-    EC: EncodedChallenge<E::G1Affine>,
-    TR: TranscriptReadBuffer<Cursor<Vec<u8>>, E::G1Affine, EC>,
-    TW: TranscriptWriterBuffer<Vec<u8>, E::G1Affine, EC>,
->(
-    params: &ParamsKZG<E>,
-    pk: &PlonkProvingKey<E::G1Affine>,
-    circuit: C,
-    instances: Vec<Vec<E::Scalar>>,
-) -> Vec<u8> {
-    // MockProver::run(params.k(), &circuit, instances.clone())
-    //     .unwrap()
-    //     .assert_satisfied();
-
-    let instances = instances
-        .iter()
-        .map(|instances| instances.as_slice())
-        .collect_vec();
-
-    let proof = {
-        let mut transcript = TW::init(Vec::new());
-        create_proof::<KZGCommitmentScheme<E>, ProverGWC<_>, _, _, TW, _>(
-            params,
-            pk,
-            &[circuit],
-            &[instances.as_slice()],
-            OsRng,
-            &mut transcript,
-        )
-        .unwrap();
-        transcript.finalize()
-    };
-    proof
-
-    // let accept = {
-    //     let mut transcript = TR::init(Cursor::new(proof.clone()));
-    //     VerificationStrategy::<_, VerifierGWC<_>>::finalize(
-    //         verify_proof::<_, VerifierGWC<_>, _, TR, _>(
-    //             params.verifier_params(),
-    //             pk.get_vk(),
-    //             AccumulatorStrategy::new(params.verifier_params()),
-    //             &[instances.as_slice()],
-    //             &mut transcript,
-    //         )
-    //         .unwrap(),
-    //     )
-    // };
-
-    // (proof, accept)
-}
-
-
 pub fn prove<
     Pub: Signal<BuildCS<crate::engines::bn256::Fr>>,
     Sec: Signal<BuildCS<crate::engines::bn256::Fr>>,
@@ -128,18 +74,31 @@ pub fn prove<
 
     let inputs_converted = inputs.iter().cloned().map(num_to_halo_fp).collect_vec();
 
-    let proof = gen_proof::<
-        halo2_curves::bn256::Bn256,
-        _,
-        _,
-        EvmTranscript<halo2_curves::bn256::G1Affine, _, _, _>,
-        EvmTranscript<halo2_curves::bn256::G1Affine, _, _, _>
-    >(
-        &params.0,
-        &pk.0,
-        bcs,
-        vec![inputs_converted],
-    );
+    let proof = {
+        let params = &params.0;
+        let pk = &pk.0;
+        let instances = vec![inputs_converted];
+        // MockProver::run(params.k(), &circuit, instances.clone())
+        //     .unwrap()
+        //     .assert_satisfied();
+
+        let instances = instances
+            .iter()
+            .map(|instances| instances.as_slice())
+            .collect_vec();
+
+        let mut transcript = <EvmTranscript<halo2_curves::bn256::G1Affine, _, _, _> as TranscriptWriterBuffer<_, _, _>>::init(Vec::new());
+        create_proof::<KZGCommitmentScheme<halo2_curves::bn256::Bn256>, ProverGWC<_>, _, _, EvmTranscript<halo2_curves::bn256::G1Affine, _, _, _>, _>(
+            params,
+            pk,
+            &[bcs],
+            &[instances.as_slice()],
+            OsRng,
+            &mut transcript,
+        )
+        .unwrap();
+        transcript.finalize()
+    };
 
     (inputs, Proof(proof))
 }
